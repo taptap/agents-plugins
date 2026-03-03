@@ -160,9 +160,9 @@ fi
 ```
 ✅ 成功创建并切换到新分支
 
-分支: docs/TAP-6579933216-api-docs
-类型: docs（文档更新）- 智能推荐
-基于: origin/main
+分支：docs/TAP-6579933216-api-docs
+类型：docs（文档更新）- 智能推荐
+基于：origin/main
 
 现在可以开始开发，完成后此命令会自动创建 MR。
 ```

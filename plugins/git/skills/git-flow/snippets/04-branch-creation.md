@@ -144,8 +144,8 @@ fi
 ```
 ✅ 成功创建并切换到新分支
 
-分支: feat/TAP-85404-user-profile
-基于: origin/main
+分支：feat/TAP-85404-user-profile
+基于：origin/main
 
 现在可以开始开发，完成后使用以下命令提交：
   /git:commit               - 仅提交

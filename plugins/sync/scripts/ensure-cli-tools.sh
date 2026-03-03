@@ -22,7 +22,6 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # 状态追踪
-MISSING_TOOLS=()
 AUTH_MISSING=()
 INSTALL_FAILED=()
 

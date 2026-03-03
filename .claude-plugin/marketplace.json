@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "TapTap Claude Code 插件库 - 提供开发工作流自动化插件",
-    "version": "0.1.18",
+    "version": "0.1.19",
     "pluginRoot": "./plugins"
   },
   "plugins": [
@@ -25,32 +25,32 @@
     {
       "name": "git",
       "source": "./plugins/git",
-      "description": "Git 工作流命令插件，提供提交、推送、创建 MR 和分支清理功能",
-      "version": "0.1.7",
+      "description": "Git 工作流命令插件，提供提交/推送/MR、远程平台操作、自动代码审查（Agent Team + Codex）",
+      "version": "0.1.8",
       "author": {
         "name": "TapTap AI Team"
       },
       "category": "version-control",
-      "keywords": ["git", "commit"],
+      "keywords": ["git", "commit", "review", "code-review", "agent-team"],
       "strict": true
     },
     {
       "name": "sync",
       "source": "./plugins/sync",
-      "description": "项目配置同步插件，提供 MCP 和开发环境配置同步功能",
-      "version": "0.1.14",
+      "description": "项目配置同步插件，提供 MCP、LSP 和开发环境配置同步功能",
+      "version": "0.1.15",
       "author": {
         "name": "TapTap AI Team"
       },
       "category": "productivity",
-      "keywords": ["sync", "mcp", "config"],
+      "keywords": ["sync", "mcp", "lsp", "config"],
       "strict": true
     },
     {
       "name": "quality",
       "source": "./plugins/quality",
       "description": "代码质量插件，提供 AI 驱动的代码审查和质量检查功能，支持跨部门多语言（Go/Java/Python/Kotlin/Swift/TypeScript）",
-      "version": "0.0.3",
+      "version": "0.0.4",
       "author": {
         "name": "TapTap AI Team"
       },

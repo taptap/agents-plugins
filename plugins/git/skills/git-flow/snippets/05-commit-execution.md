@@ -211,9 +211,9 @@ git log -1 --pretty=format:"%s" | grep -E '^(feat|fix|docs|style|refactor|test|c
 ```
 ✅ 提交成功
 
-Commit: a1b2c3d
-标题: feat(api): 新增用户资料接口 #TAP-85404
-分支: feat/TAP-85404-user-profile
+Commit：a1b2c3d
+标题：feat(api): 新增用户资料接口 #TAP-85404
+分支：feat/TAP-85404-user-profile
 
 下一步：
   - 使用 /git:commit-push 推送到远程

@@ -5,11 +5,11 @@ description: 提交代码并推送到远程分支
 
 ## Context
 
-- 当前 git 状态: !`git status`
-- 当前分支: !`git branch --show-current`
-- Staged 和 unstaged 变更: !`git diff HEAD --stat`
-- 最近提交历史: !`git log --oneline -5`
-- no-ticket 配置: !`printenv GIT_ALLOW_NO_TICKET || echo true`
+- 当前 git 状态：!`git status`
+- 当前分支：!`git branch --show-current`
+- Staged 和 unstaged 变更：!`git diff HEAD --stat`
+- 最近提交历史：!`git log --oneline -5`
+- no-ticket 配置：!`printenv GIT_ALLOW_NO_TICKET || echo true`
 
 ## Your Task
 
@@ -36,7 +36,36 @@ description: 提交代码并推送到远程分支
 
 **Commit格式**详见 [Commit格式规范](../skills/git-flow/snippets/03-commit-format.md)
 
-### 第四步：推送到远程
+### 第四步：自动代码审查（push 前）
+
+检查用户输入是否包含 `--skip-code-review` 参数。
+
+**如果包含 `--skip-code-review`：**
+
+输出以下提示后直接进入第五步：
+```
+⏭️ 已跳过代码审查（--skip-code-review）
+```
+
+**如果不包含（默认）：**
+
+先输出提示：
+```
+💡 提示：如需跳过代码审查，可使用 --skip-code-review 参数
+```
+
+然后使用 Skill 工具调用独立的代码审查：
+
+```
+Skill(skill: "git:code-reviewing", args: "review committed changes on current branch before push")
+```
+
+**审查结果处理：**
+- 全部通过（所有 findings 均 dismissed）→ 自动继续推送（不阻断）
+- 有 confirmed 或 uncertain 问题（无论是否阻塞）→ 逐条列出，让用户确认处理方式（修复 / 忽略 / 后续 PR 处理），全部确认后再继续
+- 有阻塞问题（🚫）→ 必须等待用户决策后再继续
+
+### 第五步：推送到远程
 
 检查并推送分支：
 
@@ -49,16 +78,16 @@ git push
 - 如果 push 失败并提示 "no upstream branch"
 - 自动使用：`git push -u origin <current-branch>`
 
-### 第五步：输出结果
+### 第六步：输出结果
 
 显示执行结果：
 
 ```
 ✅ 提交并推送成功
 
-分支: feat-TAP-85404-user-profile
-Commit: feat(api): 新增用户资料接口 #TAP-85404
-远程: origin/feat-TAP-85404-user-profile
+分支：feat-TAP-85404-user-profile
+Commit：feat(api): 新增用户资料接口 #TAP-85404
+远程：origin/feat-TAP-85404-user-profile
 
 下一步：
   - 使用 /git:commit-push-pr 命令创建 Merge Request

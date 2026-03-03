@@ -90,7 +90,8 @@ check_command() {
 }
 
 detect_os() {
-    local os=$(uname -s | tr '[:upper:]' '[:lower:]')
+    local os
+    os=$(uname -s | tr '[:upper:]' '[:lower:]')
     case "$os" in
         darwin) echo "darwin" ;;
         linux) echo "linux" ;;
@@ -102,7 +103,8 @@ detect_os() {
 }
 
 detect_arch() {
-    local arch=$(uname -m)
+    local arch
+    arch=$(uname -m)
     case "$arch" in
         x86_64) echo "amd64" ;;
         amd64) echo "amd64" ;;
@@ -117,7 +119,8 @@ detect_arch() {
 
 detect_shell_rc() {
     # 检测当前 shell 并返回对应的 rc 文件
-    local shell_name=$(basename "$SHELL")
+    local shell_name
+    shell_name=$(basename "$SHELL")
     case "$shell_name" in
         zsh) echo "$HOME/.zshrc" ;;
         bash) echo "$HOME/.bashrc" ;;
@@ -131,7 +134,8 @@ detect_shell_rc() {
 # ========== PATH 配置 ==========
 
 configure_path() {
-    local rc_file=$(detect_shell_rc)
+    local rc_file
+    rc_file=$(detect_shell_rc)
     local path_export='export PATH="$HOME/go-sdk/current/bin:$HOME/go/bin:$PATH"'
     local marker="# Go SDK (added by ensure-golang.sh)"
     
@@ -158,8 +162,9 @@ configure_path() {
 # ========== Golang 安装 ==========
 
 install_golang() {
-    local os=$(detect_os)
-    local arch=$(detect_arch)
+    local os arch
+    os=$(detect_os)
+    arch=$(detect_arch)
     local go_tarball="go${GO_VERSION}.${os}-${arch}.tar.gz"
     local download_url="https://go.dev/dl/${go_tarball}"
     local install_dir="$GO_SDK_DIR/go${GO_VERSION}"
@@ -220,7 +225,8 @@ install_golang() {
     
     # 验证安装
     log_info "验证 Golang 安装..."
-    local go_version_output=$("$current_link/bin/go" version 2>&1)
+    local go_version_output
+    go_version_output=$("$current_link/bin/go" version 2>&1)
     log_success "Golang 安装成功: $go_version_output"
     
     return 0
@@ -262,7 +268,8 @@ install_mcp_grafana() {
         log_detail "文件大小: $(ls -lh "$GO_BIN_DIR/mcp-grafana" | awk '{print $5}')"
         
         # 尝试获取版本
-        local version_output=$("$GO_BIN_DIR/mcp-grafana" --version 2>&1 || echo "版本信息不可用")
+        local version_output
+        version_output=$("$GO_BIN_DIR/mcp-grafana" --version 2>&1 || echo "版本信息不可用")
         log_detail "版本信息: $version_output"
     else
         log_error "安装后未找到 mcp-grafana 二进制文件"
@@ -292,7 +299,8 @@ main() {
     log_step "检查 Golang 环境"
     
     if check_command go; then
-        local go_version=$(go version 2>&1)
+        local go_version
+        go_version=$(go version 2>&1)
         log_success "Golang 已安装: $go_version"
         log_detail "Go 路径: $(which go)"
     else
@@ -359,7 +367,8 @@ main() {
     # mcp-grafana 状态
     if check_command mcp-grafana || [[ -x "$GO_BIN_DIR/mcp-grafana" ]]; then
         echo -e "${GREEN}✅ mcp-grafana${NC}"
-        local mcp_path=$(which mcp-grafana 2>/dev/null || echo "$GO_BIN_DIR/mcp-grafana")
+        local mcp_path
+        mcp_path=$(which mcp-grafana 2>/dev/null || echo "$GO_BIN_DIR/mcp-grafana")
         echo "   路径: $mcp_path"
     else
         echo -e "${RED}❌ mcp-grafana 不可用${NC}"
@@ -368,7 +377,8 @@ main() {
     echo ""
     
     # PATH 状态
-    local rc_file=$(detect_shell_rc)
+    local rc_file
+    rc_file=$(detect_shell_rc)
     if grep -q "go-sdk/current/bin" "$rc_file" 2>/dev/null; then
         echo -e "${GREEN}✅ PATH 已配置${NC}"
         echo "   配置文件: $rc_file"

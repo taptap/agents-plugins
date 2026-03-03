@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+echo "[pre-push] Running plugin validation..."
+if ! bash "${REPO_ROOT}/tests/validate.sh"; then
+  echo "[pre-push] Validation failed. Push aborted." >&2
+  exit 1
+fi
+echo "[pre-push] Validation passed."

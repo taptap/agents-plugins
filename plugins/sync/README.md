@@ -20,6 +20,7 @@
 - ✅ 同步 Claude Skills（grafana-dashboard-design）
 - ✅ 配置 Status Line（项目/分支/Context/模型/Worktree）
 - ✅ 启用 TapTap Plugins（spec/sync/git/quality）
+- ✅ 检测项目语言并配置 LSP 代码智能（自动安装 binary）
 - 📎 可选：`--with-spec` 同步 Spec Skills 到 Cursor
 
 ### 飞书 MCP 配置（可选）
@@ -69,6 +70,7 @@
 - ✅ MCP 服务器配置完成，可以自动获取最新文档
 - ✅ 自动更新机制启用（Marketplace autoUpdate），更新插件后无需手动重装
 - ✅ Cursor IDE 配置同步，两个工具无缝切换
+- ✅ LSP 代码智能自动配置（检测语言 → 安装 binary → 启用插件）
 
 ### 场景 2: 学习新框架
 
@@ -163,6 +165,26 @@ chmod +x .githooks/pre-commit
 - 直接覆盖（每次重新生成最新内容）
 - 自动删除旧的 `sync-claude-plugin.mdc` 文件
 
+### `/sync:lsp`
+
+检测项目语言并配置 LSP 代码智能。
+
+```bash
+/sync:lsp            # 检测 + 启用插件 + 安装 binary
+/sync:lsp --check    # 查看 LSP 状态（已启用插件、binary 是否存在、版本）
+/sync:lsp --install  # 强制重新安装所有已启用 LSP 的 binary
+```
+
+**功能：**
+- 自动检测项目语言（Go / TypeScript / Python / Rust / Java / Kotlin / Swift / C++ / C# / PHP）
+- 启用对应 LSP 插件到 `.claude/settings.json`
+- 立即安装缺失的 LSP binary（不等下次 session）
+- 输出安装状态和版本信息
+
+**SessionStart Hook：**
+- 团队成员启动 session 时，`ensure-lsp.sh` 自动检查并安装缺失的 LSP binary
+- 日志位置：`~/.claude/plugins/logs/ensure-lsp-*.log`
+
 ## 自动触发 Skills
 
 插件包含两个自动触发的 skills，无需手动调用：
@@ -200,6 +222,7 @@ chmod +x .githooks/pre-commit
 | `/sync:mcp-feishu <URL>` | 配置飞书文档 MCP | 可选 |
 | `/sync:mcp-feishu-project <URL>` | 配置飞书项目 MCP | 可选 |
 | `/sync:mcp-grafana <user> <pass>` | 配置 Grafana MCP（自动安装依赖） | 可选 |
+| `/sync:lsp` | 检测语言并配置 LSP 代码智能 | 高级 |
 | `/sync:mcp` | 仅配置 MCP 服务器 | 高级 |
 | `/sync:hooks` | 仅配置自动更新钩子（autoUpdate） | 高级 |
 | `/sync:cursor` | 仅同步到 Cursor | 高级 |
@@ -267,6 +290,11 @@ chmod +x .githooks/pre-commit
 - `.cursor/commands/sync-mcp-grafana.md` - Grafana MCP 配置命令
 - `~/.claude/scripts/statusline.sh` - Status Line 脚本
 
+### LSP 代码智能
+- `.claude/settings.json` - LSP 插件启用配置（`enabledPlugins` 中 `*-lsp@claude-plugins-official`）
+- `~/.claude/plugins/logs/ensure-lsp-*.log` - LSP binary 安装日志
+- 支持语言：Go / TypeScript(JS) / Python / Rust / Java / Kotlin / Swift / C(C++) / C# / PHP
+
 ### Golang & mcp-grafana（由 `/sync:mcp-grafana` 安装）
 - `~/go-sdk/current/` - Golang 安装目录
 - `~/go/bin/mcp-grafana` - mcp-grafana 二进制
@@ -316,6 +344,7 @@ chmod +x .githooks/pre-commit
 
 ## 版本历史
 
+- **v0.1.15** - 新增 `/sync:lsp` 命令（检测语言+安装 binary+启用插件）；`/sync:basic` LSP 首次即装不再延迟；Cursor 模板新增 code review 步骤（含 --skip-code-review）；修复 MR 模板覆盖问题（原子 bash）；hooks 新增 LSP 脚本；更新 statusline/ensure-golang
 - **v0.1.14** - 修复 10 个命令文件 allowed-tools 缺失问题；补齐 printenv、head、pwd、cp、ls、sort、tail、echo、wc、claude、bash、mv、tr 等命令权限声明；cursor-templates 同步修复
 - **v0.1.13** - 镜像 git 插件 no-ticket 按需配置改动到 cursor-templates；Cursor 命令模板新增 `GIT_ALLOW_NO_TICKET` 环境变量上下文；git-flow.mdc 新增仓库级配置段；更新 snippets（02-extract-task-id.md、03-commit-format.md）匹配 git 插件规则
 - **v0.1.12** - 重构 `/sync:basic` 为并行 agent 架构（Phase 0 路径解析 + 6 个命名 subagent）；命令执行行数从 ~550 精简至 ~150（Phase 0: ≤2 Bash 调用）；新增 4 个辅助脚本（ensure-mcp.sh、ensure-plugins.sh、ensure-statusline.sh、ensure-tool-search.sh）；新增 agents/ 目录包含 6 个专用 subagent；更新 hooks、mcp-feishu、mcp-feishu-project、mcp-grafana 命令的错误处理和路径解析；更新 hooks.json 配置结构；更新 mcp-feishu 和 mcp-feishu-project skill 定义

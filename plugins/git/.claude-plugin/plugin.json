@@ -1,7 +1,7 @@
 {
   "name": "git",
-  "description": "Git 工作流命令插件，提供三种提交方式：commit、commit+push、commit+push+MR，支持智能任务 ID 提取和规范化提交信息",
-  "version": "0.1.7",
+  "description": "Git 工作流命令插件，提供提交/推送/MR 创建、远程平台操作（GitHub/GitLab）、自动代码审查（Agent Team + Codex 双引擎），支持智能任务 ID 提取和规范化提交信息",
+  "version": "0.1.8",
   "author": {
     "name": "TapTap AI Team"
   }

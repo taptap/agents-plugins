@@ -36,7 +36,35 @@ description: 提交代码并推送到远程分支
 
 **Commit格式**详见 [Commit格式规范](../rules/git-flow/snippets/03-commit-format.md)
 
-### 第四步：推送到远程
+### 第四步：自动代码审查（push 前）
+
+检查用户输入是否包含 `--skip-code-review` 参数。
+
+**如果包含 `--skip-code-review`：**
+
+输出以下提示后直接进入第五步：
+```
+⏭️ 已跳过代码审查（--skip-code-review）
+```
+
+**如果不包含（默认）：**
+
+先输出提示：
+```
+💡 提示：如需跳过代码审查，可使用 --skip-code-review 参数
+```
+
+然后对当前分支上的已提交变更执行代码审查：
+
+1. 获取变更范围：`git diff HEAD~1 --stat` 和 `git diff HEAD~1`
+2. 逐文件审查，关注：Bug 风险、安全漏洞、性能问题、代码质量
+3. 输出审查结果
+
+**审查结果处理：**
+- 全部通过 → 自动继续推送
+- 有问题 → 列出问题，让用户确认处理方式（修复 / 忽略），全部确认后再继续
+
+### 第五步：推送到远程
 
 检查并推送分支：
 
@@ -49,7 +77,7 @@ git push
 - 如果 push 失败并提示 "no upstream branch"
 - 自动使用：`git push -u origin <current-branch>`
 
-### 第五步：输出结果
+### 第六步：输出结果
 
 显示执行结果：
 

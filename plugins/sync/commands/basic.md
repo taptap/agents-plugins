@@ -76,6 +76,18 @@ LATEST_SPEC=$(ls -d ~/.claude/plugins/cache/taptap-plugins/spec/*/ 2>/dev/null |
 
 如果 `SYNC_SPEC=false`，跳过此步骤，`SPEC_SKILLS_DIR=无`。
 
+**步骤 0.4：检测项目语言，输出 LSP 插件列表**
+
+执行语言检测脚本（需要 `SCRIPTS_DIR` 已解析）：
+
+```bash
+bash {SCRIPTS_DIR}/detect-lsp.sh "$(pwd)"
+```
+
+输出格式：`DETECTED_LSP=gopls-lsp@claude-plugins-official,typescript-lsp@claude-plugins-official` 或 `DETECTED_LSP=none`。
+
+提取 `DETECTED_LSP` 的值，供 Phase 2 使用。
+
 ---
 
 ### Phase 1：并行执行 6 个命名 Subagent
@@ -111,7 +123,29 @@ LATEST_SPEC=$(ls -d ~/.claude/plugins/cache/taptap-plugins/spec/*/ 2>/dev/null |
 - Agent 5 → step5_claude_skills
 - Agent 6 → step6_statusline
 
-**步骤 2.2：输出执行报告**
+**步骤 2.2：写入 LSP 插件配置并安装 binary**
+
+如果 `DETECTED_LSP` 不为 `none`：
+1. 读取项目 `.claude/settings.json`
+2. 将检测到的 LSP 插件逐个加入 `enabledPlugins`（不覆盖已有值）
+3. 写回 `.claude/settings.json`
+4. **立即安装 LSP binary**：对每个检测到的 LSP 插件，检查 binary 是否存在，缺失则安装：
+   - `gopls-lsp` → `command -v gopls || go install golang.org/x/tools/gopls@latest`
+   - `typescript-lsp` → `command -v typescript-language-server || npm install -g typescript-language-server typescript`
+   - `pyright-lsp` → `command -v pyright-langserver || npm install -g pyright`
+   - `rust-analyzer-lsp` → `command -v rust-analyzer || rustup component add rust-analyzer`
+   - `jdtls-lsp` → 提示手动安装
+   - `kotlin-lsp` → `command -v kotlin-language-server || brew install kotlin-language-server`
+   - `swift-lsp` → 提示安装 Xcode
+   - `clangd-lsp` → `command -v clangd || brew install llvm`
+   - `csharp-lsp` → `command -v csharp-ls || dotnet tool install -g csharp-ls`
+   - `php-lsp` → `command -v intelephense || npm install -g intelephense`
+5. 记录结果（插件启用 + binary 安装状态）→ step7_lsp
+
+如果 `DETECTED_LSP` 为 `none`：
+- 跳过，step7_lsp = "未检测到支持的语言"
+
+**步骤 2.3：输出执行报告**
 
 根据执行结果输出相应的报告：
 
@@ -154,6 +188,14 @@ LATEST_SPEC=$(ls -d ~/.claude/plugins/cache/taptap-plugins/spec/*/ 2>/dev/null |
      - 脚本: ~/.claude/scripts/statusline.sh
      - 配置: ~/.claude/settings.json
      - 显示: [模型] 项目 git:(分支) [进度条] % | 版本 计划
+
+  [✅/⏭️ ] LSP 代码智能: [已配置/未检测到支持的语言]
+     - 检测到语言: [Go, TypeScript, ...]
+     - 已启用插件: [gopls-lsp, typescript-lsp, ...]
+     - Binary 安装: [✅ gopls 已存在/安装成功, ✅ typescript-language-server 已存在/安装成功, ...]
+     - [如有安装失败]: ⚠️ <binary> 安装失败: <原因>
+     - 团队成员启动 session 时将通过 Hook 自动安装
+     - 运行 /sync:lsp --check 查看详细状态
 
 下一步：
   1. 重启 Claude Code 会话（MCP 配置生效）
@@ -312,7 +354,7 @@ LATEST_SPEC=$(ls -d ~/.claude/plugins/cache/taptap-plugins/spec/*/ 2>/dev/null |
    - `/sync:hooks` - 仅配置钩子
    - `/sync:cursor` - 仅同步 Cursor（包含冲突处理）
    - `/sync:statusline` - 仅配置 Status Line
-   - 未来可能添加：`/sync:gitlab-mr` - 仅同步 GitLab MR 模板
+   - `/sync:lsp` - 检测语言并配置 LSP（支持 `--check` 和 `--install`）
 
 4. **开发模式**：
    如果你是插件开发者，可以使用 `--dev` 参数优先从 cache 读取最新版本：

@@ -86,7 +86,21 @@ git add <files>  # 排除 .env、credentials 等敏感文件
 git commit -m "type(scope): 中文描述 #TASK-ID"
 ```
 
-### 6. 可选：推送并创建 MR
+### 6. 自动代码审查（commit 后、push 前，强制执行）
+
+> **MANDATORY — 禁止跳过。** 无论变更多简单，都必须执行代码审查。
+
+提交完成后，如果用户请求推送或创建 MR，使用 Skill 工具调用独立的代码审查：
+
+```
+Skill(skill: "git:code-reviewing", args: "review committed changes on current branch before push")
+```
+
+**审查结果处理：**
+- 全部通过（LGTM）→ 自动继续推送（不阻断）
+- 有阻塞问题 → 等待用户决策后再继续
+
+### 7. 可选：推送并创建 MR
 
 如果用户请求推送或创建 MR：
 
@@ -176,7 +190,20 @@ glab mr create \
 git push -u origin $(git branch --show-current) -o merge_request.create -o merge_request.target=$default_branch
 ```
 
-4. **输出结果**：显示 MR 链接，并使用系统默认浏览器打开（如果可获取到链接）。
+4. **输出结果**：显示 MR/PR 链接，并使用系统默认浏览器打开（如果可获取到链接）。
+
+### 8. Pipeline Watch（推送并创建 MR/PR 后自动执行）
+
+与 `/git:commit-push-pr` 第七步保持一致。MR/PR 创建成功后自动进入 Pipeline 监控。
+
+流程概要：
+1. 轮询 Pipeline/Check 状态（30s 间隔，最长 30 分钟）
+2. 全绿 → macOS 通知（`osascript`）+ 终端输出
+3. 有红 → 拉取失败 job 日志，分析原因
+4. lint/test 类错误 → 自动修复代码（不 commit，等用户确认）
+5. 其他错误 → macOS 通知 + 输出日志摘要和修复建议
+
+平台支持：GitLab（`glab api`）和 GitHub（`gh pr checks` / `gh run view --log-failed`）。
 
 ## 与 Commands 的关系
 

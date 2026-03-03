@@ -649,6 +649,10 @@ panic("错误")
 
 ## 版本历史
 
+### v0.0.4
+
+- 将 `code-reviewing` skill 迁移至 git 插件（集中化审查流程）
+
 ### v0.0.3
 
 - 修复 review 命令 allowed-tools 缺失 mkdir、echo、date 权限声明

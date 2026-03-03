@@ -1,16 +1,16 @@
 ---
-allowed-tools: Bash(git add:*), Bash(git status:*), Bash(git commit:*), Bash(git push), Bash(git push -u:*), Bash(git push --set-upstream:*), Bash(git push origin:*), Bash(git diff:*), Bash(git log:*), Bash(git branch:*), Bash(git checkout:*), Bash(glab mr create:*), Bash(glab auth status), Bash(which glab), Bash(printenv:*), Bash(echo:*), Bash(head:*), Bash(python3:*), Bash(cat:*), Bash(grep:*)
-description: 提交代码、推送分支并使用 GitLab push options 创建 Merge Request
+allowed-tools: Bash(git add:*), Bash(git status:*), Bash(git commit:*), Bash(git push), Bash(git push -u:*), Bash(git push --set-upstream:*), Bash(git push origin:*), Bash(git diff:*), Bash(git log:*), Bash(git branch:*), Bash(git checkout:*), Bash(glab mr create:*), Bash(glab auth status), Bash(glab api:*), Bash(glab pipeline:*), Bash(which glab), Bash(gh pr create:*), Bash(gh auth status), Bash(gh api:*), Bash(gh run:*), Bash(gh pr checks:*), Bash(which gh), Bash(sleep:*), Bash(osascript:*), Bash(printenv:*), Bash(echo:*), Bash(head:*), Bash(python3:*), Bash(cat:*), Bash(grep:*)
+description: 提交代码、推送分支、创建 MR/PR 并监控 Pipeline 状态
 ---
 
 ## Context
 
-- 当前 git 状态: !`git status`
-- 当前分支: !`git branch --show-current`
-- Staged 和 unstaged 变更: !`git diff HEAD --stat`
-- 最近提交历史: !`git log --oneline -5`
-- 远程分支: !`git branch -r | head -10`
-- no-ticket 配置: !`printenv GIT_ALLOW_NO_TICKET || echo true`
+- 当前 git 状态：!`git status`
+- 当前分支：!`git branch --show-current`
+- Staged 和 unstaged 变更：!`git diff HEAD --stat`
+- 最近提交历史：!`git log --oneline -5`
+- 远程分支：!`git branch -r | head -10`
+- no-ticket 配置：!`printenv GIT_ALLOW_NO_TICKET || echo true`
 
 ## Your Task
 
@@ -41,7 +41,36 @@ description: 提交代码、推送分支并使用 GitLab push options 创建 Mer
 
 **Commit格式**详见 [Commit格式规范](../skills/git-flow/snippets/03-commit-format.md)
 
-### 第四步：推送并创建 MR
+### 第四步：自动代码审查（push 前）
+
+检查用户输入是否包含 `--skip-code-review` 参数。
+
+**如果包含 `--skip-code-review`：**
+
+输出以下提示后直接进入第五步：
+```
+⏭️ 已跳过代码审查（--skip-code-review）
+```
+
+**如果不包含（默认）：**
+
+先输出提示：
+```
+💡 提示：如需跳过代码审查，可使用 --skip-code-review 参数
+```
+
+然后使用 Skill 工具调用独立的代码审查：
+
+```
+Skill(skill: "git:code-reviewing", args: "review committed changes on current branch before push")
+```
+
+**审查结果处理：**
+- 全部通过（所有 findings 均 dismissed）→ 自动继续推送（不阻断）
+- 有 confirmed 或 uncertain 问题（无论是否阻塞）→ 逐条列出，让用户确认处理方式（修复 / 忽略 / 后续 PR 处理），全部确认后再继续
+- 有阻塞问题（🚫）→ 必须等待用户决策后再继续
+
+### 第五步：推送并创建 MR
 
 1. **检测 glab 是否可用**：
    ```bash
@@ -151,12 +180,183 @@ description: 提交代码、推送分支并使用 GitLab push options 创建 Mer
    git push -u origin $(git branch --show-current) -o merge_request.create
    ```
 
-### 第五步：输出结果并打开浏览器
+### 第六步：输出结果并打开浏览器
 
 1. 显示推送成功信息
-2. 显示 GitLab 返回的 MR 链接
+2. 显示 GitLab/GitHub 返回的 MR/PR 链接
 3. 显示任务工单链接（如有）
-4. 使用系统默认浏览器打开 MR 链接
+4. 使用系统默认浏览器打开 MR/PR 链接
+
+### 第七步：Pipeline Watch（MR/PR 创建后自动执行）
+
+MR/PR 创建成功后，自动进入 Pipeline 监控模式。根据第五步检测到的平台（GitLab/GitHub）选择对应 API。
+
+#### 1. 获取 Pipeline/Check 状态
+
+从第五步的 `glab mr create` 或 `gh pr create` 输出中提取 MR/PR 编号（`MR_IID` / `PR_NUMBER`）。
+
+**GitLab**（glab）：
+
+> **重要**：MR pipeline 的 ref 是 `refs/merge-requests/{iid}/head`，不是分支名。
+> 使用 `pipelines?ref={branch}` **查不到** MR pipeline。必须使用 MR pipelines API。
+
+```bash
+# 获取 project_id
+PROJECT_ID=$(glab api projects/$(python3 -c "import urllib.parse; print(urllib.parse.quote('${project_path}', safe=''))") --hostname {host} | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+
+# 通过 MR API 获取关联的 pipeline（推荐，可查到 merge_request_event 类型的 pipeline）
+glab api "projects/${PROJECT_ID}/merge_requests/${MR_IID}/pipelines?per_page=1" \
+  --hostname {host}
+```
+
+**GitHub**（gh）：
+```bash
+# 获取 PR 关联的 check runs
+gh pr checks {PR_NUMBER} --repo {owner}/{repo}
+```
+
+#### 2. 轮询状态
+
+使用 **单个后台 Bash 命令**（`Bash(run_in_background=true)`）执行轮询循环。
+**禁止**用多个独立的 `sleep N && 查询` 命令手动轮询 — 必须使用下方的循环脚本。
+
+**轮询参数**：
+- 首次查询前等待：15 秒（pipeline 创建有延迟）
+- 轮询间隔：30 秒
+- 最大轮询次数：60 次（约 30 分钟）
+
+**GitLab 轮询脚本**（Bash `run_in_background=true`，变量由调用方填充）：
+
+```bash
+PROJECT_ID="{project_id}"
+MR_IID="{mr_iid}"
+HOST="{host}"
+MR_URL="{mr_url}"
+BRANCH="{branch}"
+TARGET="{target_branch}"
+
+sleep 15
+
+for i in $(seq 1 60); do
+  RESULT=$(glab api "projects/${PROJECT_ID}/merge_requests/${MR_IID}/pipelines?per_page=1" \
+    --hostname "$HOST" 2>/dev/null)
+
+  PIPELINE_ID=$(echo "$RESULT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d[0]['id'] if d else '')" 2>/dev/null)
+  STATUS=$(echo "$RESULT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d[0]['status'] if d else 'waiting')" 2>/dev/null)
+
+  if [ -z "$PIPELINE_ID" ]; then
+    echo "⏳ 等待 Pipeline 创建... (${i}/60)"
+    sleep 30
+    continue
+  fi
+
+  JOBS=$(glab api "projects/${PROJECT_ID}/pipelines/${PIPELINE_ID}/jobs" \
+    --hostname "$HOST" 2>/dev/null | python3 -c "
+import json, sys
+jobs = json.load(sys.stdin)
+parts = []
+icons = {'success':'✅','failed':'❌','running':'🔄','pending':'⏳','canceled':'🚫','created':'⏳'}
+for j in jobs:
+    parts.append(f\"{j['name']} {icons.get(j['status'],'❓')}\")
+print(' | '.join(parts))
+" 2>/dev/null)
+
+  ELAPSED=$((i * 30 + 15))
+  MINS=$((ELAPSED / 60))
+  SECS=$((ELAPSED % 60))
+  echo "⏳ Pipeline #${PIPELINE_ID}: ${STATUS} (${MINS}m${SECS}s) — ${JOBS}"
+
+  case "$STATUS" in
+    success)
+      echo ""
+      echo "✅ Pipeline #${PIPELINE_ID} passed (${MINS}m${SECS}s)"
+      echo "   MR: ${MR_URL}"
+      osascript -e "display notification \"Pipeline passed ✅\" with title \"CI/CD\" subtitle \"${BRANCH} → ${TARGET}\"" 2>/dev/null
+      exit 0
+      ;;
+    failed)
+      echo ""
+      echo "❌ Pipeline #${PIPELINE_ID} failed (${MINS}m${SECS}s)"
+      echo "   MR: ${MR_URL}"
+      osascript -e "display notification \"Pipeline failed ❌\" with title \"CI/CD\" subtitle \"${BRANCH}\"" 2>/dev/null
+      exit 1
+      ;;
+    canceled)
+      echo ""
+      echo "🚫 Pipeline #${PIPELINE_ID} canceled"
+      exit 0
+      ;;
+  esac
+
+  sleep 30
+done
+
+echo "⏰ 超时（30 分钟），请手动检查: ${MR_URL}"
+```
+
+**GitHub 轮询**：同理，用 `gh pr checks {PR_NUMBER} --repo {owner}/{repo}` 替代 glab api，检查所有 checks 是否 passed/failed。
+
+**轮询结束后处理**：
+- 脚本 exit 0（success/canceled/超时）→ 结束
+- 脚本 exit 1（failed）→ 进入步骤 3（失败分析）
+
+#### 3. 失败分析
+
+**3a. 拉取失败 job 日志**
+
+**GitLab**：
+```bash
+# 获取 pipeline 的所有 jobs
+glab api "projects/${PROJECT_ID}/pipelines/${PIPELINE_ID}/jobs" --hostname {host}
+
+# 筛选 status=failed 的 job，获取日志（trace 返回纯文本）
+glab api "projects/${PROJECT_ID}/jobs/${JOB_ID}/trace" --hostname {host}
+```
+
+**GitHub**：
+```bash
+# 获取失败的 workflow run 日志
+gh run view {run_id} --repo {owner}/{repo} --log-failed
+```
+
+**3b. 分析失败原因并分类**
+
+| 类型 | 判断依据 | 处理 |
+|------|----------|------|
+| lint 错误 | golangci-lint / eslint / flake8 等输出 | → 自动修复 |
+| 单元测试失败 | `go test` / jest / pytest 等输出 | → 自动修复 |
+| 编译错误 | `build failed` / `compilation error` | → 分析并给出修复建议 |
+| 基础设施问题 | timeout / network / docker pull | → 通知用户，建议 retry |
+| 其他 | 无法分类 | → 输出日志摘要，让用户判断 |
+
+**3c. 自动修复（仅 lint + test 类错误）**
+
+- 读取错误日志，定位具体文件和行号
+- 读取源文件，修复问题
+- **不 commit** — 修复完毕后通知用户确认
+
+```bash
+osascript -e 'display notification "Pipeline failed, auto-fix applied 🔧" with title "CI/CD" subtitle "Review fixes before commit"'
+```
+
+终端输出：
+```
+❌ Pipeline #12345 failed (lint)
+
+已自动修复：
+  - src/handler.go:42 — golangci-lint: unused variable
+  - src/handler.go:87 — golangci-lint: error not checked
+
+请检查修复后执行 /git:commit-push 重新提交。
+```
+
+**3d. 非自动修复类型**
+
+```bash
+osascript -e 'display notification "Pipeline failed ❌" with title "CI/CD" subtitle "{failed_job_name}"'
+```
+
+终端输出失败日志摘要 + 修复建议。
 
 ---
 

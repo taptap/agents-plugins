@@ -5,11 +5,11 @@ description: 创建符合规范的 git commit，自动从分支名提取 Task ID
 
 ## Context
 
-- 当前 git 状态: !`git status`
-- 当前分支: !`git branch --show-current`
-- Staged 和 unstaged 变更: !`git diff HEAD --stat`
-- 最近提交历史: !`git log --oneline -5`
-- no-ticket 配置: !`printenv GIT_ALLOW_NO_TICKET || echo true`
+- 当前 git 状态：!`git status`
+- 当前分支：!`git branch --show-current`
+- Staged 和 unstaged 变更：!`git diff HEAD --stat`
+- 最近提交历史：!`git log --oneline -5`
+- no-ticket 配置：!`printenv GIT_ALLOW_NO_TICKET || echo true`
 
 ## Your Task
 

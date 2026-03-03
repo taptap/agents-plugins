@@ -1,20 +1,23 @@
 # Git Commands Plugin
 
-Git 工作流命令插件，提供三种提交方式：commit、commit+push、commit+push+MR。
+Git 工作流命令插件，提供提交/推送/MR 创建、远程平台操作（GitHub/GitLab）、自动代码审查（Agent Team + Codex 双引擎）。
 
 ## 功能概览
 
 | 组件 | 触发方式 | 功能范围 | 智能前缀 |
 |------|----------|---------|----------|
 | `/git:commit` | 显式调用 | 仅 commit | ❌ 固定 feat/ |
-| `/git:commit-push` | 显式调用 | Commit + Push | ❌ 固定 feat/ |
-| `/git:commit-push-pr` | 显式调用 | Commit + Push + MR | ✅ 自动判断 |
+| `/git:commit-push` | 显式调用 | Commit + Push + 自动 Review | ❌ 固定 feat/ |
+| `/git:commit-push-pr` | 显式调用 | Commit + Push + MR + 自动 Review | ✅ 自动判断 |
 | `git-flow` Skill | 自然语言 | 根据用户意图决定 | ✅ 分析 diff |
+| `git-remote-operations` Skill | 远程操作 | PR/MR/Issue/Pipeline 管理 | — |
+| `code-reviewing` Skill | "review" 关键词 | MR 审查 + 本地审查 | — |
 
 **说明**：
 - **显式调用**: 用户直接输入斜杠命令，如 `/git:commit`
 - **自然语言**: 用户用自然语言描述，如"帮我提交代码"
 - **智能前缀**: 根据 git diff 分析自动判断分支类型（feat/, fix/, docs/, 等）
+- **自动 Review**: commit-push 和 commit-push-pr 在 push 前自动执行代码审查
 
 ## 架构说明
 
@@ -30,9 +33,19 @@ Git 工作流命令插件，提供三种提交方式：commit、commit+push、co
 - 分支检查逻辑 & 智能分支前缀判断
 - 文件排除规则
 
+🔍 **审查层** - [code-reviewing](skills/code-reviewing/SKILL.md)
+- Agent Team + Codex 双引擎审查
+- MR 审查（URL → worktree → 评论发布 → 自动 approve）
+- 本地审查（commit 后 push 前自动触发）
+- 5 维 checklist（安全/逻辑/资源/API/质量）
+
+🌐 **远程操作层** - [git-remote-operations](skills/git-remote-operations/SKILL.md)
+- GitHub/GitLab 平台自动检测（gh/glab）
+- PR/MR、Issue、Pipeline 完整 CLI 操作
+
 🎯 **触发层**
 - **Commands**: `/git:commit`, `/git:commit-push`, `/git:commit-push-pr`
-- **Skill**: `git-flow` (自然语言触发)
+- **Skills**: `git-flow` (自然语言触发), `code-reviewing` (审查触发), `git-remote-operations` (远程操作)
 
 ### 调用流程图
 
@@ -83,6 +96,7 @@ Git 工作流命令插件，提供三种提交方式：commit、commit+push、co
 | 特性 | commit | commit-push | commit-push-pr |
 |------|--------|-------------|----------------|
 | Commit | ✅ | ✅ | ✅ |
+| 自动 Review | ❌ | ✅ | ✅ |
 | Push | ❌ | ✅ | ✅ |
 | 创建 MR | ❌ | ❌ | ✅ |
 | 智能前缀 | ❌ | ❌ | ✅ |
@@ -123,6 +137,42 @@ Git 工作流命令插件，提供三种提交方式：commit、commit+push、co
 「提交并创建 MR」
 ```
 
+## 自动代码审查
+
+`commit-push` 和 `commit-push-pr` 在 push 前自动执行代码审查：
+
+```
+commit → 自动 review → 通过则 push → [创建 MR]
+                ↓
+          发现问题 → 用户批量选择修复/忽略
+                ↓
+          修复循环 → 自动检测 → amend → 增量 re-review
+```
+
+**审查引擎（Phase 1 + Phase 2）**：
+- Phase 1：Claude Reviewer (Opus subagent) + Codex CLI 并行独立审查
+- Phase 2：Agent Team debate — 2 个 Debater (Opus) 通过 SendMessage 逐条讨论，互相质疑确认
+
+**交互流程**：
+1. 输出完整详细报告（每个问题含调用链追踪 + 修复建议）
+2. AskUserQuestion (multiSelect) 批量勾选要修复的问题
+3. 修复后主动询问 → 自动检测 → amend → 增量 re-review
+4. 全部解决或忽略 → 继续 push
+
+## 远程平台操作
+
+`git-remote-operations` skill 提供 GitHub/GitLab 统一远程操作：
+- 自动检测平台（github.com → gh, gitlab.com/自托管 → glab）
+- PR/MR 创建、查看、更新、合并
+- Issue 管理、Pipeline/Workflow 操作
+
+## MR/PR 审查
+
+`code-reviewing` skill 提供 MR 级代码审查：
+- 给 MR URL → clone/worktree 隔离 → Agent Team 审查 → 发评论到 MR → 自动 approve
+- 本地审查 → 终端输出检查清单
+- 5 维 checklist：安全、逻辑、资源、API、质量
+
 ## 依赖
 
 ### 系统要求
@@ -136,21 +186,24 @@ Git 工作流命令插件，提供三种提交方式：commit、commit+push、co
 ### 外部依赖（可选）
 - 飞书任务管理（任务链接提取）
 - Jira 集成（TAP-xxx 任务 ID）
+- Codex CLI（代码审查双引擎，未安装自动降级为单引擎）
+- GitHub CLI `gh`（GitHub 远程操作）
+- GitLab CLI `glab`（GitLab 远程操作）
 
 ## 工作原理
 
 ### 任务 ID 提取策略（三级优先级）
 
-1. **优先级 1**: 从分支名自动提取
-   - 正则匹配: `TAP-[0-9]+`
-   - 示例: `feat/TAP-85404-user-profile` → `TAP-85404`
+1. **优先级 1**：从分支名自动提取
+   - 正则匹配：`TAP-[0-9]+`
+   - 示例：`feat/TAP-85404-user-profile` → `TAP-85404`
 
-2. **优先级 2**: 从用户输入提取
-   - 飞书链接: `https://*.feishu.cn/**`
-   - Jira 链接: `https://xindong.atlassian.net/browse/TAP-xxxxx`
-   - 直接 ID: `TAP-xxxxx`
+2. **优先级 2**：从用户输入提取
+   - 飞书链接：`https://*.feishu.cn/**`
+   - Jira 链接：`https://xindong.atlassian.net/browse/TAP-xxxxx`
+   - 直接 ID：`TAP-xxxxx`
 
-3. **优先级 3**: 询问用户
+3. **优先级 3**：询问用户
    - 使用 AskUserQuestion 工具
    - 提供 "提供任务 ID" 或 "使用 #no-ticket" 选项
 

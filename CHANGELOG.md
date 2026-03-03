@@ -1,5 +1,42 @@
 # Changelog
 
+## 0.1.19
+
+### Sync Plugin (0.1.15)
+
+- Added `/sync:lsp` command (detect project language + install LSP binary + enable plugins, with --check and --install modes)
+- Added LSP binary immediate installation to `/sync:basic` Phase 2.2 (no longer deferred to next session)
+- Added LSP documentation to README (commands table, config file locations, new member scenario)
+- Added code review step with `--skip-code-review` to Cursor template commands (git-commit-push, git-commit-push-pr)
+- Fixed MR template agent overwriting existing project templates (merged check+copy into atomic bash command)
+- Updated hooks-config agent to sync 9 scripts (added ensure-lsp-tool.sh, ensure-lsp.sh)
+- Updated hooks.json to include LSP tool and LSP binary hooks in SessionStart chain
+- Updated ensure-plugins.sh to include ralph plugin
+- Updated statusline.sh and ensure-golang.sh improvements
+
+### Git Plugin (0.1.8)
+
+- Added automatic code review step (before pusu) to commit-push and commit-push-pr commands with Agent Team + Codex dual-engine
+- Added `--skip-code-review` parameter to skip code review
+- Added `code-reviewing` skill (MR review + local review, 5-dimension checklist)
+- Added `git-remote-operations` skill (GitHub/GitLab platform auto-detection, PR/MR/Issue/Pipeline management)
+- Added GitHub PR support to commit-push-pr (gh CLI alongside glab)
+- Added Pipeline/CI monitoring after MR/PR creation (auto-poll + failure analysis + auto-fix for lint/test)
+- Changed commit-push-pr to support both GitLab and GitHub platforms
+- Updated git-flow snippets (branch creation, commit execution)
+
+### Quality Plugin (0.0.4)
+
+- Moved `code-reviewing` skill from quality plugin to git plugin (centralized review flow)
+- Removed SKILL.md, confidence-scoring.md, review-dimensions.md from quality/skills/code-reviewing/
+
+### Marketplace
+
+- Bumped version from 0.1.18 to 0.1.19
+- Updated sync plugin to version 0.1.15
+- Updated git plugin to version 0.1.8
+- Updated quality plugin to version 0.0.4
+
 ## 0.1.18
 
 ### Git Plugin (0.1.7)

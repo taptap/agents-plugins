@@ -18,7 +18,7 @@ permissionMode: acceptEdits
 
 如果 SCRIPTS_DIR 为 "无"，直接返回 failed 状态。
 
-### 1. 复制 7 个脚本到项目
+### 1. 复制 9 个脚本到项目
 
 ```bash
 mkdir -p {PROJECT_ROOT}/.claude/hooks/scripts
@@ -28,6 +28,8 @@ cp "{SCRIPTS_DIR}/ensure-statusline.sh" {PROJECT_ROOT}/.claude/hooks/scripts/
 cp "{SCRIPTS_DIR}/ensure-mcp.sh" {PROJECT_ROOT}/.claude/hooks/scripts/
 cp "{SCRIPTS_DIR}/ensure-plugins.sh" {PROJECT_ROOT}/.claude/hooks/scripts/
 cp "{SCRIPTS_DIR}/ensure-tool-search.sh" {PROJECT_ROOT}/.claude/hooks/scripts/
+cp "{SCRIPTS_DIR}/ensure-lsp-tool.sh" {PROJECT_ROOT}/.claude/hooks/scripts/
+cp "{SCRIPTS_DIR}/ensure-lsp.sh" {PROJECT_ROOT}/.claude/hooks/scripts/
 cp "{SCRIPTS_DIR}/statusline.sh" {PROJECT_ROOT}/.claude/hooks/scripts/
 ```
 
@@ -40,6 +42,8 @@ chmod +x {PROJECT_ROOT}/.claude/hooks/scripts/ensure-statusline.sh
 chmod +x {PROJECT_ROOT}/.claude/hooks/scripts/ensure-mcp.sh
 chmod +x {PROJECT_ROOT}/.claude/hooks/scripts/ensure-plugins.sh
 chmod +x {PROJECT_ROOT}/.claude/hooks/scripts/ensure-tool-search.sh
+chmod +x {PROJECT_ROOT}/.claude/hooks/scripts/ensure-lsp-tool.sh
+chmod +x {PROJECT_ROOT}/.claude/hooks/scripts/ensure-lsp.sh
 chmod +x {PROJECT_ROOT}/.claude/hooks/scripts/statusline.sh
 ```
 
@@ -65,7 +69,7 @@ chmod +x {PROJECT_ROOT}/.claude/hooks/scripts/statusline.sh
           },
           {
             "type": "command",
-            "command": "(bash .claude/hooks/scripts/ensure-statusline.sh; bash .claude/hooks/scripts/ensure-plugins.sh; bash .claude/hooks/scripts/ensure-tool-search.sh) >/dev/null 2>&1 &"
+            "command": "(bash .claude/hooks/scripts/ensure-statusline.sh; bash .claude/hooks/scripts/ensure-plugins.sh; bash .claude/hooks/scripts/ensure-tool-search.sh; bash .claude/hooks/scripts/ensure-lsp-tool.sh; bash .claude/hooks/scripts/ensure-lsp.sh) >/dev/null 2>&1 &"
           },
           {
             "type": "command",
@@ -92,6 +96,6 @@ chmod +x {PROJECT_ROOT}/.claude/hooks/scripts/statusline.sh
 ## 结果
 - 状态: success / failed / skipped
 - 详情:
-  - 脚本复制: [7 个脚本已复制/失败]
+  - 脚本复制: [9 个脚本已复制/失败]
   - hooks.json: [新建/已更新/无需更新]
 - 错误: [如有]

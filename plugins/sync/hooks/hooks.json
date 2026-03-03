@@ -14,7 +14,7 @@
           },
           {
             "type": "command",
-            "command": "(bash .claude/hooks/scripts/ensure-statusline.sh; bash .claude/hooks/scripts/ensure-plugins.sh; bash .claude/hooks/scripts/ensure-tool-search.sh) >/dev/null 2>&1 &"
+            "command": "(bash .claude/hooks/scripts/ensure-statusline.sh; bash .claude/hooks/scripts/ensure-plugins.sh; bash .claude/hooks/scripts/ensure-tool-search.sh; bash .claude/hooks/scripts/ensure-lsp-tool.sh; bash .claude/hooks/scripts/ensure-lsp.sh) >/dev/null 2>&1 &"
           },
           {
             "type": "command",
