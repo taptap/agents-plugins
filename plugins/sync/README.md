@@ -344,6 +344,7 @@ chmod +x .githooks/pre-commit
 
 ## 版本历史
 
+- **v0.1.17** - skills-sync 新增 review-rules 模板同步（不覆盖项目已有规则）
 - **v0.1.16** - review-checklist 不覆盖项目自定义版本；修正覆盖策略文档；修复 4 个 hook 脚本缺少可执行权限；Cursor 模板新增 Pipeline Watch
 - **v0.1.15** - 新增 `/sync:lsp` 命令（检测语言+安装 binary+启用插件）；`/sync:basic` LSP 首次即装不再延迟；Cursor 模板新增 code review 步骤（含 --skip-code-review）；修复 MR 模板覆盖问题（原子 bash）；hooks 新增 LSP 脚本；更新 statusline/ensure-golang
 - **v0.1.14** - 修复 10 个命令文件 allowed-tools 缺失问题；补齐 printenv、head、pwd、cp、ls、sort、tail、echo、wc、claude、bash、mv、tr 等命令权限声明；cursor-templates 同步修复

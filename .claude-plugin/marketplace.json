@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "TapTap Claude Code 插件库 - 提供开发工作流自动化插件",
-    "version": "0.1.20",
+    "version": "0.1.22",
     "pluginRoot": "./plugins"
   },
   "plugins": [
@@ -25,8 +25,8 @@
     {
       "name": "git",
       "source": "./plugins/git",
-      "description": "Git 工作流命令插件，提供提交/推送/MR、远程平台操作、自动代码审查（Agent Team + Codex）",
-      "version": "0.1.9",
+      "description": "Git 工作流命令插件，提供提交/推送/MR、远程平台操作、自动代码审查（Agent Team 审查+辩论 + Codex 双视角），支持项目自定义审查规则",
+      "version": "0.1.11",
       "author": {
         "name": "TapTap AI Team"
       },
@@ -38,7 +38,7 @@
       "name": "sync",
       "source": "./plugins/sync",
       "description": "项目配置同步插件，提供 MCP、LSP 和开发环境配置同步功能",
-      "version": "0.1.16",
+      "version": "0.1.18",
       "author": {
         "name": "TapTap AI Team"
       },

@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.1.21
+
+### Git Plugin (0.1.10)
+
+- Added project-level custom review rules support (review-rules.md with scope-based matching)
+- Redesigned code review engine: Agent Team with debate phase (2 members review independently then cross-validate)
+- Added review checklist loading with project customization support (shared with CI reviewer)
+- Updated plugin description to reflect new review architecture
+
+### Sync Plugin (0.1.17)
+
+- Added review-rules template sync to skills-sync agent (copies review-rules.md if not exists)
+- Added review-rules to `/sync:basic` output and override policy docs
+- Added review-rules.md template to sync plugin skills directory
+
+### Marketplace
+
+- Bumped version from 0.1.20 to 0.1.21
+- Updated git plugin to version 0.1.10
+- Updated sync plugin to version 0.1.17
+- Removed ralph plugin (still in development)
+
 ## 0.1.20
 
 ### Git Plugin (0.1.9)

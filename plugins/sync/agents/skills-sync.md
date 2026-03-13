@@ -47,6 +47,20 @@ test -f {PROJECT_ROOT}/.claude/skills/code-reviewing/review-checklist.md || \
 
 如果目标文件已存在，记录为 "已存在（跳过）"。
 
+### 4. 复制 review-rules（项目审查规则模板）
+
+如果 CHECKLIST_FOUND（review-rules 在同一目录）：
+```bash
+mkdir -p {PROJECT_ROOT}/.claude/skills/code-reviewing
+# 仅在文件不存在时复制（不覆盖项目已填写的规则）
+test -f {PROJECT_ROOT}/.claude/skills/code-reviewing/review-rules.md || \
+  cp "{SKILLS_DIR}/code-reviewing/review-rules.md" {PROJECT_ROOT}/.claude/skills/code-reviewing/
+```
+
+**重要**：使用 `test -f ... ||` 确保不覆盖项目已有的自定义规则。
+
+如果目标文件已存在，记录为 "已存在（跳过）"。
+
 ## 输出格式（严格遵循）
 
 ## 结果
@@ -54,4 +68,5 @@ test -f {PROJECT_ROOT}/.claude/skills/code-reviewing/review-checklist.md || \
 - 详情:
   - grafana-dashboard-design: [已复制/源目录不存在（跳过）]
   - review-checklist: [已复制/已存在（跳过）/源目录不存在（跳过）]
+  - review-rules: [已复制/已存在（跳过）/源目录不存在（跳过）]
 - 错误: [如有]

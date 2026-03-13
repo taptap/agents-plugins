@@ -183,6 +183,7 @@ bash {SCRIPTS_DIR}/detect-lsp.sh "$(pwd)"
   ✅ Claude Skills 同步: 成功
      - grafana-dashboard-design（Grafana Dashboard 设计规范）
      - review-checklist（Code Review 检查清单）[已复制/已存在（跳过）/源目录不存在（跳过）]
+     - review-rules（项目审查规则模板）[已复制/已存在（跳过）/源目录不存在（跳过）]
      - 位置: .claude/skills/
 
   ✅ Status Line 配置: 成功
@@ -337,7 +338,7 @@ bash {SCRIPTS_DIR}/detect-lsp.sh "$(pwd)"
    - **Cursor 同步**：直接覆盖（rules 和 commands 每次重新生成）
    - **Spec Skills**：直接覆盖（每次从 spec 插件重新生成 .mdc 文件）（仅 --with-spec 时执行）
    - **GitLab MR 模板**：已存在则跳过，不覆盖（保留项目自定义配置）
-   - **Claude Skills**：grafana-dashboard-design 直接覆盖；review-checklist 已存在则跳过（保留项目自定义版本）
+   - **Claude Skills**：grafana-dashboard-design 直接覆盖；review-checklist、review-rules 已存在则跳过（保留项目自定义版本）
    - **Status Line**：直接覆盖（每次重新复制脚本并更新配置）
    - 某步骤失败不影响后续步骤
 
