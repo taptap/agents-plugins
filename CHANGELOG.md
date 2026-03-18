@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.1.24 — Codex statusline fixes
+
+### Sync Plugin (0.1.20)
+
+- Fixed context usage showing 100% by using `last_token_usage.input_tokens` instead of cumulative `total_token_usage.total_tokens`
+- Fixed cross-instance context usage contamination by matching sessions via filename creation timestamp
+- Fixed tmux normal mode statusline not showing due to `_is_iterm2` incorrectly returning true (inherited `TERM_PROGRAM`)
+- Added `_is_tmux_cc()` to properly distinguish tmux -CC from normal tmux mode
+- Fixed tmux -CC mode "Unrecognized command from tmux" error by wrapping SetUserVar with tmux passthrough
+- Added `_iterm2_escape()` helper for automatic tmux passthrough wrapping
+- Auto-configure `allow-passthrough on` in tmux.conf (prefers `.tmux.conf.local` for framework compatibility)
+- Switched iTerm2 plist operations from direct file I/O to `defaults export/import` (cfprefsd) to prevent running iTerm2 from overwriting changes
+- Added `cleanup_iterm2()` function for proper Status Bar removal
+- Fixed zsh hooks update detection using shasum hash comparison instead of string equality
+- Added `/clean-codex-statusline` skill for complete statusline cleanup
+
+### Marketplace
+
+- Bumped version from 0.1.23 to 0.1.24
+- Updated sync plugin to version 0.1.20
+
 ## 0.1.23 — Codex compatibility
 
 ### Sync Plugin (0.1.19)

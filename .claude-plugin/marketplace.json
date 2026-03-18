@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "TapTap Claude Code 插件库 - 提供开发工作流自动化插件",
-    "version": "0.1.23",
+    "version": "0.1.24",
     "pluginRoot": "./plugins"
   },
   "plugins": [
@@ -38,7 +38,7 @@
       "name": "sync",
       "source": "./plugins/sync",
       "description": "项目配置同步插件，提供 MCP、LSP 和开发环境配置同步功能",
-      "version": "0.1.19",
+      "version": "0.1.20",
       "author": {
         "name": "TapTap AI Team"
       },

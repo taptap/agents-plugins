@@ -16,12 +16,30 @@ codex_status_active_file() {
   print -r -- "$HOME/.cache/codex-status/${state_key}.active"
 }
 
-# 检测是否在 iTerm2 环境（包括 tmux -CC 模式）
+# 检测是否在 iTerm2 环境（包括 tmux 内继承的 iTerm2 环境）
 _is_iterm2() {
   [[ "${TERM_PROGRAM:-}" == "iTerm.app" || -n "${ITERM_SESSION_ID:-}" ]] && return 0
-  # tmux -CC 模式：client_control_mode=1 表示 iTerm2 tmux 集成
-  [[ -n "${TMUX:-}" ]] && [[ "$(tmux display-message -p '#{client_control_mode}' 2>/dev/null)" == "1" ]] && return 0
+  [[ -n "${ITERM_PROFILE:-}" ]] && return 0
   return 1
+}
+
+# 检测是否在 tmux -CC（iTerm2 控制模式）
+_is_tmux_cc() {
+  [[ -n "${TMUX:-}" ]] || return 1
+  [[ "$(tmux display-message -p '#{client_control_mode}' 2>/dev/null)" == "1" ]] && return 0
+  return 1
+}
+
+# 发送 iTerm2 转义序列（tmux 内自动用 passthrough 包裹）
+_iterm2_escape() {
+  local seq="$1"
+  local target="${2:-/dev/tty}"
+  if [[ -n "${TMUX:-}" ]]; then
+    # tmux passthrough: \ePtmux;\e<seq>\e\\
+    printf '\033Ptmux;\033%s\033\\' "$seq" > "$target" 2>/dev/null
+  else
+    printf '%s' "$seq" > "$target" 2>/dev/null
+  fi
 }
 
 # iTerm2: 通过 SetUserVar 写入 status bar 数据（底部）
@@ -30,7 +48,7 @@ codex_iterm2_set_user_var() {
   local val="${1:-}"
   local encoded
   encoded="$(printf '%s' "$val" | base64 | tr -d '\r\n')"
-  printf '\033]1337;SetUserVar=%s=%s\a' "codex_status" "$encoded" > /dev/tty 2>/dev/null
+  _iterm2_escape "$(printf '\033]1337;SetUserVar=%s=%s\a' "codex_status" "$encoded")"
 }
 
 # 后台轮询更新 iTerm2 status bar（codex 运行期间）
@@ -48,11 +66,11 @@ codex_iterm2_watch() {
         st="$("$HOME/.local/bin/codex-status" --plain --state-key="$sk" "$wd" "codex" "" "$pid" 2>/dev/null)" || true
         if [[ -n "$st" ]]; then
           encoded="$(printf '%s' "$st" | base64 | tr -d '\r\n')"
-          printf '\033]1337;SetUserVar=%s=%s\a' "codex_status" "$encoded" > "$tty_dev" 2>/dev/null
+          _iterm2_escape "$(printf '\033]1337;SetUserVar=%s=%s\a' "codex_status" "$encoded")" "$tty_dev"
         fi
         sleep 5
       done
-      printf '\033]1337;SetUserVar=%s=%s\a' "codex_status" "" > "$tty_dev" 2>/dev/null
+      _iterm2_escape "$(printf '\033]1337;SetUserVar=%s=%s\a' "codex_status" "")" "$tty_dev"
     ) &
   ) 2>/dev/null
 }
@@ -70,7 +88,7 @@ codex_iterm2_auto_setup() {
 codex_tmux_apply_status() {
   [[ -n "$TMUX" ]] || return 0
   # tmux -CC 模式下不设 status-left（用 iTerm2 Status Bar 代替）
-  _is_iterm2 && return 0
+  _is_tmux_cc && return 0
   command -v tmux >/dev/null 2>&1 || return 0
   tmux set -g status-left '#[fg=#1f2335,bg=#7aa2f7,bold] TMUX #[default] #(~/.local/bin/codex-status --state-key="#{pane_id}" "#{pane_current_path}" "#{pane_current_command}" "#{pane_title}" "#{pane_pid}")' >/dev/null 2>&1
   tmux set -g window-status-format '' >/dev/null 2>&1

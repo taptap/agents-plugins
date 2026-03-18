@@ -351,19 +351,43 @@ def style(text: str, fg: str, bg: Optional[str] = None, bold: bool = False) -> s
     return f"#[{','.join(attrs)}] {text} "
 
 
+def _iterm2_prefs_read() -> Optional[dict]:
+    """Read iTerm2 preferences via 'defaults export' (works with running iTerm2)."""
+    import plistlib
+    result = subprocess.run(
+        ["defaults", "export", "com.googlecode.iterm2", "-"],
+        capture_output=True,
+    )
+    if result.returncode != 0:
+        return None
+    try:
+        return plistlib.loads(result.stdout)
+    except Exception:
+        return None
+
+
+def _iterm2_prefs_write(data: dict) -> bool:
+    """Write iTerm2 preferences via 'defaults import' (works with running iTerm2)."""
+    import plistlib
+    try:
+        xml = plistlib.dumps(data)
+    except Exception:
+        return False
+    result = subprocess.run(
+        ["defaults", "import", "com.googlecode.iterm2", "-"],
+        input=xml,
+        capture_output=True,
+    )
+    return result.returncode == 0
+
+
 def setup_iterm2() -> int:
     """Auto-configure iTerm2 Status Bar with codex_status component for all profiles."""
-    import plistlib
-
-    plist_path = pathlib.Path.home() / "Library" / "Preferences" / "com.googlecode.iterm2.plist"
-    if not plist_path.exists():
+    data = _iterm2_prefs_read()
+    if data is None:
         return 1
 
-    try:
-        with open(plist_path, "rb") as f:
-            plist = plistlib.load(f)
-    except Exception:
-        return 1
+    bookmarks = data.get("New Bookmarks", [])
 
     component = {
         "class": "iTermStatusBarSwiftyStringComponent",
@@ -410,12 +434,9 @@ def setup_iterm2() -> int:
     }
 
     changed = False
-    # Status Bar 位置设为底部（全局设置，0=top, 1=bottom）
-    if plist.get("StatusBarPosition") != 1:
-        plist["StatusBarPosition"] = 1
-        changed = True
+    data["StatusBarPosition"] = 1
 
-    for bookmark in plist.get("New Bookmarks", []):
+    for bookmark in bookmarks:
         if not bookmark.get("Show Status Bar", False):
             bookmark["Show Status Bar"] = True
             changed = True
@@ -433,11 +454,41 @@ def setup_iterm2() -> int:
             changed = True
 
     if changed:
-        try:
-            with open(plist_path, "wb") as f:
-                plistlib.dump(plist, f)
-            print("[codex-status] iTerm2 Status Bar 已自动配置，重启 iTerm2 后生效")
-        except Exception:
+        if _iterm2_prefs_write(data):
+            print("[codex-status] iTerm2 Status Bar 已自动配置（Cmd+Q 重启 iTerm2 生效）")
+        else:
+            return 1
+    return 0
+
+
+def cleanup_iterm2() -> int:
+    """Remove codex_status component from iTerm2 Status Bar for all profiles."""
+    data = _iterm2_prefs_read()
+    if data is None:
+        return 0
+
+    bookmarks = data.get("New Bookmarks", [])
+    changed = False
+    for bookmark in bookmarks:
+        layout = bookmark.get("Status Bar Layout", {})
+        comps = layout.get("components", [])
+        new_comps = [
+            c for c in comps
+            if "codex_status" not in str(
+                c.get("configuration", {}).get("knobs", {}).get("expression", "")
+            )
+        ]
+        if len(new_comps) != len(comps):
+            layout["components"] = new_comps
+            changed = True
+        if not new_comps and bookmark.get("Show Status Bar"):
+            bookmark["Show Status Bar"] = False
+            changed = True
+
+    if changed:
+        if _iterm2_prefs_write(data):
+            print("[codex-status] iTerm2 codex_status 已清除（Cmd+Q 重启 iTerm2 生效）")
+        else:
             return 1
     return 0
 
