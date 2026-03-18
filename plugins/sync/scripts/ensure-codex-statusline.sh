@@ -91,12 +91,44 @@ else
   fi
 fi
 
-# ========== 第三步：配置 iTerm2（仅 macOS） ==========
+# ========== 第三步：配置 tmux passthrough（tmux -CC 模式需要） ==========
+
+PASSTHROUGH_LINE="set -g allow-passthrough on"
+
+if command -v tmux >/dev/null 2>&1; then
+  # 检查 ~/.tmux.conf 和 ~/.tmux.conf.local 是否已配置
+  passthrough_found=false
+  for conf in "$HOME/.tmux.conf" "$HOME/.tmux.conf.local"; do
+    if [ -f "$conf" ] && grep -q "allow-passthrough" "$conf" 2>/dev/null; then
+      passthrough_found=true
+      break
+    fi
+  done
+  if [ "$passthrough_found" = "true" ]; then
+    echo "✅ tmux allow-passthrough 已配置"
+  else
+    # 优先写 .tmux.conf.local（gpakosz/.tmux 等框架的自定义文件）
+    TMUX_TARGET="$HOME/.tmux.conf.local"
+    [ ! -f "$TMUX_TARGET" ] && TMUX_TARGET="$HOME/.tmux.conf"
+    echo "" >> "$TMUX_TARGET"
+    echo "# Allow iTerm2 escape sequences to pass through tmux (required for tmux -CC mode)" >> "$TMUX_TARGET"
+    echo "$PASSTHROUGH_LINE" >> "$TMUX_TARGET"
+    echo "✅ 已在 $(basename "$TMUX_TARGET") 中启用 allow-passthrough"
+  fi
+  # 如果当前在 tmux 内，立即生效
+  if [ -n "${TMUX:-}" ]; then
+    tmux set -g allow-passthrough on 2>/dev/null || true
+  fi
+else
+  echo "⏭️  tmux 未安装，跳过 passthrough 配置"
+fi
+
+# ========== 第四步：配置 iTerm2（仅 macOS） ==========
 
 if [ "$(uname)" = "Darwin" ]; then
   # 运行 codex-status --setup-iterm2（内部幂等）
   if "$DST_BIN" --setup-iterm2 2>/dev/null; then
-    echo "✅ iTerm2 Status Bar 配置完成"
+    echo "✅ iTerm2 Status Bar 配置完成（首次配置需完全退出并重启 iTerm2）"
   else
     echo "⚠️  iTerm2 配置跳过（可能非 iTerm2 环境）"
   fi
