@@ -179,10 +179,6 @@ claude mcp remove <server-name> -s local
       "command": "npx",
       "args": ["-y", "@upstash/context7-mcp"],
       "env": {}
-    },
-    "sequential-thinking": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
     }
   }
 }

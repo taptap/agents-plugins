@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.1.23 — Codex compatibility
+
+### Sync Plugin (0.1.19)
+
+- Added codex-statusline skill with tmux and iTerm2 support (auto-detect terminal, display project/branch/model)
+- Made Codex MCP configuration optional (`--with-codex` flag) in mcp-feishu and mcp-feishu-project skills to save Codex context window space
+- Migrated hooks from project-level to $HOME-level (`~/.claude/hooks/`) for Codex $HOME workspace compatibility
+- Added cleanup of legacy project-level hooks in hooks-config agent
+- Removed sequential-thinking MCP from configuration and templates
+- Added sequential-thinking cleanup step to mcp-config agent
+- Simplified `/sync:mcp` command (context7 only)
+- Added plugin-status skill for runtime plugin diagnostics
+- Enhanced grafana-dashboard-design skill with expanded design specifications
+- Enhanced mcp-feishu and mcp-feishu-project skills with improved configuration flow
+- Expanded ensure-plugins.sh with additional plugin management logic
+
+### Git Plugin (0.1.12)
+
+- Added environment detection to auto-select review mode: Agent Team (Claude Code) or serial dual-perspective (Codex)
+- Added Mode B: serial cross-validation review for Codex — calls Claude CLI for first pass, agent does second pass, then merges findings
+- Added `.agents/skills/code-reviewing/` as fallback path for review checklist and rules ($HOME Codex compatibility)
+- Refactored git-flow into three standalone skills: commit, commit-push, commit-push-pr
+
+### Marketplace
+
+- Added `.agents/` symlink and `AGENTS.md` for Codex workspace compatibility
+- Fixed hooks.md frontmatter YAML indentation error
+- Bumped version from 0.1.22 to 0.1.23
+- Updated git plugin to version 0.1.12
+- Updated sync plugin to version 0.1.19
+
 ## 0.1.21
 
 ### Git Plugin (0.1.10)

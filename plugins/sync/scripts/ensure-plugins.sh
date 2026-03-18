@@ -1,6 +1,6 @@
 #!/bin/bash
-# ensure-plugins.sh - 自动确保 enabledPlugins 包含所有必要插件
-# SessionStart hook: 检查并合并 enabledPlugins 到 ~/.claude/settings.json
+# ensure-plugins.sh - 自动确保 enabledPlugins + extraKnownMarketplaces 完整
+# SessionStart hook: 检查并合并到 ~/.claude/settings.json
 # 后台执行，不阻塞 session 启动，配置在下次 session 生效
 
 set -e
@@ -20,20 +20,34 @@ has_command() {
 SETTINGS_FILE="$HOME/.claude/settings.json"
 
 # 期望的插件列表
-REQUIRED_PLUGINS=("spec@taptap-plugins" "sync@taptap-plugins" "git@taptap-plugins" "quality@taptap-plugins" "ralph@taptap-plugins")
+REQUIRED_PLUGINS=("spec@taptap-plugins" "sync@taptap-plugins" "git@taptap-plugins" "quality@taptap-plugins")
 
-# 检查是否已有全部插件
-check_has_all_plugins() {
+# 需要清理的废弃插件
+DEPRECATED_PLUGINS=("ralph@taptap-plugins")
+
+# 检查是否已有全部插件且无废弃插件
+check_plugins_ok() {
   local file="$1"
   if [ ! -f "$file" ]; then
     return 1
   fi
   if has_command jq; then
+    # 检查必要插件都存在
     for plugin in "${REQUIRED_PLUGINS[@]}"; do
       if ! jq -e ".enabledPlugins[\"$plugin\"]" "$file" >/dev/null 2>&1; then
         return 1
       fi
     done
+    # 检查废弃插件不存在
+    for plugin in "${DEPRECATED_PLUGINS[@]}"; do
+      if jq -e ".enabledPlugins[\"$plugin\"]" "$file" >/dev/null 2>&1; then
+        return 1
+      fi
+    done
+    # 检查 extraKnownMarketplaces.taptap-plugins 存在
+    if ! jq -e '.extraKnownMarketplaces["taptap-plugins"]' "$file" >/dev/null 2>&1; then
+      return 1
+    fi
     return 0
   fi
   if has_command python3; then
@@ -42,16 +56,19 @@ import json, sys
 with open('$file') as f:
     d = json.load(f)
 plugins = d.get('enabledPlugins', {})
-required = ['spec@taptap-plugins', 'sync@taptap-plugins', 'git@taptap-plugins', 'quality@taptap-plugins', 'ralph@taptap-plugins']
-sys.exit(0 if all(k in plugins for k in required) else 1)
+marketplaces = d.get('extraKnownMarketplaces', {})
+required = ['spec@taptap-plugins', 'sync@taptap-plugins', 'git@taptap-plugins', 'quality@taptap-plugins']
+deprecated = ['ralph@taptap-plugins']
+has_marketplace = 'taptap-plugins' in marketplaces
+sys.exit(0 if all(k in plugins for k in required) and not any(k in plugins for k in deprecated) and has_marketplace else 1)
 " 2>/dev/null
     return $?
   fi
   return 1
 }
 
-if check_has_all_plugins "$SETTINGS_FILE"; then
-  echo "✅ enabledPlugins 已包含全部插件，跳过"
+if check_plugins_ok "$SETTINGS_FILE"; then
+  echo "✅ enabledPlugins 已包含全部插件且无废弃插件，跳过"
   exit 0
 fi
 
@@ -60,17 +77,25 @@ echo "正在配置 enabledPlugins..."
 # jq 优先
 if has_command jq; then
   if [ -f "$SETTINGS_FILE" ]; then
-    jq '.enabledPlugins = ((.enabledPlugins // {}) + {
+    jq '(.enabledPlugins // {}) as $ep |
+    .enabledPlugins = ($ep + {
       "spec@taptap-plugins": true,
       "sync@taptap-plugins": true,
       "git@taptap-plugins": true,
-      "quality@taptap-plugins": true,
-      "ralph@taptap-plugins": true
+      "quality@taptap-plugins": true
+    } | del(.["ralph@taptap-plugins"])) |
+    .extraKnownMarketplaces = ((.extraKnownMarketplaces // {}) + {
+      "taptap-plugins": {
+        "source": {
+          "source": "github",
+          "repo": "taptap/claude-plugins-marketplace"
+        }
+      }
     })' "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp" \
       && mv "${SETTINGS_FILE}.tmp" "$SETTINGS_FILE"
   else
     mkdir -p "$(dirname "$SETTINGS_FILE")"
-    echo '{"enabledPlugins": {"spec@taptap-plugins": true, "sync@taptap-plugins": true, "git@taptap-plugins": true, "quality@taptap-plugins": true, "ralph@taptap-plugins": true}}' \
+    echo '{"enabledPlugins": {"spec@taptap-plugins": true, "sync@taptap-plugins": true, "git@taptap-plugins": true, "quality@taptap-plugins": true}, "extraKnownMarketplaces": {"taptap-plugins": {"source": {"source": "github", "repo": "taptap/claude-plugins-marketplace"}}}}' \
       | jq '.' > "${SETTINGS_FILE}.tmp" \
       && mv "${SETTINGS_FILE}.tmp" "$SETTINGS_FILE"
   fi
@@ -109,8 +134,21 @@ def main():
     plugins["sync@taptap-plugins"] = True
     plugins["git@taptap-plugins"] = True
     plugins["quality@taptap-plugins"] = True
-    plugins["ralph@taptap-plugins"] = True
+    plugins.pop("ralph@taptap-plugins", None)  # 清理已废弃的插件
     data["enabledPlugins"] = plugins
+
+    # 确保 extraKnownMarketplaces 包含 taptap-plugins
+    marketplaces = data.get("extraKnownMarketplaces", {})
+    if not isinstance(marketplaces, dict):
+        marketplaces = {}
+    if "taptap-plugins" not in marketplaces:
+        marketplaces["taptap-plugins"] = {
+            "source": {
+                "source": "github",
+                "repo": "taptap/claude-plugins-marketplace"
+            }
+        }
+    data["extraKnownMarketplaces"] = marketplaces
 
     dir_path = os.path.dirname(path)
     if dir_path and not os.path.exists(dir_path):
@@ -131,7 +169,7 @@ def main():
         print("⚠️  settings.json 写入失败，跳过")
         return 0
 
-    print("✅ 已配置 enabledPlugins (python3)")
+    print("✅ 已配置 enabledPlugins + extraKnownMarketplaces (python3)")
     return 0
 
 if __name__ == "__main__":

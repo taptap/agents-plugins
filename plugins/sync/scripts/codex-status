@@ -1,0 +1,540 @@
+#!/usr/bin/env python3
+import glob
+import json
+import os
+import pathlib
+import re
+import subprocess
+import sys
+import time
+from typing import Optional, Tuple
+
+
+CODEX_HOME = pathlib.Path.home() / ".codex"
+CONFIG_FILE = CODEX_HOME / "config.toml"
+SESSIONS_DIR = CODEX_HOME / "sessions"
+STATE_DIR = pathlib.Path.home() / ".cache" / "codex-status"
+
+
+def read_model_from_config() -> str:
+    model = "codex"
+    effort = None
+    try:
+        with CONFIG_FILE.open("r", encoding="utf-8") as fh:
+            for raw in fh:
+                line = raw.strip()
+                if line.startswith("model = "):
+                    model = line.split("=", 1)[1].strip().strip('"')
+                elif line.startswith("model_reasoning_effort = "):
+                    effort = line.split("=", 1)[1].strip().strip('"')
+    except FileNotFoundError:
+        return model
+    return f"{model} {effort}" if effort else model
+
+
+def read_codex_version() -> str:
+    try:
+        out = subprocess.check_output(
+            ["codex", "--version"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
+    except (OSError, subprocess.CalledProcessError):
+        return "v?"
+    parts = out.split()
+    for part in parts:
+        if part.startswith("0.") or part.startswith("1.") or part.startswith("2."):
+            return f"v{part}"
+        if part.startswith("v") and len(part) > 1:
+            return part
+    return f"v{out}" if out else "v?"
+
+
+def parse_session_creation_time(filepath: str) -> Optional[float]:
+    """Extract session creation timestamp from filename.
+
+    Filename format: rollout-YYYY-MM-DDTHH-MM-SS-<uuid>.jsonl
+    """
+    basename = os.path.basename(filepath)
+    m = re.match(r"rollout-(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2})-", basename)
+    if not m:
+        return None
+    try:
+        dt_str = m.group(1).replace("T", " ").replace("-", "", 2)
+        # "20260318 16-21-01" -> parse
+        parts = m.group(1).split("T")
+        date_part = parts[0]  # 2026-03-18
+        time_part = parts[1].replace("-", ":")  # 16:21:01
+        import datetime
+        dt = datetime.datetime.strptime(
+            f"{date_part} {time_part}", "%Y-%m-%d %H:%M:%S"
+        )
+        return dt.timestamp()
+    except (ValueError, IndexError):
+        return None
+
+
+def iter_session_files():
+    pattern = str(SESSIONS_DIR / "**" / "*.jsonl")
+    files = glob.glob(pattern, recursive=True)
+    return sorted(files, key=os.path.getmtime, reverse=True)
+
+
+def current_repo_root(path: str) -> Optional[str]:
+    p = pathlib.Path(path).expanduser()
+    try:
+        root = subprocess.check_output(
+            ["git", "-C", str(p), "rev-parse", "--show-toplevel"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
+        return root or None
+    except subprocess.CalledProcessError:
+        return None
+
+
+def _parse_session_data(path: str) -> Tuple[
+    Optional[int], Optional[int], Optional[str], Optional[str], Optional[str]
+]:
+    """Parse a single session file and return (ctx_input, window, model, effort, cwd)."""
+    last_total = None
+    last_window = None
+    last_model = None
+    last_effort = None
+    session_cwd = None
+    with open(path, "r", encoding="utf-8") as fh:
+        for raw in fh:
+            try:
+                event = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            if event.get("type") == "session_meta":
+                payload = event.get("payload", {})
+                cwd = payload.get("cwd")
+                if isinstance(cwd, str) and cwd:
+                    session_cwd = cwd
+            elif event.get("type") == "event_msg":
+                payload = event.get("payload", {})
+                if payload.get("type") == "token_count":
+                    info = payload.get("info") or {}
+                    # Use last_token_usage.input_tokens for context window fill,
+                    # NOT total_token_usage.total_tokens (which is cumulative across turns)
+                    last_usage = info.get("last_token_usage") or {}
+                    ctx_input = last_usage.get("input_tokens")
+                    window = info.get("model_context_window")
+                    if isinstance(ctx_input, int):
+                        last_total = ctx_input
+                    if isinstance(window, int):
+                        last_window = window
+            elif event.get("type") == "turn_context":
+                payload = event.get("payload", {})
+                cwd = payload.get("cwd")
+                if isinstance(cwd, str) and cwd and session_cwd is None:
+                    session_cwd = cwd
+                model = payload.get("model")
+                if isinstance(model, str) and model:
+                    last_model = model
+                effort = payload.get("effort")
+                if isinstance(effort, str) and effort:
+                    last_effort = effort
+    return last_total, last_window, last_model, last_effort, session_cwd
+
+
+def read_latest_codex_usage(
+    pane_path: str, started_at: Optional[float] = None
+) -> Tuple[Optional[int], Optional[int], Optional[str], Optional[str], Optional[str]]:
+    repo_root = current_repo_root(pane_path)
+    target_cwd = str(pathlib.Path(pane_path).expanduser().resolve())
+    resolved_repo = str(pathlib.Path(repo_root).resolve()) if repo_root else None
+
+    # When started_at is available, find the session created closest to activation time.
+    # This prevents cross-talk between multiple Codex instances in the same repo.
+    if started_at is not None:
+        best_match = None
+        best_delta = float("inf")
+        for path in iter_session_files():
+            try:
+                file_mtime = os.path.getmtime(path)
+            except OSError:
+                continue
+            # Skip files last modified before activation
+            if file_mtime < started_at - 1:
+                continue
+            # Parse creation time from filename for precise matching
+            creation_time = parse_session_creation_time(path)
+            if creation_time is None:
+                continue
+            # Session must be created within a reasonable window around activation
+            # (allow 60s before to 30s after, covering preexec → codex startup delay)
+            delta = abs(creation_time - started_at)
+            if creation_time < started_at - 60 or creation_time > started_at + 30:
+                continue
+            try:
+                data = _parse_session_data(path)
+            except OSError:
+                continue
+            _, _, _, _, session_cwd = data
+            if not session_cwd:
+                continue
+            try:
+                session_cwd_resolved = str(pathlib.Path(session_cwd).expanduser().resolve())
+            except OSError:
+                continue
+            if resolved_repo:
+                if session_cwd_resolved != resolved_repo:
+                    continue
+            elif session_cwd_resolved != target_cwd:
+                continue
+            if delta < best_delta:
+                best_delta = delta
+                best_match = data
+        if best_match and (best_match[0] is not None or best_match[2] is not None):
+            return best_match
+
+    # Fallback: no started_at or no match found — use original newest-first scan
+    for path in iter_session_files():
+        try:
+            data = _parse_session_data(path)
+        except OSError:
+            continue
+        _, _, _, _, session_cwd = data
+        if not session_cwd:
+            continue
+        try:
+            session_cwd_resolved = str(pathlib.Path(session_cwd).expanduser().resolve())
+        except OSError:
+            continue
+        if resolved_repo:
+            if session_cwd_resolved != resolved_repo:
+                continue
+        elif session_cwd_resolved != target_cwd:
+            continue
+        if data[0] is not None or data[2] is not None:
+            return data
+    return None, None, None, None, None
+
+
+def current_repo_and_branch(path: str) -> Tuple[str, str]:
+    p = pathlib.Path(path).expanduser()
+    repo = p.name
+    branch = "-"
+    try:
+        root = subprocess.check_output(
+            ["git", "-C", str(p), "rev-parse", "--show-toplevel"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
+        if root:
+            repo = pathlib.Path(root).name
+            branch = subprocess.check_output(
+                ["git", "-C", str(p), "branch", "--show-current"],
+                stderr=subprocess.DEVNULL,
+                text=True,
+            ).strip() or "detached"
+    except subprocess.CalledProcessError:
+        pass
+    return repo, branch
+
+
+def descendant_commands(pid: int) -> str:
+    try:
+        out = subprocess.check_output(
+            ["pgrep", "-P", str(pid)],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
+    except (OSError, subprocess.CalledProcessError):
+        return ""
+    child_pids = [x for x in out.splitlines() if x.strip().isdigit()]
+    commands = []
+    for child in child_pids:
+        try:
+            cmd = subprocess.check_output(
+                ["ps", "-p", child, "-o", "command="],
+                stderr=subprocess.DEVNULL,
+                text=True,
+            ).strip()
+            if cmd:
+                commands.append(cmd)
+        except (OSError, subprocess.CalledProcessError):
+            continue
+    return " | ".join(commands)
+
+
+def is_active_codex(command: str, title: str, pane_pid: str, force: bool) -> bool:
+    if force:
+        return True
+    command = (command or "").strip().lower()
+    title = (title or "").strip().lower()
+    if "claude code" in title:
+        return False
+    if re.fullmatch(r"\d+\.\d+\.\d+", command):
+        return False
+    if command in {"codex", "volta-shim"}:
+        return True
+    if "openai codex" in title:
+        return True
+    if pane_pid.isdigit():
+        descendants = descendant_commands(int(pane_pid)).lower()
+        if "codex" in descendants:
+            return True
+    return False
+
+
+def render_bar(pct: int, width: int = 10, plain: bool = False) -> str:
+    pct = max(0, min(100, pct))
+    filled = max(0, min(width, round(width * pct / 100)))
+    if plain:
+        return "▰" * filled + "▱" * (width - filled)
+    return "█" * filled + "░" * (width - filled)
+
+
+def state_file_for_key(key: str) -> pathlib.Path:
+    safe = re.sub(r"[^A-Za-z0-9._-]", "_", key)
+    return STATE_DIR / f"{safe}.json"
+
+
+def active_file_for_key(key: str) -> pathlib.Path:
+    safe = re.sub(r"[^A-Za-z0-9._-]", "_", key)
+    return STATE_DIR / f"{safe}.active"
+
+
+def set_active(state_key: str, pane_path: str) -> int:
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "cwd": str(pathlib.Path(pane_path).expanduser()),
+        "started_at": time.time(),
+    }
+    active_file_for_key(state_key).write_text(json.dumps(payload), encoding="utf-8")
+    return 0
+
+
+def clear_active(state_key: str) -> int:
+    try:
+        active_file_for_key(state_key).unlink()
+    except FileNotFoundError:
+        pass
+    return 0
+
+
+def is_active_marker_set(state_key: Optional[str]) -> bool:
+    if not state_key:
+        return False
+    return active_file_for_key(state_key).exists()
+
+
+def read_active_cwd(state_key: Optional[str]) -> Optional[str]:
+    meta = read_active_meta(state_key)
+    if not meta:
+        return None
+    cwd = meta.get("cwd")
+    return cwd if isinstance(cwd, str) and cwd else None
+
+
+def read_active_meta(state_key: Optional[str]) -> Optional[dict]:
+    if not state_key:
+        return None
+    path = active_file_for_key(state_key)
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def style(text: str, fg: str, bg: Optional[str] = None, bold: bool = False) -> str:
+    attrs = [f"fg={fg}"]
+    if bg is not None:
+        attrs.append(f"bg={bg}")
+    if bold:
+        attrs.append("bold")
+    return f"#[{','.join(attrs)}] {text} "
+
+
+def setup_iterm2() -> int:
+    """Auto-configure iTerm2 Status Bar with codex_status component for all profiles."""
+    import plistlib
+
+    plist_path = pathlib.Path.home() / "Library" / "Preferences" / "com.googlecode.iterm2.plist"
+    if not plist_path.exists():
+        return 1
+
+    try:
+        with open(plist_path, "rb") as f:
+            plist = plistlib.load(f)
+    except Exception:
+        return 1
+
+    component = {
+        "class": "iTermStatusBarSwiftyStringComponent",
+        "configuration": {
+            "knobs": {
+                "base: priority": 5.0,
+                "maxwidth": float("inf"),
+                "expression": "\\(user.codex_status)",
+                "shared font": "",
+                "minwidth": 0,
+                "shared text color": {
+                    "Red Component": 0.627,
+                    "Color Space": "sRGB",
+                    "Blue Component": 0.898,
+                    "Alpha Component": 1.0,
+                    "Green Component": 0.773,
+                },
+                "shared background color": {
+                    "Red Component": 0.0,
+                    "Color Space": "sRGB",
+                    "Blue Component": 0.0,
+                    "Alpha Component": 1.0,
+                    "Green Component": 0.0,
+                },
+                "base: compression resistance": 1,
+            },
+            "layout advanced configuration dictionary value": {
+                "remove empty components": False,
+                "auto-rainbow style": 0,
+                "font": ".AppleSystemUIFont 12",
+                "algorithm": 0,
+            },
+        },
+    }
+
+    layout = {
+        "components": [component],
+        "advanced configuration": {
+            "remove empty components": True,
+            "auto-rainbow style": 0,
+            "font": ".SFNS-Regular 12",
+            "algorithm": 0,
+        },
+    }
+
+    changed = False
+    # Status Bar 位置设为底部（全局设置，0=top, 1=bottom）
+    if plist.get("StatusBarPosition") != 1:
+        plist["StatusBarPosition"] = 1
+        changed = True
+
+    for bookmark in plist.get("New Bookmarks", []):
+        if not bookmark.get("Show Status Bar", False):
+            bookmark["Show Status Bar"] = True
+            changed = True
+        existing = bookmark.get("Status Bar Layout", {})
+        has_codex = False
+        for comp in existing.get("components", []):
+            expr = (
+                comp.get("configuration", {}).get("knobs", {}).get("expression", "")
+            )
+            if "codex_status" in expr:
+                has_codex = True
+                break
+        if not has_codex:
+            bookmark["Status Bar Layout"] = layout
+            changed = True
+
+    if changed:
+        try:
+            with open(plist_path, "wb") as f:
+                plistlib.dump(plist, f)
+            print("[codex-status] iTerm2 Status Bar 已自动配置，重启 iTerm2 后生效")
+        except Exception:
+            return 1
+    return 0
+
+
+def main() -> int:
+    plain = False
+    force = False
+    set_active_key = None
+    clear_active_key = None
+    do_setup_iterm2 = False
+    state_key = None
+    args = []
+    for arg in sys.argv[1:]:
+        if arg == "--plain":
+            plain = True
+        elif arg == "--force":
+            force = True
+        elif arg == "--setup-iterm2":
+            do_setup_iterm2 = True
+        elif arg.startswith("--set-active="):
+            set_active_key = arg.split("=", 1)[1]
+        elif arg.startswith("--clear-active="):
+            clear_active_key = arg.split("=", 1)[1]
+        elif arg.startswith("--state-key="):
+            state_key = arg.split("=", 1)[1]
+        else:
+            args.append(arg)
+
+    pane_path = args[0] if len(args) > 0 else str(pathlib.Path.home())
+    pane_command = args[1] if len(args) > 1 else ""
+    pane_title = args[2] if len(args) > 2 else ""
+    pane_pid = args[3] if len(args) > 3 else ""
+
+    if do_setup_iterm2:
+        return setup_iterm2()
+    if set_active_key:
+        return set_active(set_active_key, pane_path)
+    if clear_active_key:
+        return clear_active(clear_active_key)
+
+    if state_key:
+        if not is_active_marker_set(state_key):
+            return 0
+    elif not is_active_codex(pane_command, pane_title, pane_pid, force):
+        return 0
+
+    active_meta = read_active_meta(state_key)
+    active_cwd = None
+    active_started_at = None
+    if active_meta:
+        cwd = active_meta.get("cwd")
+        if isinstance(cwd, str) and cwd:
+            active_cwd = cwd
+        started_at = active_meta.get("started_at")
+        if isinstance(started_at, (int, float)):
+            active_started_at = float(started_at)
+    data_path = active_cwd or pane_path
+    model = read_model_from_config()
+    total, window, _model_runtime, _effort_runtime, _session_cwd = read_latest_codex_usage(
+        data_path, active_started_at
+    )
+    codex_version = read_codex_version()
+    pct_used = None
+    if total is not None and window:
+        pct_used = min(100, max(0, int(total * 100 / window)))
+    repo_path = _session_cwd or data_path
+    repo, branch = current_repo_and_branch(repo_path)
+
+    if plain:
+        pct_label = "-" if pct_used is None else f"{pct_used}%"
+        bar = "----------" if pct_used is None else render_bar(pct_used, plain=True)
+        if branch and branch != "-":
+            repo_part = f"{repo} git:({branch})"
+        else:
+            repo_part = repo
+        sys.stdout.write(
+            f"[{model}] | {repo_part} | {bar} {pct_label} | {codex_version}"
+        )
+        return 0
+
+    parts = [style(f"[{model}]", "colour213", bold=True)]
+    parts.append(style("|", "colour245"))
+    parts.append(style(f"{repo} ", "colour45", bold=True))
+    parts.append(style(f"git:({branch})", "colour99", bold=True))
+    parts.append(style("|", "colour245"))
+    if pct_used is None:
+        parts.append(style("----------", "colour240", bold=True))
+        parts.append(style("-", "colour250", bold=True))
+    else:
+        parts.append(style(render_bar(pct_used), "colour46", bold=True))
+        parts.append(style(f"{pct_used}%", "colour250", bold=True))
+    parts.append(style("|", "colour245"))
+    parts.append(style(codex_version, "colour244"))
+    parts.append("#[default]")
+    sys.stdout.write("".join(parts))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

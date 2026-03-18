@@ -1,5 +1,5 @@
 #!/bin/bash
-# ensure-mcp.sh - 自动配置 MCP 服务器 (context7 + sequential-thinking)
+# ensure-mcp.sh - 自动配置 MCP 服务器 (context7) + 清理废弃 MCP
 # SessionStart hook: 检查 ~/.claude.json 并添加缺失的 MCP 配置
 # 后台执行，不阻塞 session 启动，配置在下次 session 生效
 
@@ -112,14 +112,12 @@ ensure_mcp_jq() {
     echo "✅ context7 已配置，跳过"
   fi
 
-  # 检查并添加 sequential-thinking
-  if ! jq -e '.mcpServers["sequential-thinking"]' "$file" >/dev/null 2>&1; then
-    jq '.mcpServers["sequential-thinking"] = {"command":"npx","args":["-y","@modelcontextprotocol/server-sequential-thinking"]}' \
+  # 清理已废弃的 sequential-thinking（如果存在）
+  if jq -e '.mcpServers["sequential-thinking"]' "$file" >/dev/null 2>&1; then
+    jq 'del(.mcpServers["sequential-thinking"])' \
       "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
-    echo "✅ 已添加 sequential-thinking MCP"
+    echo "🗑️ 已移除 sequential-thinking MCP（已废弃）"
     changed=true
-  else
-    echo "✅ sequential-thinking 已配置，跳过"
   fi
 
   if [ "$changed" = "false" ]; then
@@ -153,12 +151,10 @@ MCP_SERVERS = {
         "command": "npx",
         "args": ["-y", "@upstash/context7-mcp"],
         "env": {}
-    },
-    "sequential-thinking": {
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
     }
 }
+
+DEPRECATED_SERVERS = ["sequential-thinking"]
 
 def get_project_path():
     """获取当前项目路径"""
@@ -247,6 +243,13 @@ def main():
             changed = True
         else:
             print(f"✅ {name} 已配置，跳过")
+
+    # 清理废弃 MCP
+    for name in DEPRECATED_SERVERS:
+        if name in data["mcpServers"]:
+            del data["mcpServers"][name]
+            print(f"🗑️ 已移除 {name} MCP（已废弃）")
+            changed = True
 
     if not changed:
         print("✅ MCP 配置已完整，无需更新")

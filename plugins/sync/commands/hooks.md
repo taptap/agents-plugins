@@ -1,6 +1,6 @@
 ---
 allowed-tools: Read, Write, Edit, Bash(mkdir:*), Bash(chmod:*), Bash(test:*), Bash(cat:*), Bash(pwd:*), Bash(cp:*), Bash(ls:*), Bash(sort:*), Bash(tail:*), Bash(echo:*)
- description: 同步 plugin hooks 配置到项目级，启用自动更新功能
+description: 同步 plugin hooks 配置到项目级，启用自动更新功能
 ---
 
 ## Context
@@ -10,7 +10,7 @@ allowed-tools: Read, Write, Edit, Bash(mkdir:*), Bash(chmod:*), Bash(test:*), Ba
 1. **启用自动更新**：将 marketplace 的 `autoUpdate` 设为 true（后续由 Claude 自动更新插件）
 2. **CLI 工具检测**：检测并自动安装 gh/glab CLI 工具，检查认证状态
 3. **状态栏配置**：自动复制 statusline.sh 到 `~/.claude/scripts/` 并配置 `~/.claude/settings.json`
-4. **MCP 配置**：自动配置 context7 + sequential-thinking MCP 到 `~/.claude.json`
+4. **MCP 配置**：自动配置 context7 MCP 到 `~/.claude.json`
 5. **插件启用**：确保 `enabledPlugins` 包含 spec, sync, git, quality 插件
 6. **ToolSearch 配置**：确保 `env.ENABLE_TOOL_SEARCH` 已配置（不覆盖已有值）
 
@@ -172,7 +172,7 @@ test -f .claude/hooks/hooks.json && echo "存在" || echo "不存在"
 
   📌 SessionStart Hook 4: MCP 配置（后台）
      脚本: .claude/hooks/scripts/ensure-mcp.sh
-     功能: 配置 context7 + sequential-thinking MCP 到 ~/.claude.json
+     功能: 配置 context7 MCP 到 ~/.claude.json + 清理废弃 MCP
 
 生效方式：
   重启 Claude Code 会话后，SessionStart hook 会自动执行

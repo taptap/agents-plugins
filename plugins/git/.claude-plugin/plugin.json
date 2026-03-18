@@ -1,7 +1,7 @@
 {
   "name": "git",
   "description": "Git 工作流命令插件，提供提交/推送/MR 创建、远程平台操作（GitHub/GitLab）、自动代码审查（Agent Team 审查+辩论 + Codex 双视角），支持项目自定义审查清单",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "author": {
     "name": "TapTap AI Team"
   }

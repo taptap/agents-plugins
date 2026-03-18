@@ -63,7 +63,7 @@ One-click configuration for MCP, auto-update, and Cursor synchronization:
 
 **Included features:**
 
-- ✅ Configure context7 and sequential-thinking MCP (automatically fetch latest documentation)
+- ✅ Configure context7 MCP (automatically fetch latest documentation)
 - ✅ Enable plugin auto-reload + CLI tool detection (restart session after modifications to take effect)
 - ✅ Sync configuration to Cursor (including Spec Skills rules)
 - ✅ Sync GitLab Merge Request default template
@@ -84,10 +84,10 @@ One-click configuration for MCP, auto-update, and Cursor synchronization:
 
 | Plugin  | Version | Description                                                                                          |
 | ------- | ------- | ---------------------------------------------------------------------------------------------------- |
-| spec    | 0.1.3   | Spec-Driven Development workflow plugin                                                              |
-| git     | 0.1.6   | Git workflow automation plugin (three commit modes: commit, commit+push, commit+push+MR)             |
-| sync    | 0.1.13  | Dev environment config sync plugin (MCP + Hooks + Cursor + Spec Skills rules + Claude Skills)        |
-| quality | 0.0.2   | AI-powered code quality plugin (9 parallel Agents: Bug detection, code quality, security, performance) |
+| spec    | 0.1.4   | Spec-Driven Development workflow plugin                                                              |
+| git     | 0.1.12  | Git workflow automation plugin (commit/push/MR + dual-mode code review + remote platform ops)        |
+| sync    | 0.1.19  | Dev environment config sync plugin (MCP + LSP + Hooks + Cursor + Claude Skills)                      |
+| quality | 0.0.4   | AI-powered code quality plugin (9 parallel Agents: Bug detection, code quality, security, performance) |
 
 
 See the README.md in each plugin directory for detailed documentation.
@@ -257,7 +257,7 @@ Use AI-powered code review to automatically detect potential issues:
 /sync:basic
 
 # Or configure each item separately
-/sync:mcp            # Configure context7 and sequential-thinking MCP
+/sync:mcp            # Configure context7 MCP
 /sync:hooks          # Enable plugin auto-reload
 /sync:cursor         # Sync configuration to Cursor IDE
 
@@ -273,7 +273,7 @@ Use AI-powered code review to automatically detect potential issues:
 
 **Feature Details:**
 
-- **MCP Servers**: Automatically fetch latest documentation for GitHub libraries (context7) and structured problem-solving (sequential-thinking)
+- **MCP Servers**: Automatically fetch latest documentation for GitHub libraries (context7)
 - **Auto-Reload**: Restart session after plugin modifications to take effect, no manual reinstallation needed
 - **Cursor Sync**: Use Git commands and Spec Skills rules (doc-auto-sync, module-discovery, etc.) in Cursor IDE
 

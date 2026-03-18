@@ -120,6 +120,12 @@ git show origin/main:.claude-plugin/marketplace.json | jq -r '.plugins[] | selec
 
 仅更新有版本变更的行，其他行保持不变。
 
+### 步骤 4.5: 更新英文 README.en.md
+
+更新 `README.en.md` 中 `## Plugin List` 表格中有版本变更的插件版本号。
+
+同时检查 `README.en.md` 中其他内容是否与 `README.md` 的功能描述一致（如 MCP 服务器列表、命令说明等），如有差异则同步更新。
+
 ### 步骤 5: 校验
 
 逐一确认以下位置的版本号一致性：

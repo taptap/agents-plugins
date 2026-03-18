@@ -13,7 +13,7 @@
 ```
 
 这个命令会自动完成：
-- ✅ 配置 MCP 服务器（context7 + sequential-thinking）
+- ✅ 配置 MCP 服务器（context7）
 - ✅ 启用自动更新钩子（Marketplace autoUpdate）+ CLI 工具检测
 - ✅ 同步配置到 Cursor IDE（git-flow rules + commands）
 - ✅ 同步 GitLab Merge Request 默认模板
@@ -109,7 +109,7 @@ chmod +x .githooks/pre-commit
 
 ### `/sync:mcp`
 
-配置 context7 和 sequential-thinking MCP 服务器。
+配置 context7 MCP 服务器。
 
 ```bash
 /sync:mcp
@@ -122,7 +122,7 @@ chmod +x .githooks/pre-commit
 
 **MCP 说明：**
 - **context7**: 拉取最新的库文档和代码示例（AI 自动调用）
-- **sequential-thinking**: 提供结构化问题解决（AI 自动调用）
+
 
 ### `/sync:hooks`
 
@@ -276,12 +276,12 @@ chmod +x .githooks/pre-commit
 ## 配置文件位置
 
 ### Claude Code
-- `~/.claude.json` - MCP 配置（context7 + sequential-thinking + 飞书/Grafana，用户级）
+- `~/.claude.json` - MCP 配置（context7 + 飞书/Grafana，用户级）
 - `.claude/hooks/hooks.json` - Hooks 配置（项目级）
 - `~/.claude/settings.json` - 用户级配置（MCP 懒加载等）
 
 ### Cursor
-- `~/.cursor/mcp.json` - MCP 配置（context7 + sequential-thinking + 飞书/Grafana，全局）
+- `~/.cursor/mcp.json` - MCP 配置（context7 + 飞书/Grafana，全局）
 - `.cursor/rules/git-flow.mdc` - Git 工作流规范
 - `.cursor/rules/doc-auto-sync.mdc` - 模块文档自动同步规则（--with-spec）
 - `.cursor/rules/module-discovery.mdc` - 模块发现规则（--with-spec）
@@ -305,7 +305,7 @@ chmod +x .githooks/pre-commit
 插件提供了标准的 MCP 配置模板，位于 `skills/mcp-templates/` 目录：
 
 - `context7.json` - context7 MCP 配置
-- `sequential-thinking.json` - sequential-thinking MCP 配置
+
 
 这些模板会被 `/sync:mcp` 和 `/sync:basic` 命令使用，确保团队成员使用统一的配置格式。
 
@@ -344,13 +344,14 @@ chmod +x .githooks/pre-commit
 
 ## 版本历史
 
+- **v0.1.19** - 新增 codex-statusline（tmux + iTerm2）；飞书 MCP 的 Codex 配置改为可选（--with-codex）；hooks 迁移至 $HOME 级（Codex 兼容）；移除 sequential-thinking MCP；新增 plugin-status skill
 - **v0.1.17** - skills-sync 新增 review-rules 模板同步（不覆盖项目已有规则）
 - **v0.1.16** - review-checklist 不覆盖项目自定义版本；修正覆盖策略文档；修复 4 个 hook 脚本缺少可执行权限；Cursor 模板新增 Pipeline Watch
 - **v0.1.15** - 新增 `/sync:lsp` 命令（检测语言+安装 binary+启用插件）；`/sync:basic` LSP 首次即装不再延迟；Cursor 模板新增 code review 步骤（含 --skip-code-review）；修复 MR 模板覆盖问题（原子 bash）；hooks 新增 LSP 脚本；更新 statusline/ensure-golang
 - **v0.1.14** - 修复 10 个命令文件 allowed-tools 缺失问题；补齐 printenv、head、pwd、cp、ls、sort、tail、echo、wc、claude、bash、mv、tr 等命令权限声明；cursor-templates 同步修复
 - **v0.1.13** - 镜像 git 插件 no-ticket 按需配置改动到 cursor-templates；Cursor 命令模板新增 `GIT_ALLOW_NO_TICKET` 环境变量上下文；git-flow.mdc 新增仓库级配置段；更新 snippets（02-extract-task-id.md、03-commit-format.md）匹配 git 插件规则
 - **v0.1.12** - 重构 `/sync:basic` 为并行 agent 架构（Phase 0 路径解析 + 6 个命名 subagent）；命令执行行数从 ~550 精简至 ~150（Phase 0: ≤2 Bash 调用）；新增 4 个辅助脚本（ensure-mcp.sh、ensure-plugins.sh、ensure-statusline.sh、ensure-tool-search.sh）；新增 agents/ 目录包含 6 个专用 subagent；更新 hooks、mcp-feishu、mcp-feishu-project、mcp-grafana 命令的错误处理和路径解析；更新 hooks.json 配置结构；更新 mcp-feishu 和 mcp-feishu-project skill 定义
-- **v0.1.11** - MCP 配置（context7 + sequential-thinking）改为写入用户级文件（`~/.claude.json` + `~/.cursor/mcp.json`），跨项目复用；新增 `/sync:statusline` 命令（配置状态栏：项目/分支/Context/模型/Worktree）；`/sync:basic` 新增 Status Line 配置阶段、TapTap Plugins 自动启用、MCP 懒加载配置；Spec Skills 改为 `--with-spec` 可选参数；ensure-cli-tools 改为后台静默运行；新增 MCP 懒加载配置文档；清理 statusline.sh debug 输出
+- **v0.1.11** - MCP 配置（context7）改为写入用户级文件（`~/.claude.json` + `~/.cursor/mcp.json`），跨项目复用；新增 `/sync:statusline` 命令（配置状态栏：项目/分支/Context/模型/Worktree）；`/sync:basic` 新增 Status Line 配置阶段、TapTap Plugins 自动启用、MCP 懒加载配置；Spec Skills 改为 `--with-spec` 可选参数；ensure-cli-tools 改为后台静默运行；新增 MCP 懒加载配置文档；清理 statusline.sh debug 输出
 - **v0.1.10** - 新增 `/sync:mcp-feishu-project` 命令，配置飞书项目 MCP（project.feishu.cn）；新增 `mcp-feishu-project` skill 自动触发
 - **v0.1.9** - 新增 `/sync:mcp-grafana` 命令（自动安装 Golang 和 mcp-grafana）；新增 `--dev` 开发模式参数；新增 Claude Skills 同步（`grafana-dashboard-design`）；新增 Cursor 命令 `sync-mcp-grafana.md`
 - **v0.1.8** - 重构 Spec Skills 同步：删除单一索引文件 `sync-claude-plugin.mdc`，改为独立 `.mdc` 规则文件（`doc-auto-sync.mdc`、`module-discovery.mdc`、`generate-module-map.mdc`）；过滤测试中的 skills
