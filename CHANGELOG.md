@@ -5,6 +5,7 @@
 ### Sync Plugin (0.1.19)
 
 - Added codex-statusline skill with tmux and iTerm2 support (auto-detect terminal, display project/branch/model)
+- Made Codex MCP configuration optional (`--with-codex` flag) in mcp-feishu and mcp-feishu-project skills to save Codex context window space
 - Migrated hooks from project-level to $HOME-level (`~/.claude/hooks/`) for Codex $HOME workspace compatibility
 - Added cleanup of legacy project-level hooks in hooks-config agent
 - Removed sequential-thinking MCP from configuration and templates

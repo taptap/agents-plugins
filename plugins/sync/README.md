@@ -344,7 +344,7 @@ chmod +x .githooks/pre-commit
 
 ## 版本历史
 
-- **v0.1.19** - 新增 codex-statusline（tmux + iTerm2）；hooks 迁移至 $HOME 级（Codex 兼容）；移除 sequential-thinking MCP；新增 plugin-status skill；增强 grafana-dashboard-design、mcp-feishu 等 skill
+- **v0.1.19** - 新增 codex-statusline（tmux + iTerm2）；飞书 MCP 的 Codex 配置改为可选（--with-codex）；hooks 迁移至 $HOME 级（Codex 兼容）；移除 sequential-thinking MCP；新增 plugin-status skill
 - **v0.1.17** - skills-sync 新增 review-rules 模板同步（不覆盖项目已有规则）
 - **v0.1.16** - review-checklist 不覆盖项目自定义版本；修正覆盖策略文档；修复 4 个 hook 脚本缺少可执行权限；Cursor 模板新增 Pipeline Watch
 - **v0.1.15** - 新增 `/sync:lsp` 命令（检测语言+安装 binary+启用插件）；`/sync:basic` LSP 首次即装不再延迟；Cursor 模板新增 code review 步骤（含 --skip-code-review）；修复 MR 模板覆盖问题（原子 bash）；hooks 新增 LSP 脚本；更新 statusline/ensure-golang

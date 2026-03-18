@@ -19,16 +19,18 @@ description: 当用户提供飞书项目 MCP URL 或请求配置飞书项目 MCP
 
 ## 核心原则
 
-⚠️ **强制要求：必须完成三个任务**
+⚠️ **强制要求：必须完成所有必选任务**
 
-此 skill 的目标是同时配置 Claude Code、Cursor 和 Codex。**只有三个任务都成功完成才算真正完成。**
+此 skill 的目标是同时配置 Claude Code 和 Cursor。Codex 配置为**可选**，仅在用户传入 `--with-codex` 参数时执行。
 
 **任务清单：**
-1. ✅ 配置 Claude Code (`~/.claude.json`)
-2. ✅ 配置 Cursor (`~/.cursor/mcp.json`)
-3. ✅ 配置 Codex (`~/.codex/config.toml`)
+1. ✅ 配置 Claude Code (`~/.claude.json`)（必选）
+2. ✅ 配置 Cursor (`~/.cursor/mcp.json`)（必选）
+3. ⏭️ 配置 Codex (`~/.codex/config.toml`)（可选，需 `--with-codex` 参数）
 
-**如果任一任务失败，必须：**
+**Codex 为可选的原因：** Codex context window 较小（258K），MCP 工具定义会额外占用 context，默认不配置以节省空间。
+
+**如果任一必选任务失败，必须：**
 - 明确告知用户哪个任务失败
 - 提供具体的错误信息和解决方案
 - 不能只完成一个任务就结束
@@ -77,13 +79,19 @@ https://project\.feishu\.cn/mcp_server/v1\?mcpKey=[^&]+&projectKey=[^&]+&userKey
 https://project.feishu.cn/mcp_server/v1?mcpKey={mcpKey}&projectKey={projectKey}&userKey={userKey}
 ```
 
-**0.3 创建任务清单**
+**0.3 检查参数**
+
+检查用户是否传入 `--with-codex` 参数：
+- 有 `--with-codex` → `SYNC_CODEX=true`
+- 无 → `SYNC_CODEX=false`
+
+**0.4 创建任务清单**
 
 使用 TodoWrite 创建任务清单：
 ```
 - 配置 Claude Code
 - 配置 Cursor
-- 配置 Codex
+- 配置 Codex（仅 --with-codex 时）
 ```
 
 ### 阶段 1：配置 Claude Code
@@ -176,7 +184,9 @@ claude mcp get feishu-project-mcp
 
 使用 TodoWrite 标记 "配置 Cursor" 为 completed。
 
-### 阶段 2.5：配置 Codex
+### 阶段 2.5：配置 Codex（可选，仅 `--with-codex` 时执行）
+
+**如果 `SYNC_CODEX=false`，跳过此阶段，在汇总中标注 "跳过（未启用 --with-codex）"。**
 
 **2.5.1 检查配置文件**
 
@@ -223,7 +233,7 @@ url = "<提取的 URL>"
 
 **3.2 输出结果**
 
-**情况 A：两个任务都成功**
+**情况 A：所有必选任务都成功**
 
 ```
 ✅ 飞书项目 MCP 配置完成！
@@ -231,12 +241,12 @@ url = "<提取的 URL>"
 配置状态：
   Claude Code: ✅ [新增配置 / 已配置]
   Cursor:      ✅ [新增配置 / 已配置]
-  Codex:       ✅ [新增配置 / 已配置 / 跳过（未安装）]
+  Codex:       [✅ 新增配置 / 已配置 / ⏭️ 跳过（未启用 --with-codex）/ ⏭️ 跳过（未安装）]
 
 配置位置：
   - Claude Code: ~/.claude.json（user scope，所有项目可用）
   - Cursor: ~/.cursor/mcp.json
-  - Codex: ~/.codex/config.toml [mcp_servers] 段
+  - Codex: ~/.codex/config.toml [mcp_servers] 段（需 --with-codex）
 
 下一步：
   1. 重启 Claude Code 会话（如果是新增配置）
@@ -254,7 +264,7 @@ url = "<提取的 URL>"
 配置状态：
   Claude Code: [✅ 成功 / ❌ 失败]
   Cursor:      [✅ 成功 / ❌ 失败]
-  Codex:       [✅ 成功 / ❌ 失败 / 跳过（未安装）]
+  Codex:       [✅ 成功 / ❌ 失败 / ⏭️ 跳过（未启用 --with-codex）/ ⏭️ 跳过（未安装）]
 
 失败详情：
   [具体错误信息]

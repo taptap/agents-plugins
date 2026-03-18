@@ -50,6 +50,30 @@ def read_codex_version() -> str:
     return f"v{out}" if out else "v?"
 
 
+def parse_session_creation_time(filepath: str) -> Optional[float]:
+    """Extract session creation timestamp from filename.
+
+    Filename format: rollout-YYYY-MM-DDTHH-MM-SS-<uuid>.jsonl
+    """
+    basename = os.path.basename(filepath)
+    m = re.match(r"rollout-(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2})-", basename)
+    if not m:
+        return None
+    try:
+        dt_str = m.group(1).replace("T", " ").replace("-", "", 2)
+        # "20260318 16-21-01" -> parse
+        parts = m.group(1).split("T")
+        date_part = parts[0]  # 2026-03-18
+        time_part = parts[1].replace("-", ":")  # 16:21:01
+        import datetime
+        dt = datetime.datetime.strptime(
+            f"{date_part} {time_part}", "%Y-%m-%d %H:%M:%S"
+        )
+        return dt.timestamp()
+    except (ValueError, IndexError):
+        return None
+
+
 def iter_session_files():
     pattern = str(SESSIONS_DIR / "**" / "*.jsonl")
     files = glob.glob(pattern, recursive=True)
@@ -69,71 +93,124 @@ def current_repo_root(path: str) -> Optional[str]:
         return None
 
 
+def _parse_session_data(path: str) -> Tuple[
+    Optional[int], Optional[int], Optional[str], Optional[str], Optional[str]
+]:
+    """Parse a single session file and return (ctx_input, window, model, effort, cwd)."""
+    last_total = None
+    last_window = None
+    last_model = None
+    last_effort = None
+    session_cwd = None
+    with open(path, "r", encoding="utf-8") as fh:
+        for raw in fh:
+            try:
+                event = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            if event.get("type") == "session_meta":
+                payload = event.get("payload", {})
+                cwd = payload.get("cwd")
+                if isinstance(cwd, str) and cwd:
+                    session_cwd = cwd
+            elif event.get("type") == "event_msg":
+                payload = event.get("payload", {})
+                if payload.get("type") == "token_count":
+                    info = payload.get("info") or {}
+                    # Use last_token_usage.input_tokens for context window fill,
+                    # NOT total_token_usage.total_tokens (which is cumulative across turns)
+                    last_usage = info.get("last_token_usage") or {}
+                    ctx_input = last_usage.get("input_tokens")
+                    window = info.get("model_context_window")
+                    if isinstance(ctx_input, int):
+                        last_total = ctx_input
+                    if isinstance(window, int):
+                        last_window = window
+            elif event.get("type") == "turn_context":
+                payload = event.get("payload", {})
+                cwd = payload.get("cwd")
+                if isinstance(cwd, str) and cwd and session_cwd is None:
+                    session_cwd = cwd
+                model = payload.get("model")
+                if isinstance(model, str) and model:
+                    last_model = model
+                effort = payload.get("effort")
+                if isinstance(effort, str) and effort:
+                    last_effort = effort
+    return last_total, last_window, last_model, last_effort, session_cwd
+
+
 def read_latest_codex_usage(
     pane_path: str, started_at: Optional[float] = None
 ) -> Tuple[Optional[int], Optional[int], Optional[str], Optional[str], Optional[str]]:
     repo_root = current_repo_root(pane_path)
     target_cwd = str(pathlib.Path(pane_path).expanduser().resolve())
-    for path in iter_session_files():
-        if started_at is not None:
+    resolved_repo = str(pathlib.Path(repo_root).resolve()) if repo_root else None
+
+    # When started_at is available, find the session created closest to activation time.
+    # This prevents cross-talk between multiple Codex instances in the same repo.
+    if started_at is not None:
+        best_match = None
+        best_delta = float("inf")
+        for path in iter_session_files():
             try:
-                if os.path.getmtime(path) < started_at - 1:
-                    continue
+                file_mtime = os.path.getmtime(path)
             except OSError:
                 continue
-        last_total = None
-        last_window = None
-        last_model = None
-        last_effort = None
-        session_cwd = None
-        try:
-            with open(path, "r", encoding="utf-8") as fh:
-                for raw in fh:
-                    try:
-                        event = json.loads(raw)
-                    except json.JSONDecodeError:
-                        continue
-                    if event.get("type") == "session_meta":
-                        payload = event.get("payload", {})
-                        cwd = payload.get("cwd")
-                        if isinstance(cwd, str) and cwd:
-                            session_cwd = cwd
-                    elif event.get("type") == "event_msg":
-                        payload = event.get("payload", {})
-                        if payload.get("type") == "token_count":
-                            info = payload.get("info") or {}
-                            total = info.get("total_token_usage", {}).get("total_tokens")
-                            window = info.get("model_context_window")
-                            if isinstance(total, int):
-                                last_total = total
-                            if isinstance(window, int):
-                                last_window = window
-                    elif event.get("type") == "turn_context":
-                        payload = event.get("payload", {})
-                        cwd = payload.get("cwd")
-                        if isinstance(cwd, str) and cwd and session_cwd is None:
-                            session_cwd = cwd
-                        model = payload.get("model")
-                        if isinstance(model, str) and model:
-                            last_model = model
-                        effort = payload.get("effort")
-                        if isinstance(effort, str) and effort:
-                            last_effort = effort
+            # Skip files last modified before activation
+            if file_mtime < started_at - 1:
+                continue
+            # Parse creation time from filename for precise matching
+            creation_time = parse_session_creation_time(path)
+            if creation_time is None:
+                continue
+            # Session must be created within a reasonable window around activation
+            # (allow 60s before to 30s after, covering preexec → codex startup delay)
+            delta = abs(creation_time - started_at)
+            if creation_time < started_at - 60 or creation_time > started_at + 30:
+                continue
+            try:
+                data = _parse_session_data(path)
+            except OSError:
+                continue
+            _, _, _, _, session_cwd = data
             if not session_cwd:
                 continue
             try:
                 session_cwd_resolved = str(pathlib.Path(session_cwd).expanduser().resolve())
             except OSError:
                 continue
-            if repo_root:
-                if session_cwd_resolved != str(pathlib.Path(repo_root).resolve()):
+            if resolved_repo:
+                if session_cwd_resolved != resolved_repo:
                     continue
             elif session_cwd_resolved != target_cwd:
                 continue
-            if last_total is not None or last_model is not None:
-                return last_total, last_window, last_model, last_effort, session_cwd
+            if delta < best_delta:
+                best_delta = delta
+                best_match = data
+        if best_match and (best_match[0] is not None or best_match[2] is not None):
+            return best_match
+
+    # Fallback: no started_at or no match found — use original newest-first scan
+    for path in iter_session_files():
+        try:
+            data = _parse_session_data(path)
         except OSError:
             continue
+        _, _, _, _, session_cwd = data
+        if not session_cwd:
+            continue
+        try:
+            session_cwd_resolved = str(pathlib.Path(session_cwd).expanduser().resolve())
+        except OSError:
+            continue
+        if resolved_repo:
+            if session_cwd_resolved != resolved_repo:
+                continue
+        elif session_cwd_resolved != target_cwd:
+            continue
+        if data[0] is not None or data[2] is not None:
+            return data
     return None, None, None, None, None
 
 

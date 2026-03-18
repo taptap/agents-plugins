@@ -22,6 +22,8 @@ permissionMode: acceptEdits
 
 ```bash
 mkdir -p ~/.claude/hooks/scripts
+# 清理无效符号链接（旧版本残留的已删除/重命名脚本）
+find ~/.claude/hooks/scripts -type l ! -exec test -e {} \; -delete 2>/dev/null
 for f in "{SCRIPTS_DIR}"/*.sh; do
   ln -sf "$f" ~/.claude/hooks/scripts/$(basename "$f")
 done
@@ -60,6 +62,10 @@ chmod +x ~/.claude/hooks/scripts/*.sh 2>/dev/null
           {
             "type": "command",
             "command": "(bash ~/.claude/hooks/scripts/ensure-mcp.sh >/dev/null 2>&1 &)"
+          },
+          {
+            "type": "command",
+            "command": "(bash ~/.claude/hooks/scripts/ensure-codex-statusline.sh >/dev/null 2>&1 &)"
           }
         ]
       }
