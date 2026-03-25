@@ -1,0 +1,68 @@
+name: test-review
+version: "1.1"
+description: >
+  评审测试用例的覆盖度和质量。输入上游生成的用例（test_cases.json）+ 需求链接或本地需求文档，
+  输出 review_result.md + final_cases.json。
+
+input:
+  one_of:
+    story_link:
+      type: string
+      description: 需求链接（飞书 Story / 文档链接，或其他可通过脚本获取的 URL）
+    requirement_doc:
+      type: file
+      description: 本地需求文档（AI 对话生成或手动提供的 .md / .json 文件）
+  optional:
+    cases_to_review:
+      type: file
+      description: 上游 test-design 生成的 test_cases.json
+      from_upstream: test-design
+    requirement_points:
+      type: file
+      description: 上游功能点清单
+      from_upstream: requirement-clarification
+    clarified_requirements:
+      type: file
+      description: 上游澄清结果
+      from_upstream: requirement-clarification
+    design_link:
+      type: string
+      description: Figma 设计稿链接
+
+output:
+  files:
+    - name: final_cases.json
+      description: 评审通过 + 补充的完整用例集
+      format: json
+    - name: review_result.md
+      description: 4 维度评审结果
+      format: markdown
+    - name: supplementary_cases.json
+      description: 补充用例（如有）
+      format: json
+    - name: summary.md
+      description: 评审统计和改进建议
+      format: markdown
+    - name: review_summary.json
+      description: 评审摘要统计（用例数/覆盖率/问题数/维度评分）
+      format: json
+  structured:
+    total_reviewed:
+      type: number
+      description: 评审用例总数
+    coverage_rate:
+      type: string
+      description: 需求覆盖率
+    issues_found:
+      type: number
+      description: 发现问题数
+    cases_supplemented:
+      type: number
+      description: 补充用例数
+
+dependencies:
+  scripts:
+    - shared-tools/scripts/fetch_feishu_doc.py
+  env_vars:
+    - FEISHU_APP_ID
+    - FEISHU_APP_SECRET

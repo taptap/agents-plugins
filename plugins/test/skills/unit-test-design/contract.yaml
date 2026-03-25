@@ -1,0 +1,55 @@
+name: unit-test-design
+version: "1.0"
+description: >
+  分析源代码文件，自动生成可执行的单元测试代码。
+  输入源码文件/模块路径，输出对应语言的测试文件。
+
+input:
+  one_of:
+    source_files:
+      type: file[]
+      description: 待生成测试的源代码文件列表
+    source_dir:
+      type: string
+      description: 待生成测试的模块/目录路径
+  optional:
+    requirement_doc:
+      type: file
+      description: 需求文档或技术方案，辅助理解业务逻辑
+    requirement_points:
+      type: file
+      description: 上游功能点清单，用于指导测试覆盖重点（优先为 P0/P1 功能点对应的代码模块生成单测）
+      from_upstream: requirement-clarification
+    test_cases:
+      type: file
+      description: 上游功能测试用例，用于对齐测试场景和方法论
+      from_upstream: test-design
+    test_framework:
+      type: string
+      description: 指定测试框架（如 pytest、vitest），默认自动检测
+    skip_existing:
+      type: boolean
+      description: 是否跳过已有测试的函数（默认 true）
+
+output:
+  files:
+    - name: test_plan.md
+      description: 测试点清单（每个函数的测试用例设计）
+      format: markdown
+  structured:
+    total_functions:
+      type: number
+      description: 分析的函数总数
+    total_test_cases:
+      type: number
+      description: 生成的测试用例总数
+    files_generated:
+      type: number
+      description: 生成的测试文件数
+    language:
+      type: string
+      description: 检测到的编程语言
+
+dependencies:
+  scripts: []
+  env_vars: []

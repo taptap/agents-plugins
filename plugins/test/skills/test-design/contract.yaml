@@ -1,0 +1,60 @@
+name: test-design
+version: "1.1"
+description: >
+  根据需求文档和澄清结果拆解功能模块并生成结构化测试用例。
+  输入需求链接、本地需求文档或上游澄清结果，输出 test_cases.json。
+
+input:
+  one_of:
+    story_link:
+      type: string
+      description: 需求链接（飞书 Story / 文档链接，或其他可通过脚本获取的 URL）
+    requirement_doc:
+      type: file
+      description: 本地需求文档（AI 对话生成或手动提供的 .md / .json 文件）
+  optional:
+    clarified_requirements:
+      type: file
+      description: 上游 requirement-clarification 的澄清结果
+      from_upstream: requirement-clarification
+    requirement_points:
+      type: file
+      description: 上游功能点清单
+      from_upstream: requirement-clarification
+    design_link:
+      type: string
+      description: Figma 设计稿链接
+
+output:
+  files:
+    - name: test_cases.json
+      description: 所有模块的测试用例合集（顶层 JSON 数组，各用例通过 module 字段标识归属）
+      format: json
+    - name: decomposition.md
+      description: 功能模块拆解清单
+      format: markdown
+    - name: context_summary.md
+      description: 全局上下文摘要
+      format: markdown
+  structured:
+    total_modules:
+      type: number
+      description: 模块总数
+    total_cases:
+      type: number
+      description: 用例总数
+    priority_distribution:
+      type: object
+      description: 优先级分布 {P0, P1, P2, P3}
+
+dependencies:
+  scripts:
+    - shared-tools/scripts/fetch_feishu_doc.py
+    - shared-tools/scripts/gitlab_helper.py  # 条件触发：获取技术文档涉及代码时
+    - shared-tools/scripts/github_helper.py  # 条件触发：获取技术文档涉及代码时
+  env_vars:
+    - FEISHU_APP_ID
+    - FEISHU_APP_SECRET
+    - GITLAB_URL      # 条件触发
+    - GITLAB_TOKEN    # 条件触发
+    - GITHUB_TOKEN    # 条件触发

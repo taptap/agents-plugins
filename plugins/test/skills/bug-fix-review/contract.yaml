@@ -1,0 +1,56 @@
+name: bug-fix-review
+version: "1.1"
+description: >
+  分析 Bug 修复代码变更的完整性和残余风险。输入 Bug 链接或本地 Bug 描述文件，
+  输出 fix_analysis.json + risk_assessment.json。
+
+input:
+  one_of:
+    bug_link:
+      type: string
+      description: Bug 链接（飞书 Bug 链接，或其他可通过脚本获取的 URL）
+    bug_doc:
+      type: file
+      description: 本地 Bug 描述文件（AI 对话生成或手动提供的 .md / .json 文件）
+  optional:
+    code_changes:
+      type: string[]
+      description: 关联的 MR/PR 链接列表（如未提供则通过 search 脚本自动搜索）
+
+output:
+  files:
+    - name: fix_analysis.json
+      description: 根因分析和修复完整性评估
+      format: json
+    - name: risk_assessment.json
+      description: 残余风险评估和行动建议
+      format: json
+    - name: code_analysis.md
+      description: 代码变更分析过程记录
+      format: markdown
+  structured:
+    overall_risk:
+      type: string
+      description: 总体风险等级
+    fix_completeness:
+      type: string
+      description: 修复完整性判断
+    side_effect_count:
+      type: number
+      description: 潜在副作用数
+
+dependencies:
+  scripts:
+    - shared-tools/scripts/fetch_feishu_doc.py
+    - shared-tools/scripts/gitlab_helper.py
+    - shared-tools/scripts/github_helper.py
+    - shared-tools/scripts/search_mrs.py
+    - shared-tools/scripts/search_prs.py
+  env_vars:
+    - FEISHU_APP_ID
+    - FEISHU_APP_SECRET
+    - GITLAB_URL
+    - GITLAB_TOKEN
+    - GITLAB_PROJECT_MAPPING
+    - GITHUB_TOKEN
+    - GITHUB_REPO_MAPPING

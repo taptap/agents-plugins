@@ -1,0 +1,76 @@
+name: requirement-traceability
+version: "2.0"
+description: >
+  双向追溯需求与代码变更的映射关系。输入需求描述 + 代码变更（MR/PR 或本地 diff），
+  输出 traceability_matrix.json + coverage_report.json + risk_assessment.json。
+
+input:
+  one_of:
+    code_changes:
+      type: string[]
+      description: 关联的 MR/PR 链接列表（GitLab MR 或 GitHub PR）
+    code_diff:
+      type: file
+      description: 本地 diff 文件（git diff 输出、patch 文件等）
+    code_diff_text:
+      type: string
+      description: 直接提供的代码变更文本（粘贴的 diff 内容）
+  optional:
+    story_link:
+      type: string
+      description: 需求链接（飞书 Story / 文档链接，或其他可通过脚本获取的 URL）
+    requirement_doc:
+      type: file
+      description: 本地需求文档（AI 对话生成或手动提供的 .md / .json 文件）
+    clarified_requirements:
+      type: file
+      description: 上游需求澄清结果
+      from_upstream: requirement-clarification
+    requirement_points:
+      type: file
+      description: 上游功能点清单
+      from_upstream: requirement-clarification
+
+output:
+  files:
+    - name: traceability_matrix.json
+      description: 需求×代码双向映射矩阵
+      format: json
+    - name: coverage_report.json
+      description: 覆盖率统计和缺口清单
+      format: json
+    - name: risk_assessment.json
+      description: 风险评估和行动建议
+      format: json
+  structured:
+    overall_risk:
+      type: string
+      description: 总体风险等级
+    requirement_coverage_rate:
+      type: string
+      description: 需求覆盖率
+    code_traceability_rate:
+      type: string
+      description: 代码变更需求归属率
+    gap_count:
+      type: number
+      description: 覆盖缺口数
+    mode:
+      type: string
+      description: 执行模式（full | degraded），降级模式无需求源
+
+dependencies:
+  scripts:
+    - shared-tools/scripts/fetch_feishu_doc.py
+    - shared-tools/scripts/gitlab_helper.py
+    - shared-tools/scripts/github_helper.py
+    - shared-tools/scripts/search_mrs.py
+    - shared-tools/scripts/search_prs.py
+  env_vars:
+    - FEISHU_APP_ID
+    - FEISHU_APP_SECRET
+    - GITLAB_URL
+    - GITLAB_TOKEN
+    - GITLAB_PROJECT_MAPPING
+    - GITHUB_TOKEN
+    - GITHUB_REPO_MAPPING

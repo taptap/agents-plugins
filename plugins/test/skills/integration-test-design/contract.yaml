@@ -1,0 +1,51 @@
+name: integration-test-design
+version: "1.0"
+description: >
+  分析 API 接口和服务模块，自动生成可执行的集成测试代码。
+  输入 API 定义/服务路径，输出集成测试文件。
+
+input:
+  one_of:
+    api_spec:
+      type: file
+      description: API 定义文件（OpenAPI/Swagger YAML/JSON、Proto 文件）
+    service_path:
+      type: string
+      description: 服务模块目录路径（包含路由定义、handler、service 层代码）
+  optional:
+    tech_doc:
+      type: file
+      description: 技术方案文档，辅助理解服务架构和业务逻辑
+    requirement_points:
+      type: file
+      description: 上游功能点清单，用于指导测试覆盖重点（优先为 P0/P1 功能点对应的 API 生成集成测试）
+      from_upstream: requirement-clarification
+    test_framework:
+      type: string
+      description: 指定测试框架，默认自动检测
+    db_config:
+      type: string
+      description: 测试数据库连接配置（如未提供则自动检测项目配置）
+
+output:
+  files:
+    - name: integration_test_plan.md
+      description: 集成测试场景清单（每个接口的测试矩阵）
+      format: markdown
+  structured:
+    total_endpoints:
+      type: number
+      description: 分析的接口总数
+    total_test_cases:
+      type: number
+      description: 生成的测试场景总数
+    files_generated:
+      type: number
+      description: 生成的测试文件数
+    test_types:
+      type: string[]
+      description: 涵盖的测试类型（API/数据库/服务间调用/中间件）
+
+dependencies:
+  scripts: []
+  env_vars: []

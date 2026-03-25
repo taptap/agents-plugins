@@ -1,0 +1,71 @@
+name: requirement-clarification
+version: "2.0"
+description: >
+  当收到新需求（链接、文档、口述或碎片化信息）时，通过多维度结构化问答
+  与用户拉齐对需求的理解，输出结构化澄清结果和编号功能点清单。
+
+input:
+  one_of:
+    story_link:
+      type: string
+      description: 需求链接（飞书 Story / 文档链接，或其他可通过脚本获取的 URL）
+    requirement_doc:
+      type: file
+      description: 本地需求文档（AI 对话生成或手动提供的 .md / .json 文件）
+    requirement_text:
+      type: string
+      description: >
+        自由文本形式的需求描述——可以是一句话需求、对话摘要、
+        或用户口述的碎片化信息。skill 会基于此内容主动发起澄清问答。
+    context_messages:
+      type: string[]
+      description: >
+        历史对话中提取的需求相关片段（由编排层或用户提供），
+        可单独作为输入触发探索模式，也可与其他输入组合作为补充上下文。
+  optional:
+    design_link:
+      type: string
+      description: Figma 设计稿链接
+
+output:
+  files:
+    - name: clarification_log.md
+      description: 澄清过程记录（问题 + 回答 + 结论），供人回看
+      format: markdown
+    - name: clarified_requirements.json
+      description: 结构化澄清结果，含功能点、边界、约束、确认的 Q&A
+      format: json
+    - name: requirement_points.json
+      description: 编号功能点清单，供下游 skill 消费
+      format: json
+  structured:
+    mode:
+      type: string
+      description: 执行模式（document | exploratory）
+    confidence_level:
+      type: string
+      description: 整体置信度（high | medium | low），探索模式下通常偏低
+    story_id:
+      type: string
+      description: Story 工作项 ID（探索模式下可能为 null）
+    total_points:
+      type: number
+      description: 功能点总数
+    confirmed_points:
+      type: number
+      description: 已完全确认的功能点数
+    open_question_count:
+      type: number
+      description: 未解决问题数（对应 JSON 文件中 open_questions 数组的长度）
+
+dependencies:
+  scripts:
+    - shared-tools/scripts/fetch_feishu_doc.py
+    - shared-tools/scripts/gitlab_helper.py  # 条件触发：需求涉及现有代码时
+    - shared-tools/scripts/github_helper.py  # 条件触发：需求涉及现有代码时
+  env_vars:
+    - FEISHU_APP_ID
+    - FEISHU_APP_SECRET
+    - GITLAB_URL      # 条件触发
+    - GITLAB_TOKEN    # 条件触发
+    - GITHUB_TOKEN    # 条件触发
