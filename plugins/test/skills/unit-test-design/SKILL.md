@@ -2,7 +2,7 @@
 name: unit-test-design
 description: >
   分析源代码文件，自动生成可执行的单元测试代码。
-  输入源码文件/模块路径，输出对应语言的测试文件（如 *_test.go、test_*.py、*.test.ts）。
+  输入源码文件/模块路径，输出对应语言的测试文件（如 *_test.go、test_*.py、*.test.ts、*Tests.swift）。
 ---
 
 # 单元测试设计
@@ -24,6 +24,16 @@ description: >
 - Mock 生成 — 为外部依赖（数据库、HTTP、文件系统）生成 Mock/Stub
 - 测试代码生成 — 输出可直接编译/运行的测试文件
 
+## 模型分层
+
+按「错误代价」分配模型能力，详见 [CONVENTIONS.md](../../CONVENTIONS.md#模型分层策略)。
+
+| 任务 | 推荐模型 | 理由 |
+| --- | --- | --- |
+| 代码分析（analyze 阶段） | Opus | 理解代码逻辑是生成质量的天花板 |
+| 测试设计和代码生成（design/generate 阶段） | Sonnet | 模板化生成 |
+| 质量自检（verify 阶段） | Opus | 捕捉弱测试需要深度推理 |
+
 ## 测试生成原则
 
 1. **忠于代码** — 严格基于源代码逻辑生成测试，不臆断未实现的行为
@@ -32,6 +42,42 @@ description: >
 4. **惯用模式** — 遵循目标语言的测试惯用法（表驱动、参数化、BDD 等）
 5. **覆盖充分** — 正向路径 + 边界值 + 错误处理 + 特殊输入
 6. **验证行为而非实现** — 测试公开接口和业务不变量，不围绕当前内部实现细节写测试
+
+## 跳过标准（不生成的场景）
+
+以下场景 AI 无法可靠地确定断言预期值，**不生成测试代码**，只在 test_plan.md 中记录场景描述和跳过原因，由开发者自行补充。
+
+### 预期值无法从公开 API 确定
+
+当断言的预期值无法仅从以下信息确定时，不生成该断言：
+- 被测类型/函数的文档注释、docstring
+- 类型签名和参数类型
+- 公开的常量或枚举定义
+- 项目中已有测试的模式（同类断言的先例）
+
+**典型触发场景**：
+
+- **包装器/转换器属性**：被测类型将输入包装或转换后暴露为属性（如 `ErrorWrapper.code`、`ResponseParser.statusCode`），且文档未说明属性与原始输入的映射关系。AI 无法确定属性值是原始值、转换后的值、还是分类码
+- **第三方库属性语义歧义**：断言涉及第三方库类型的属性（如 `MoyaError.errorCode`），属性名暗示的含义可能与实际语义不同，且项目中无使用先例可参考
+- **Mock 数据经过条件分支**：mock 数据在到达断言属性前会经过条件解析（如 JSON 反序列化尝试），不同的 mock 内容触发不同分支，导致相同输入类型但不同输出值
+
+**跳过时在 test_plan.md 中记录**：
+
+```markdown
+| 用例 | 场景描述 | 跳过原因 |
+| --- | --- | --- |
+| TapError(MoyaError.statusCode(非 JSON response)) 的 code 值 | HTTP 404 响应（body 为纯文本）经 TapError 包装后的 code 属性 | TapError.code 是包装器属性，语义取决于 response body 格式，无公开文档说明非 JSON 场景的行为 |
+```
+
+### 不跳过的反例
+
+以下场景即使涉及包装器，AI 也应正常生成测试：
+- 文档注释明确说明了属性语义（如 `/// 返回 HTTP 状态码`）
+- 项目中已有测试对同类场景建立了断言先例
+- 被测类型是项目内部类型，源码可读且转换逻辑简单直接（无条件分支、无 fallback）
+- 存在服务端 API 契约文档（OpenAPI/Swagger）定义了响应结构
+
+更多高风险假设场景参见 [CONVENTIONS.md 高风险假设模式](../../CONVENTIONS.md#高风险假设模式)。
 
 ## 测试质量防线
 
@@ -115,13 +161,19 @@ Mock 的目的是隔离外部依赖，不是跳过被测逻辑：
      - **数据构造**：有无 Factory/Builder/Fixture 工具函数
      - **setup/teardown 模式**：用 `TestMain`、`setUp/tearDown`、`beforeEach`、`@pytest.fixture` 还是其他
    - 将学到的约定记录到 `test_plan.md` 的开头作为「项目测试约定」章节
-5. 如果项目中没有已有测试文件 → 根据构建配置推断主流框架（go.mod → testing+testify、pyproject.toml → pytest、package.json → vitest/jest），并参考 [METHODS.md](METHODS.md) 中的参考模板
+5. **iOS/Swift 项目额外检测**（当检测到 `.xcodeproj` 或 `.xcworkspace` 时执行）：
+   - 检测 `.xctestplan` 文件 → 了解测试分组策略（哪些测试属于 Unit、哪些属于 Integration）
+   - 识别测试框架共存情况：`import XCTest` vs `import Testing`（Swift Testing）→ 决定新测试使用哪个框架
+   - 搜索 `TestInfrastructure/`、`Helpers/`、`Stubbing/` 等目录 → 发现可复用的测试基础设施（如 StubURLProtocol、JSONFixtureLoader、自定义断言 Helper）
+   - 检查 `@testable import` 的模块名 → 确认测试 target 可访问的模块
+   - 检查 Podfile / Package.swift 中测试 target 的依赖 → 了解可用的测试库
+6. 如果项目中没有已有测试文件 → 根据构建配置推断主流框架（go.mod → testing+testify、pyproject.toml → pytest、package.json → vitest/jest、*.xcodeproj → XCTest + Swift Testing），并参考 [METHODS.md](METHODS.md) 中的参考模板
 
 ### 阶段 2: analyze — 代码分析
 
-**上游感知**（可选）：如果工作目录中存在 `requirement_points.json`（上游 requirement-clarification 产出）或 `test_cases.json`（上游 test-design 产出），先读取这些文件：
+**上游感知**（可选）：如果工作目录中存在 `requirement_points.json`（上游 requirement-clarification 产出）或 `final_cases.json`（上游 test-case-generation 最终产出），先读取这些文件：
 - 从 `requirement_points.json` 中提取 P0/P1 功能点，标记与这些功能点相关的代码模块为高优先级
-- 从 `test_cases.json` 中了解已有的功能测试场景，避免重复覆盖已在功能测试中验证的纯业务逻辑
+- 从 `final_cases.json` 中了解已有的功能测试场景，避免重复覆盖已在功能测试中验证的纯业务逻辑
 
 对每个源码文件：
 
@@ -151,21 +203,44 @@ Mock 的目的是隔离外部依赖，不是跳过被测逻辑：
 3. Mock 外部依赖时优先使用项目中已有的 Mock 工具和模式
 4. 将测试文件写入项目约定的位置（从已有测试的目录结构推断）
 5. 如果项目无已有测试 → 参考 [METHODS.md](METHODS.md) 中的参考模板
+6. **出口断言扫描**（硬性出口条件）：在提交测试文件前，对每个 test 方法扫描是否包含至少 1 个断言调用（参见 [断言审计协议](../../CONVENTIONS.md#断言审计协议)）。发现零断言方法时，原地补充断言后再进入 verify 阶段。目的确实是"验证不崩溃"的方法必须标注 `[crashSafety]` 并添加最低限度断言
 
 ### 阶段 5: verify — 验证
 
+Phase 5 拆分为两个子阶段：先执行机械审计（5a），再执行语义质量检查（5b）。
+
+#### 5a. 独立断言审计
+
+按 [独立验证者协议](../../CONVENTIONS.md#独立验证者协议) 执行断言审计，优先使用独立 agent（模式 A），不可用时降级为自审 + Grep 扫描（模式 B）。
+
+**模式 A**（推荐）：通过 Task 工具启动独立的 verify-agent。verify-agent 仅收到：
+- 生成的测试文件全文
+- 被测源码文件全文
+- [断言审计协议](../../CONVENTIONS.md#断言审计协议)中的审计规则和弱断言定义
+
+verify-agent **不收到** test_plan.md 或任何设计推理。以对抗性视角审计——假定每个测试都有问题，证明合格后才放行。
+
+**模式 B**（降级）：用 Grep 工具在生成的测试文件中搜索断言 pattern，逐方法统计断言数。然后按审计输出格式逐行填写审计表格。
+
+5a 的输出是 [审计表格](../../CONVENTIONS.md#审计输出格式)。任何 BLOCKED 项必须回到 Phase 4 修复后重新审计。
+
+#### 5b. 语义质量检查
+
+在 5a 审计通过（无 BLOCKED 项）后，执行以下语义级别的质量检查：
+
 1. 检查生成的测试文件语法正确性
-2. 尝试编译/运行测试（`go test`、`pytest`、`npm test` 等）
+2. 尝试编译/运行测试（`go test`、`pytest`、`npm test`、`xcodebuild test` 等）
 3. 修复编译错误或导入问题
-4. **质量自检**（逐项检查）：
-   - 是否存在"只断言无错误但不验证返回值"的弱断言？
+4. **语义自检**（逐项检查）：
+   - 5a 标记为 WEAK 的方法是否已加强或书面说明理由？
    - 是否所有参数化测试都包含了边界和异常 case，而非只有 happy path？
    - 是否有测试 Mock 掉了被测函数自身的核心逻辑？
    - 对每个关键测试，能否说明"把实现改成哪种错误版本后此测试会失败"？
    - 纯函数/校验器是否使用了 property-based testing？
    - 如自检发现问题 → 回到 generate 阶段修复，最多重试 2 次
    - 重试后仍不通过 → 在 test_plan.md 中标注未通过的自检项
-5. 输出测试结果摘要和质量自检报告
+5. 5a 和 5b 的发现按 [交叉验证协议](../../CONVENTIONS.md#交叉验证) 合并
+6. 输出测试结果摘要、审计表格和质量自检报告
 
 ## 输出格式
 

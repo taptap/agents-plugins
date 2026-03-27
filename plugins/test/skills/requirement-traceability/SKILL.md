@@ -33,6 +33,46 @@ description: >
 
 置信度标记见 [CONVENTIONS](../../CONVENTIONS.md#置信度标记)。
 
+## 双通道追溯模式
+
+v0.0.10 引入双通道追溯，正向和反向使用不同的验证策略：
+
+| 通道 | 方向 | 方法 | 回答的问题 |
+| --- | --- | --- | --- |
+| 正向通道 | 需求 → 代码 | 用例中介验证 | 需求是否被正确实现？ |
+| 反向通道 | 代码 → 需求 | 直接代码追溯 | 代码有没有做需求之外的事？ |
+
+### 正向通道：用例中介验证
+
+不直接拿需求去"匹配"代码，而是先将需求拆解为结构化验证用例（具体输入→预期输出），然后 AI 逐条对照代码推理。
+
+优势：迫使 AI 从"模糊映射"降维到"具体断言"，精度显著提升。
+
+正向通道消费上游 `verification-test-gen` 的 `verification_cases.json`。如果上游未执行，本 skill 内置简化版用例生成。
+
+### 反向通道：直接代码追溯
+
+保持现有的 reverse-tracer Agent 模式 — 从代码变更出发，寻找每个变更对应的需求点。
+
+优势：能检测"多余实现"和"范围蔓延"，这是正向通道无法做到的。
+
+### UI 还原度检查（条件触发）
+
+当需求有 Figma 设计稿链接时，正向通道额外执行 UI 还原度对比。使用 Figma MCP 获取设计数据/截图，Browser MCP 获取实现截图/DOM，AI 对比差异。输出 `ui_fidelity_report.json`，合并到 `coverage_report.json`。
+
+触发条件：`design_link` 存在且前端页面可在浏览器中访问。
+
+## 模型分层
+
+按「错误代价」分配模型能力，详见 [CONVENTIONS.md](../../CONVENTIONS.md#模型分层策略)。
+
+| 任务 | 推荐模型 | 理由 |
+| --- | --- | --- |
+| 冗余对追溯 Agent（forward/reverse-tracer） | Opus | 追溯遗漏 = 需求缺口未被发现 |
+| 正向用例中介验证 | Opus | 代码路径追踪需要深度推理 |
+| UI 还原度检查 Agent | Opus | 视觉和结构差异识别需要精确对比 |
+| 交叉验证和结果合并 | Sonnet | 规则化处理 |
+
 ## 可用工具
 
 ### 1. MR/PR 搜索和分析脚本
@@ -55,7 +95,7 @@ description: >
 | --- | --- | --- |
 | 1. init | 验证输入，确认代码变更来源 | — |
 | 2. fetch | 获取需求文档和代码 diff | `analysis_checklist.md` |
-| 3. map | 构建需求↔代码双向映射 | `code_analysis.md` |
+| 3. map | 双通道并行：正向用例验证 + 反向代码追溯 | `code_analysis.md` |
 | 4. output | 覆盖验证、风险评估和最终产出 | `traceability_matrix.json`、`coverage_report.json`、`risk_assessment.json` |
 
 ## 中间文件

@@ -23,7 +23,8 @@ description: >
 
 - 多形态输入处理 — 支持链接、文档、自由文本、对话碎片等多种输入形式
 - 需求文档深度解析 — 识别功能边界、状态流转、业务规则、数据约束
-- 结构化问题生成 — 按 11 个维度生成针对性的澄清问题
+- 多视角并行分析 — 复杂需求时启动功能/异常/用户 3 个视角 Agent 并行分析，交叉验证提升置信度
+- 结构化问题生成 — 按 12 个维度生成针对性的澄清问题
 - 交互式确认 — 通过 ask_question 渐进式确认，记录人工回答
 - 结构化输出 — 产出可被下游 skill 直接消费的 JSON 数据
 
@@ -53,6 +54,7 @@ description: >
 | 安全与合规 | 数据加密、隐私法规、审计日志、脱敏 | 「用户手机号在日志中是否需要脱敏？」 |
 | 兼容性 | 浏览器/OS 版本、屏幕尺寸、降级策略 | 「最低支持的 Android 版本？小屏幕下表格如何展示？」 |
 | 可测试性与验收标准 | 如何验证功能正确、验收标准、测试数据 | 「验收标准是什么？需要准备哪些测试数据？」 |
+| 影响范围 | 变更涉及的模块、功能、上下游系统 | 「优惠券逻辑修改会影响哪些模块？订单结算、退款、数据报表是否都需要同步调整？」 |
 
 详细检查项见 [CHECKLIST.md](CHECKLIST.md)。
 
@@ -62,7 +64,7 @@ description: >
 
 1. **首轮（骨架确认）**：确认功能范围、目标用户、核心场景，2-3 个开放式问题
 2. **中间轮（维度深挖）**：按优先级逐维度提问，每个问题提供选项或默认值
-   - 优先级：功能边界 → 验收标准 → 状态流转 → 异常处理 → 交互规则 → 其他
+   - 优先级：功能边界 → 验收标准 → 状态流转 → 异常处理 → 依赖关系 → 影响范围 → 交互规则 → 其他
 3. **末轮（查缺补漏）**：汇总已知信息让用户确认，列出剩余 unconfirmed 项
 
 ### 退出条件
@@ -78,6 +80,16 @@ description: >
 - 提供选项或默认值帮助回答，如「支付超时后订单状态：A) 保持待支付 B) 自动取消 C) 其他」
 - 对用户不关心的维度，AI 提出默认假设让用户确认，而非追问到底
 - 标注问题来源维度和关联功能点
+
+## 模型分层
+
+按「错误代价」分配模型能力，详见 [CONVENTIONS.md](../../CONVENTIONS.md#模型分层策略)。
+
+| 任务 | 推荐模型 | 理由 |
+| --- | --- | --- |
+| 需求文档解析和澄清 | Opus | 需求理解是整个 pipeline 质量天花板 |
+| 多视角分析 Agent（功能/异常） | Opus | 遗漏隐含需求的代价极高 |
+| 多视角分析 Agent（用户） | Sonnet | 用户体验分析风险较低 |
 
 ## 可用工具
 
@@ -143,6 +155,7 @@ description: >
       "id": "FP-1",
       "name": "用户注册",
       "description": "...",
+      "confidence": 85,
       "boundaries": { "in_scope": ["..."], "out_of_scope": ["..."] },
       "state_transitions": [
         { "from": "未注册", "to": "已注册", "trigger": "提交注册表单", "rules": ["..."] }
@@ -153,6 +166,17 @@ description: >
       "error_handling": ["..."],
       "data_constraints": ["..."],
       "dependencies": ["功能点级别的依赖，如'依赖支付服务的退款接口'"],
+      "impact_scope": {
+        "directly_affected": [
+          { "module": "order-service/coupon.go", "reason": "优惠券核心计算逻辑" }
+        ],
+        "indirectly_affected": [
+          { "module": "analytics/report.go", "reason": "报表统计依赖优惠金额字段" }
+        ],
+        "scope_confirmed": false,
+        "scope_notes": "需与需求方确认报表模块是否需要同步调整",
+        "data_source": "module_relations_index | code_scan | manual"
+      },
       "interaction_rules": ["..."],
       "security_compliance": ["..."],
       "compatibility": ["..."],
@@ -174,6 +198,8 @@ description: >
 ```
 
 字段按实际澄清结果填写，未涉及的维度留空数组或 null，不需要强制填充。探索模式下 `confidence_level` 通常为 `medium` 或 `low`，下游 skill 据此调整容忍度。
+
+`functional_points[].confidence`（0-100）：功能点级别的置信度。多视角模式下为交叉验证后的合并评分（2+ Agent 确认 +20 加成）；单 Agent 模式下基于文档明确度评分。下游 test-case-generation 据此调整用例生成的激进程度。
 
 `qa_pairs` 中 `source` 为 `assumption` 表示 AI 提出的默认假设被用户确认。
 

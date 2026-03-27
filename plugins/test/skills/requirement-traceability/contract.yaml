@@ -30,6 +30,17 @@ input:
       type: file
       description: 上游功能点清单
       from_upstream: requirement-clarification
+    verification_cases:
+      type: file
+      description: 上游验证用例（verification-test-gen 产出）
+      from_upstream: verification-test-gen
+    design_link:
+      type: string
+      description: Figma 设计稿链接（UI 还原度检查时使用）
+    ui_fidelity_report:
+      type: file
+      description: 上游 UI 还原度检查报告
+      from_upstream: ui-fidelity-check
 
 output:
   files:
@@ -41,6 +52,12 @@ output:
       format: json
     - name: risk_assessment.json
       description: 风险评估和行动建议
+      format: json
+    - name: forward_verification.json
+      description: 正向用例中介验证结果
+      format: json
+    - name: ui_fidelity_report.json
+      description: UI 还原度检查报告（条件产出，仅有设计稿时）
       format: json
   structured:
     overall_risk:
@@ -58,6 +75,27 @@ output:
     mode:
       type: string
       description: 执行模式（full | degraded），降级模式无需求源
+    tracing_mode:
+      type: string
+      description: 追溯模式（single-pass | redundancy-pair）
+    bidirectional_confirmation_rate:
+      type: string
+      description: 双向确认率（两个追溯 Agent 一致的映射占比）
+    verification_channel:
+      type: string
+      description: 验证通道模式（dual_channel | forward_only | reverse_only）
+    forward_verification_rate:
+      type: string
+      description: 正向用例验证通过率
+    ui_fidelity_overall:
+      type: string
+      description: UI 还原度评级（high | medium | low | N/A）
+    loop_iterations:
+      type: number
+      description: 回溯自循环执行轮次（0 表示无缺口未触发循环）
+    loop_exit_reason:
+      type: string
+      description: 自循环退出原因（all_covered | max_iterations | no_progress | user_terminated | not_triggered）
 
 dependencies:
   scripts:

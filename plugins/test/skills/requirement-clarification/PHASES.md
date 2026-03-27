@@ -87,14 +87,77 @@ python3 $SKILLS_ROOT/shared-tools/scripts/fetch_feishu_doc.py \
 2. 通过 ask_question 让用户确认/补充/删减：「根据你的描述，我梳理出以下功能点：① ... ② ... ③ ...，是否准确？有遗漏吗？」
 3. 用户确认后编号（FP-1, FP-2, ...），作为后续维度分析的基础
 
-### 3.2 按维度分析每个功能点
+### 3.2 按维度分析每个功能点（支持多视角并行）
 
-对每个功能点，逐一检查 [CHECKLIST.md](CHECKLIST.md) 中的 11 个维度。对每个维度：
+**复杂度判断**：如果功能点 >= 3 个且需求文本 > 2000 字 → 启动多视角并行分析；否则 → 单 Agent 分析。
+
+#### 3.2.1 多视角并行分析（复杂需求）
+
+在**单条消息**中同时发送 3 个 Task 调用，使用 [agents/requirement-understanding/](../../agents/requirement-understanding/) 下的 Agent 定义：
+
+- **functional-perspective**（Opus）：分析功能边界、输入输出、状态流转、数据约束
+- **exception-perspective**（Opus）：分析错误路径、边界条件、异常场景、容错机制
+- **user-perspective**（Sonnet）：分析用户场景、交互流程、可用性、多角色行为
+
+每个 Agent 接收完整需求文档，独立输出 findings（含 confidence 评分）。
+
+**交叉验证**（由主 Agent 在收到 3 个 Task 结果后执行）：
+
+1. 收集三个 Agent 的 findings 数组
+2. **结构化匹配**：要求各视角 Agent 在 findings 中标注 `target_id`（关联的 FP-N 编号）。合并时先按 `target_id + category` 做初步分组，同一分组内再做语义去重（相似描述合并）
+3. 同一发现被 2+ 个 Agent 独立识别 → confidence += 20（封顶 100）
+4. 合并后的 findings 按 confidence 排序：
+   - ≥80：标记为已确认的需求缺口，直接写入功能点的对应维度
+   - 60-79：转化为需向用户提出的澄清问题
+   - <60：记录但不主动提问
+5. 为每个功能点计算 `confidence` 分数：已确认维度占比 × 100
+
+**降级回退**：Task 工具不可用 → 单 Agent 逐维度分析（下方 3.2.2 流程）。
+
+#### 3.2.2 单 Agent 分析（简单需求或降级模式）
+
+对每个功能点，逐一检查 [CHECKLIST.md](CHECKLIST.md) 中的 12 个维度。对每个维度：
 
 1. 在已有信息中搜索相关内容
 2. 如果已明确说明 → 记录答案，标记 `source: "document"`（文档模式）或 `source: "human"`（探索模式首轮已确认）
 3. 如果未说明或存在歧义 → 生成具体的澄清问题
 4. 如果该维度可提出合理默认假设 → 生成带默认值的确认问题，标记待确认为 `source: "assumption"`
+
+### 3.2.3 影响范围分析（条件触发）
+
+当需求涉及**已有功能的修改**（而非全新功能）时，执行影响范围分析。
+
+**触发条件**：需求文档或功能点描述中提到了现有模块/功能/实体的修改。全新功能跳过此步。
+
+**Step 1：读取模块关系索引**
+
+检查项目中是否存在 `module-relations.json`（由 `spec` 插件的 `module-discovery` 生成维护）：
+
+1. 如果存在 → Read `module-relations.json`
+2. 从需求中提取核心实体关键词（如「优惠券」「订单」「支付」）
+3. 在 `entity_index` 中查找每个实体，获取 `referenced_by` 列表
+4. 沿 `depends_on` / `depended_by` 链路向外扩展一层
+5. 如果不存在 → 进入 Step 2 的定向代码扫描
+
+**Step 2：定向代码验证**（当索引不存在或不足以回答时）
+
+- 不做全库扫描，仅对索引中标记为不确定的关系做**定向扫描**（限定模块目录）
+- 如果没有索引，使用 Grep/SemanticSearch 按关键词搜索，但限定在主要业务代码目录
+- 搜索结果按模块分组，不把原始搜索结果直接交给后续步骤
+
+**Step 3：生成影响范围报告**
+
+将影响范围写入每个相关功能点的 `impact_scope` 字段：
+- `directly_affected`: 直接引用该实体的模块（从 entity_index 或代码扫描获取）
+- `indirectly_affected`: 间接依赖（沿 depended_by 链路扩展一层）
+- `scope_confirmed`: 初始为 false，等待用户确认
+- `data_source`: 标注数据来自 `module_relations_index` 还是 `code_scan`
+
+**Step 4：纳入确认问题**
+
+将影响范围发现转化为确认问题，在 3.3 渐进式确认中向用户提问：
+- "修改 X 逻辑会影响以下 N 个模块：[列表]。请确认这些模块是否都在本次需求范围内？"
+- 用户确认后设置 `scope_confirmed: true`
 
 ### 3.3 渐进式确认
 
@@ -173,7 +236,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/fetch_feishu_doc.py \
 
 ### 4.2 生成 requirement_points.json
 
-从 clarified_requirements.json 中提取编号功能点清单，附带验收标准和测试关注维度。供下游 test-design 和 test-review 消费。
+从 clarified_requirements.json 中提取编号功能点清单，附带验收标准和测试关注维度。供下游 test-case-generation 消费。
 
 ### 4.3 标记未解决问题
 

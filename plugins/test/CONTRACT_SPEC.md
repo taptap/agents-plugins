@@ -48,14 +48,18 @@ dependencies:
   env_vars:                     # 必需的环境变量
     - FEISHU_APP_ID
     - FEISHU_APP_SECRET
+  mcp_servers:                  # 可选：依赖的 MCP server（仅依赖外部 MCP 服务的 skill 使用）
+    - plugin-figma-figma
+  tools:                        # 可选：依赖的 MCP 工具（仅依赖外部 MCP 服务的 skill 使用）
+    - get_screenshot
 ```
 
 ## 编写规则
 
 1. `name` 必须与 skill 目录名一致
-2. `input.required` 中的字段是 skill 执行的前提条件，缺失则 skill 无法启动
+2. `input.required` 中的字段是 skill 执行的前提条件，缺失则 skill 无法启动。当所有输入均为必填（无可选替代）时使用 `required`；当多个输入互为替代（至少提供一个）时使用 `one_of`
 3. `input.one_of` 中的字段至少需要提供一个，编排层负责校验；skill 内部按 CONVENTIONS.md 定义的输入路由优先级处理
-4. `input.optional` 中标注 `from_upstream` 的字段，编排层会自动从上游 skill 的输出中填充
+4. `input.optional` 中标注 `from_upstream` 的字段，编排层会自动从上游 skill 的输出中填充。`from_upstream` 支持数组语法表示多个可能的上游来源：`from_upstream: [unit-test-design, integration-test-design]`（语义：任一上游都可提供此输入）
 5. `output.files` 列出所有 skill 会产出的文件，文件名必须确定（不使用通配符）
 6. `output.structured` 用于编排层快速判断 skill 执行结果，无需解析文件
 7. `version` 遵循语义化版本：主版本号变更表示接口不兼容，次版本号变更表示向后兼容的功能新增

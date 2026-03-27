@@ -1,6 +1,6 @@
 # test Plugin
 
-> QA 工作流插件，覆盖需求澄清 → 测试设计 → 测试评审 → 需求回溯 → Bug 修复分析的完整 QA 流程
+> QA 工作流插件，覆盖需求澄清 → 测试用例生成（含冗余对评审）→ 需求回溯 → Bug 修复分析的完整 QA 流程
 
 ## 简介
 
@@ -10,10 +10,12 @@
 
 | Skill | 类型 | 功能 |
 |-------|------|------|
-| **requirement-clarification** | 核心工作流 | 多维度结构化问答，拉齐需求理解 |
-| **test-design** | 核心工作流 | 基于需求拆解功能模块并生成结构化测试用例 |
-| **test-review** | 核心工作流 | 评审测试用例的覆盖度和质量（4 维度） |
-| **requirement-traceability** | 核心工作流 | 双向追溯需求与代码变更的映射关系 |
+| **requirement-clarification** | 核心工作流 | 多维度结构化问答（含影响范围分析），拉齐需求理解 |
+| **test-case-generation** | 核心工作流 | 基于需求拆解功能模块、生成测试用例、冗余对评审（4 维度）、用户确认 |
+| **requirement-traceability** | 核心工作流 | 双通道追溯（正向用例验证 + 反向代码追溯 + UI 还原度） |
+| **verification-test-gen** | 需求回溯辅助 | 从需求点生成结构化验证用例，AI 逐条对照代码推理 |
+| **test-failure-analyzer** | 测试门禁辅助 | 分析测试失败原因，分类处理，支持自循环 |
+| **ui-fidelity-check** | 需求回溯辅助 | 对比 Figma 设计稿与浏览器实现的 UI 还原度 |
 | **bug-fix-review** | 独立 skill | 分析 Bug 修复代码变更的完整性和残余风险 |
 | **unit-test-design** | 代码级生成 | 分析源代码，生成可执行的单元测试代码 |
 | **integration-test-design** | 代码级生成 | 分析 API/服务，生成可执行的集成测试代码 |
@@ -26,7 +28,7 @@
 
 ## 快速开始
 
-本插件支持 3 条独立工作链路，可独立执行也可组合使用：
+本插件支持 5 条独立工作链路，可独立执行也可组合使用：
 
 ### 链路 A — 功能测试全流程（串行）
 
@@ -35,14 +37,13 @@
 ```
 需求文档/链接
     ↓
-requirement-clarification（需求澄清）
+requirement-clarification（需求澄清 + 影响范围分析）
     ↓ clarified_requirements.json + requirement_points.json
-test-design（测试设计）
-    ↓ test_cases.json
-test-review（测试评审）
-    ↓ final_cases.json
-requirement-traceability（需求回溯）
-    ↓ traceability_matrix.json + coverage_report.json
+test-case-generation（测试用例生成 + 冗余对评审 + 用户确认）
+    ↓ final_cases.json（本 skill 最终产物，requirement-traceability 不消费此文件）
+    + 用户提供 MR/PR 链接或 diff（手动输入，作为 requirement-traceability 的代码变更输入）
+requirement-traceability（需求回溯 — 双通道）
+    ↓ traceability_matrix.json + coverage_report.json + forward_verification.json
 ```
 
 ### 链路 B — 代码级测试生成（可并行）
@@ -62,6 +63,35 @@ API 定义   ──→ integration-test-design ──→ 集成测试代码
 Bug 信息 + MR/PR ──→ bug-fix-review ──→ fix_analysis.json + risk_assessment.json
 ```
 
+### 链路 D — 需求回溯增强（配合链路 A）
+
+生成结构化验证用例，AI 逐条对照代码推理验证，配合 UI 还原度检查。
+
+```
+requirement_points.json + 代码实现
+    ↓
+verification-test-gen（验证用例生成 + AI 推理验证）
+    ↓ verification_cases.json + verification_report.json
+ui-fidelity-check（UI 还原度检查，有设计稿时）
+    ↓ ui_fidelity_report.json
+requirement-traceability（合并到双通道回溯）
+    ↓ coverage_report.json（含正向验证率 + UI 还原度）
+```
+
+### 链路 E — 测试失败自循环（配合链路 B）
+
+测试执行后有失败用例时，自动分析原因并循环修复。
+
+```
+测试执行结果（有失败）+ 代码变更 diff
+    ↓
+test-failure-analyzer（失败分类 + 方案生成）
+    ↓ failure_analysis.json + action_plan.md
+    ↓ 用户确认 → 执行修复 → 重新测试（最多 3 轮）
+```
+
+> 注意：链路 E 的输入 `test_execution_report.json` 仅在环境支持执行测试时生成。若仅做代码级测试生成（链路 B）而未实际执行测试，则无法触发链路 E。
+
 ## 支持的语言
 
 | 语言 | 单元测试 | 集成测试 | 测试框架 |
@@ -73,20 +103,61 @@ Bug 信息 + MR/PR ──→ bug-fix-review ──→ fix_analysis.json + risk_a
 | Kotlin | ✅ | ✅ | JUnit 5 + MockK |
 | Swift | ✅ | — | XCTest |
 
+## 架构特性
+
+本插件借鉴 quality/review 插件的多 Agent 设计模式，持续引入以下架构能力：
+
+### 多视角并行分析
+复杂需求时启动功能/异常/用户 3 个视角 Agent 并行分析，交叉验证提升置信度。适用于 requirement-clarification 和 test-case-generation。
+
+### 冗余对评审
+test-case-generation（review 阶段）和 requirement-traceability 使用冗余对模式 — 2 个独立 Agent 并行分析同一内容，共识发现自动加成置信度 +20。不确定的评审问题抛给用户确认，避免评审幻觉。
+
+### 双通道追溯（v0.0.10+）
+requirement-traceability 正向用「用例中介验证」（需求→验证用例→AI 逐条对照代码），反向用「直接代码追溯」（代码→需求），两者互补。
+
+### 影响范围分析（v0.0.10+）
+requirement-clarification 新增影响范围维度 — 基于 `module-relations.json` 模块关系索引分析变更波及范围，避免全库代码扫描的噪声和遗漏。
+
+### UI 还原度检查（v0.0.10+）
+Figma MCP 获取设计数据/截图 + Browser MCP 获取实现截图/DOM，AI 对比 6 个维度（布局/间距/颜色/字体/状态/交互）的还原差异。
+
+### 自循环机制（v0.0.10+）
+test-failure-analyzer 支持 分析→修复→重测 自循环（最多 3 轮），AI 自动分类失败原因（预期变化/回归/不稳定）并推荐处理方案。
+
+### 量化置信度评分
+全 Pipeline 引入 0-100 连续置信度评分，替代原有的文本标签。置信度从 requirement-clarification 流转至 requirement-traceability，每个阶段叠加评分。
+
+### 模型分层策略
+按「错误代价」分配模型 — Opus 用于需求理解/覆盖审查/根因分析/代码路径追踪（漏检代价高），Sonnet 用于用例生成/报告输出（模板化工作）。
+
 ## 目录结构
 
 ```
 plugins/test/
 ├── .claude-plugin/
 │   └── plugin.json
-├── CONVENTIONS.md              # 统一约定
+├── CONVENTIONS.md              # 统一约定（含置信度、Agent 规范、双通道、自循环）
 ├── CONTRACT_SPEC.md            # contract.yaml 编写规范
+├── agents/                     # Agent 定义文件（单一事实源）
+│   ├── AGENT_TEMPLATE.md       # 统一模板
+│   ├── test-case-writer.md     # 测试用例生成 Agent
+│   ├── verification-test-writer.md  # 验证用例生成 Agent
+│   ├── test-case-generation/   # 用例评审冗余对 Agent
+│   │   ├── review-agent-1.md   # 覆盖度视角评审 Agent
+│   │   └── review-agent-2.md   # 质量视角评审 Agent
+│   ├── failure-classifier.md   # 测试失败分类 Agent (预留)
+│   ├── ui-fidelity-checker.md  # UI 还原度检查 Agent
+│   ├── requirement-understanding/  # 需求理解多视角 Agent
+│   └── requirement-traceability/   # 需求追溯冗余对
 ├── skills/
 │   ├── shared-tools/           # 共享脚本
-│   ├── requirement-clarification/
-│   ├── test-design/
-│   ├── test-review/
-│   ├── requirement-traceability/
+│   ├── requirement-clarification/  # 需求澄清（含影响范围分析）
+│   ├── test-case-generation/   # 测试用例生成（含冗余对评审）
+│   ├── requirement-traceability/   # 需求回溯（双通道 + UI 还原度）
+│   ├── verification-test-gen/  # 验证用例生成（AI 推理验证）
+│   ├── test-failure-analyzer/  # 测试失败分析（自循环）
+│   ├── ui-fidelity-check/      # UI 还原度检查
 │   ├── bug-fix-review/
 │   ├── unit-test-design/       # 单元测试代码生成
 │   └── integration-test-design/ # 集成测试代码生成
@@ -107,6 +178,68 @@ shared-tools 脚本依赖以下环境变量（按需配置）：
 
 ## 版本历史
 
+### v0.0.16
+
+- Fix 25 review findings (R-001 to R-025) + 4 AI execution risks from dual-agent QA workflow review
+- R-001: Create review-agent-1.md and review-agent-2.md for test-case-generation redundant pair review
+- R-002/R-023: Delete deprecated skills/test-review/ and skills/test-design/ directories
+- R-003: Unify ui_fidelity_report.json field names (category, UI-DIFF-N, design_url) across SKILL.md, PHASES.md, and TEMPLATES.md
+- R-004: Fix verification-test-writer.md output to flat JSON array (remove {agent, findings} wrapper)
+- R-005: Add traceability assessment (call depth, dynamic dispatch) before code path tracing in verification-test-gen and requirement-traceability
+- R-006: Replace semantic ID matching with direct FP- inheritance in requirement-traceability
+- R-007: Correct reverse-tracer execution timing description
+- R-008: Add ui_fidelity_report as optional input in requirement-traceability contract
+- R-009/R-014: Extend CONTRACT_SPEC.md with mcp_servers/tools dependencies and from_upstream array syntax
+- R-011: Raise consensus confidence threshold from 60 to 70
+- R-012: Upgrade convergence check to set comparison (detect new regressions even when total count decreases)
+- R-013: Clarify data flow in README Link A (test-case-generation → requirement-traceability is not automatic)
+- R-016: Change degradation mode confidence from 0 to null with clear semantics
+- R-017: Unify incremental rerun verification method in requirement-traceability
+- R-018: Add test_command discovery mechanism in test-failure-analyzer
+- R-019: Normalize R- prefix format in CONVENTIONS.md
+- R-020: Mark failure-classifier as reserved
+- R-021: Add token estimation rules for large document segmentation
+- R-022: Add confidence cap (60) for structural-only mode in ui-fidelity-check
+- R-024: Add Python availability pre-check and ImportError/ModuleNotFoundError as deterministic failures
+- R-025: Optimize user confirmation UX with batch accept/reject options
+- Risk 1: Add adversarial verification (counter-evidence check) for pass conclusions
+- Risk 2: Require target_id in multi-perspective agent findings for structured matching
+- Risk 3: Implement two-step deduplication (literal grep + AI semantic comparison)
+- Risk 4: Cap indirect association confidence at 75 in test-failure-analyzer
+
+### v0.0.13
+
+- 合并 `test-case-generation`（原 `test-design`）与 `test-review` 为单一 skill — 生成后立即进行冗余对评审，不确定问题抛给用户确认
+- 新增 `agents/test-case-generation/review-agent-1.md` 和 `review-agent-2.md` — 分别侧重覆盖度和质量的评审 Agent
+- test-case-generation 阶段从 5 个扩展为 7 个：新增 review（冗余对评审）、confirm（用户确认）、output（最终输出）
+- 输出文件从 `test_cases.json` 变为 `final_cases.json`（含 `review_confidence` 和 `source` 字段）
+- 链路 A 简化为 3 个节点：requirement-clarification → test-case-generation → requirement-traceability
+- 删除独立的 `test-review` skill 和目录
+
+### v0.0.11
+
+- 新增 `verification-test-gen` skill — 从需求功能点生成结构化验证用例（具体输入→预期输出），AI 逐条对照代码推理验证
+- 新增 `test-failure-analyzer` skill — 分析测试失败原因，分类为预期变化/回归/不稳定，支持 分析→修复→重测 自循环（最多 3 轮）
+- 新增 `ui-fidelity-check` skill — 对比 Figma 设计稿与浏览器实现的 UI 还原度（6 维度对比）
+- 新增 3 个 Agent 定义：`verification-test-writer`、`failure-classifier`、`ui-fidelity-checker`
+- `requirement-clarification` 新增第 12 维度「影响范围」— 基于 `module-relations.json` 模块关系索引分析变更波及范围
+- `requirement-traceability` 升级为双通道模式 — 正向「用例中介验证」+ 反向「直接代码追溯」+ 条件触发 UI 还原度检查
+- CONVENTIONS.md 新增 6 个章节（双通道追溯、影响范围分析、自循环协议、UI 还原度、验证用例格式、module-relations.json 格式）
+- 新增链路 D（需求回溯增强）和链路 E（测试失败自循环），共 5 条工作链路
+
+### v0.0.7
+
+- 新增 `agents/` 目录，包含 8 个 Agent 定义文件（统一模板化）
+- 引入多视角并行分析（功能/异常/用户 3 个视角 Agent）用于需求理解
+- test-review 引入冗余对评审模式（2 个独立 Agent 并行评审）
+- requirement-traceability 引入冗余对追溯模式（正向 + 反向 Agent 并行）
+- 全 Pipeline 引入 0-100 量化置信度评分，替代文本标签
+- 所有 skill 新增模型分层说明（Opus/Sonnet/Haiku 按错误代价分配）
+- CONVENTIONS.md 新增 4 个章节（量化置信度、Agent 规范、模型分层、多 Agent 并行）
+- 用例 JSON 格式新增 `confidence`、`review_confidence`、`source` 可选字段
+- test-case-generation 新增简单需求快速路径（<3 功能点跳过 decompose）
+- traceability_matrix.json 新增 `confidence`、`trace_direction` 字段
+
 ### v0.0.4
 
 - 修复 search_mrs.py / search_prs.py 子串匹配误报（改用词边界正则）
@@ -119,7 +252,7 @@ shared-tools 脚本依赖以下环境变量（按需配置）：
 
 ### v0.0.3
 
-- 修复 .gitignore 排除 test-design / test-review 目录的阻塞问题
+- 修复 .gitignore 排除 test-case-generation / test-review 目录的阻塞问题
 - 移除 Python 脚本中硬编码的内部 GitLab URL 和项目 ID
 - 统一 Python 脚本类型注解为 typing 模块格式（兼容 Python 3.8+）
 - 修复 fetch_feishu_doc.py image token 路径穿越风险

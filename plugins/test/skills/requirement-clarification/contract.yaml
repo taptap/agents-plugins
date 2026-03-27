@@ -26,6 +26,9 @@ input:
     design_link:
       type: string
       description: Figma 设计稿链接
+    module_relations:
+      type: file
+      description: 模块关系索引文件（module-relations.json），由 spec 插件的 module-discovery 生成维护
 
 output:
   files:
@@ -57,6 +60,18 @@ output:
     open_question_count:
       type: number
       description: 未解决问题数（对应 JSON 文件中 open_questions 数组的长度）
+    analysis_mode:
+      type: string
+      description: 分析模式（single-agent | multi-perspective）
+    perspective_agreement_rate:
+      type: string
+      description: 多视角一致率（仅 multi-perspective 模式）
+    impact_scope_available:
+      type: boolean
+      description: 是否进行了影响范围分析
+    affected_modules_count:
+      type: number
+      description: 受影响模块总数（直接 + 间接）
 
 dependencies:
   scripts:

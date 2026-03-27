@@ -1,7 +1,7 @@
 {
   "name": "test",
-  "description": "QA 工作流插件，提供需求澄清、测试设计（功能/单元/集成）、测试评审、需求回溯、Bug 修复分析等 QA 全流程 Skill",
-  "version": "0.0.6",
+  "description": "QA 工作流插件，提供需求澄清、测试用例生成（含冗余对评审）、代码级测试生成（单元/集成）、需求回溯、Bug 修复分析等 QA 全流程 Skill",
+  "version": "0.0.17",
   "author": {
     "name": "TapTap AI Team"
   }

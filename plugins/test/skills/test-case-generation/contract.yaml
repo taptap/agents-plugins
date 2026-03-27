@@ -1,8 +1,8 @@
-name: test-design
-version: "1.1"
+name: test-case-generation
+version: "2.0"
 description: >
-  根据需求文档和澄清结果拆解功能模块并生成结构化测试用例。
-  输入需求链接、本地需求文档或上游澄清结果，输出 test_cases.json。
+  根据需求文档和澄清结果拆解功能模块，生成结构化测试用例，并通过冗余对评审确保质量。
+  输入需求链接、本地需求文档或上游澄清结果，输出 final_cases.json。
 
 input:
   one_of:
@@ -27,8 +27,11 @@ input:
 
 output:
   files:
+    - name: final_cases.json
+      description: 评审通过 + 补充的完整用例集（含 review_confidence 和 source 字段）
+      format: json
     - name: test_cases.json
-      description: 所有模块的测试用例合集（顶层 JSON 数组，各用例通过 module 字段标识归属）
+      description: 生成阶段的用例集（review 前的中间版本，保留供对比）
       format: json
     - name: decomposition.md
       description: 功能模块拆解清单
@@ -36,16 +39,47 @@ output:
     - name: context_summary.md
       description: 全局上下文摘要
       format: markdown
+    - name: review_result.md
+      description: 4 维度冗余对评审结果
+      format: markdown
+    - name: review_summary.json
+      description: 评审摘要统计（用例数/覆盖率/问题数/维度评分）
+      format: json
+    - name: supplementary_cases.json
+      description: 补充用例（如有覆盖缺口）
+      format: json
+      optional: true
   structured:
     total_modules:
       type: number
       description: 模块总数
     total_cases:
       type: number
-      description: 用例总数
+      description: 生成的用例总数（review 前）
     priority_distribution:
       type: object
       description: 优先级分布 {P0, P1, P2, P3}
+    avg_confidence:
+      type: number
+      description: 用例平均置信度（0-100）
+    coverage_rate:
+      type: string
+      description: 需求覆盖率
+    issues_found:
+      type: number
+      description: 评审发现问题数
+    consensus_issues:
+      type: number
+      description: 两个评审 Agent 一致发现的问题数
+    cases_supplemented:
+      type: number
+      description: 补充用例数
+    review_mode:
+      type: string
+      description: 评审模式（single-agent | redundancy-pair）
+    user_confirmed_count:
+      type: number
+      description: 用户确认的问题数
 
 dependencies:
   scripts:
