@@ -238,6 +238,88 @@ Agent 因 context 截断或异常中断后恢复执行时：
 - JSON 文件顶层必须是数组或对象，不能是字符串
 - 所有文本使用中文
 
+## ask_question 输出格式
+
+所有 skill 需要向用户提问并等待回答时，**必须**使用以下结构化格式输出，确保平台能将问题渲染为可点击的交互式卡片。
+
+### 格式规范
+
+输出一行 `AskUserQuestion` 标记，紧接一个 JSON code fence：
+
+````
+AskUserQuestion
+```json
+{
+  "questions": [
+    {
+      "question": "完整的问题文本",
+      "header": "简短标题（2-6 字）",
+      "options": [
+        {"label": "选项显示文本"},
+        {"label": "另一选项", "description": "补充说明（可选）"}
+      ],
+      "multiSelect": false
+    }
+  ]
+}
+```
+````
+
+### 字段说明
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `questions` | array | 是 | 问题列表，每次 3-5 个 |
+| `questions[].question` | string | 是 | 完整问题描述 |
+| `questions[].header` | string | 是 | 简短标题，用于卡片标题栏 |
+| `questions[].options` | array | 是 | 选项列表，至少 2 个 |
+| `questions[].options[].label` | string | 是 | 选项显示文本 |
+| `questions[].options[].description` | string | 否 | 选项补充说明 |
+| `questions[].multiSelect` | boolean | 否 | 是否允许多选，默认 `false` |
+
+### 约束
+
+- 每次提问控制在 **3-5 个问题**
+- 每个问题必须提供 **选项或默认值**，降低用户认知负担
+- `AskUserQuestion` 标记行前后不要夹杂其他文字；分析说明放在标记行之前单独输出
+- 不要在 JSON 中使用 Markdown 格式（如 `**加粗**`），保持纯文本
+
+### 示例
+
+```
+分析完成，需要您确认以下信息：
+
+AskUserQuestion
+```json
+{
+  "questions": [
+    {
+      "question": "本次需求涉及哪些平台？",
+      "header": "平台范围",
+      "options": [
+        {"label": "仅前端（iOS/Android/Web/PC）"},
+        {"label": "仅后端"},
+        {"label": "前后端同时修改"},
+        {"label": "多端同步", "description": "请在回复中列出具体平台"}
+      ],
+      "multiSelect": false
+    },
+    {
+      "question": "核心变更是什么？请选择最接近的描述",
+      "header": "核心变更",
+      "options": [
+        {"label": "新增功能模块"},
+        {"label": "修改现有功能逻辑"},
+        {"label": "UI/交互调整"},
+        {"label": "性能优化/重构"}
+      ],
+      "multiSelect": true
+    }
+  ]
+}
+```
+```
+
 ## 脚本失败重试策略
 
 所有共享脚本调用失败时，统一执行以下重试策略：

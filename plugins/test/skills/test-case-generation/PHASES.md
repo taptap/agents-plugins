@@ -273,30 +273,51 @@
 
 ### 6.2 向用户呈现
 
-使用 `ask_question` 工具提供结构化选项，降低用户认知负担：
+使用 CONVENTIONS.md「ask_question 输出格式」提供结构化选项，降低用户认知负担。
 
 **首先**提供批量处理选项：
 
+````
+AskUserQuestion
+```json
+{
+  "questions": [
+    {
+      "question": "评审发现 {N} 个待确认问题，您希望如何处理？",
+      "header": "批量处理",
+      "options": [
+        {"label": "接受全部建议修改"},
+        {"label": "逐条确认", "description": "逐个展示每个问题"},
+        {"label": "驳回全部", "description": "保持原样"}
+      ],
+      "multiSelect": false
+    }
+  ]
+}
 ```
-问题：评审发现 {N} 个待确认问题，您希望如何处理？
-选项：
-A. 接受全部建议修改
-B. 逐条确认（逐个展示每个问题）
-C. 驳回全部（保持原样）
+````
+
+如用户选择**逐条确认**，则逐个展示，每个问题包含 Agent 判断摘要和操作选项：
+
+````
+AskUserQuestion
+```json
+{
+  "questions": [
+    {
+      "question": "{问题描述}（涉及用例 {case_id}，共识置信度 {merged_confidence}）",
+      "header": "问题 1",
+      "options": [
+        {"label": "接受建议修改", "description": "{suggestion}"},
+        {"label": "驳回（保持原样）"},
+        {"label": "补充说明", "description": "请在回复中补充"}
+      ],
+      "multiSelect": false
+    }
+  ]
+}
 ```
-
-如用户选择**逐条确认**，则以结构化列表逐个展示：
-
-```markdown
-### 问题 1: {问题描述}
-- **涉及用例**: {case_id} - {title}
-- **Agent #1 判断**: {description} (confidence: {score})
-- **Agent #2 判断**: {description} (confidence: {score})
-- **共识置信度**: {merged_confidence}
-- **建议操作**: {suggestion}
-
-请确认：接受建议修改 / 驳回（保持原样） / 补充说明
-```
+````
 
 ### 6.3 应用用户决策
 
