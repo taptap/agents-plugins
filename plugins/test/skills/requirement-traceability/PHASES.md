@@ -10,14 +10,16 @@
 
 ### 1.1 确认代码变更来源
 
-按以下优先级判断（互斥，取第一个命中的）：
+收集所有代码变更来源（可同时提供多个）：
 
-1. `code_diff_text` 参数非空 → **文本模式**，直接使用提供的 diff 文本
-2. `code_diff` 参数提供了文件路径 → **文件模式**，Read 该文件获取 diff 内容
-3. `code_changes` 参数提供了 MR/PR 链接列表 → **MR/PR 模式**，记录链接列表
-4. 预取数据中有关联代码变更列表 → **MR/PR 模式**，使用预取列表
-5. 预取数据中有 `work_item_id` → 用 `search_mrs.py` / `search_prs.py` 搜索，仍为 0 → **停止**
+1. `code_diff_text` 参数非空 → 纳入 **文本 diff**
+2. `code_diff` 参数提供了文件路径列表 → 逐个 Read，纳入 **文件 diff**
+3. `code_changes` 参数提供了 MR/PR 链接列表 → 纳入 **MR/PR 列表**
+4. 预取数据中有关联代码变更列表 → 合并到 MR/PR 列表（去重）
+5. 以上均为空时，预取数据中有 `work_item_id` → 用 `search_mrs.py` / `search_prs.py` 搜索，仍为 0 → **停止**
 6. 以上均不满足 → **停止**
+
+后续阶段同时处理所有来源的 diff 数据。
 
 ### 1.2 MR/PR 模式下的 provider 判断
 
@@ -99,6 +101,10 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 1. 如果存在 → 在 4.4 中直接合并到 coverage_report.json
 2. 如果不存在且有 design_link → 在 3.4 中触发 UI 还原度检查
 
+同时检查 `api_contract_report.json` 是否存在（上游 api-contract-validation 产出）：
+1. 如果存在 → 在 4.4 中直接合并到 coverage_report.json，跳过 3.2.5 的内置检查
+2. 如果不存在且代码变更涉及 API 相关文件 → 在 3.2.5 中触发内置契约感知检查
+
 ### 3.2 正向通道：用例中介验证
 
 **有上游 verification_cases.json 时**：
@@ -129,6 +135,49 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 | `covered` | `pass` | 保留 forward-tracer 的 confidence |
 | `partial` | `inconclusive` | confidence 取 forward-tracer 值的 80%（部分实现无法判定 pass） |
 | `missing` | `fail` | 保留 forward-tracer 的 confidence |
+
+### 3.2.5 API 契约感知检查（条件触发）
+
+当前后端同步开发时，代码变更可能存在接口契约不一致。本步骤在正向通道完成后执行轻量级 API 契约校验。
+
+**触发条件**（满足任一即触发）：
+
+1. 代码变更文件中包含 API 相关模式（网络请求路径定义、API 模型/DTO、请求参数构造、路由定义等）
+2. `analysis_checklist.md` 中的需求点涉及接口交互（关键词：接口、API、数据获取、请求、网络等）
+3. `code_changes` 或 `backend_changes` 中同时存在前端和后端 MR/PR
+
+以上条件均不满足 → 跳过，在 coverage_report.json 中记录 `api_contract.overall_consistency: "N/A"`。
+
+**上游优先**：如果工作目录已有 `api_contract_report.json`（上游 api-contract-validation 产出）→ 跳过内置检查，在阶段 4 直接合并。
+
+**内置轻量级检查流程**：
+
+1. **分类 API 相关变更**：从 diff 中识别以下文件类型
+   - 前端：网络请求路径枚举/常量、API 响应模型（Codable/Decodable/DTO）、请求参数构造
+   - 后端：路由定义、Controller/Handler、响应结构体/序列化器
+
+2. **提取接口签名**：从 diff 中提取每个涉及的 API 端点的关键信息
+   - 请求路径（URL path）
+   - 请求方法（GET/POST/PUT/DELETE）
+   - 请求参数名和类型
+   - 响应字段名和类型
+
+3. **交叉比对**：对每个涉及的端点，在前端和后端的变更之间做一致性检查
+   - **路径一致性**：前端调用路径 vs 后端路由定义
+   - **字段名一致性**：前端模型字段名 vs 后端响应字段名（注意命名风格转换，如 snake_case ↔ camelCase）
+   - **类型一致性**：前端字段类型 vs 后端字段类型（如 String vs Int 不匹配）
+   - **必填字段完整性**：后端标记为必填的请求参数，前端是否都传递了
+
+4. **可选：OpenAPI 基准校验**：如果提供了 `openapi_spec` 参数
+   - 将前端模型和后端实现分别与 OpenAPI 定义比对
+   - 偏离 OpenAPI 定义的一方标记为不一致来源
+
+5. **写入结果**：生成契约检查摘要，追加到 `code_analysis.md`
+
+**降级**：
+
+- 仅有前端变更无后端变更（或反之）→ 仅检查与 OpenAPI spec 的一致性（如有 spec），否则仅记录 API 相关变更的概要，不做一致性判定
+- diff 信息不足以提取接口签名 → 标记为 `inconclusive`，在报告中注明原因
 
 ### 3.3 反向通道：直接代码追溯
 
@@ -252,6 +301,36 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 6. `source` ← `"ui-fidelity-check"`（上游产出）或 `"inline"`（本 skill 内置检查）
 7. 如无 `ui_fidelity_report.json` 且未执行 UI 检查 → `ui_fidelity` 字段不写入
 
+- `api_contract`: 如果有 `api_contract_report.json`（上游产出）或 3.2.5 内置检查结果，按以下字段映射合并 API 契约数据：
+
+```json
+{
+  "api_contract": {
+    "overall_consistency": "consistent | inconsistent | partial | N/A",
+    "checked_endpoints": 3,
+    "issues_found": 1,
+    "issues": [
+      {
+        "endpoint": "/api/v2/user/profile",
+        "type": "field_mismatch | type_mismatch | path_mismatch | missing_param",
+        "severity": "high | medium | low",
+        "frontend_expects": "user_name: String",
+        "backend_provides": "username: String",
+        "source_mr": "ios/taptap-ios!456"
+      }
+    ],
+    "source": "api-contract-validation | inline"
+  }
+}
+```
+
+映射规则：
+1. `overall_consistency` ← 上游 `api_contract_report.json` 的 `overall_consistency`，或内置检查的计算结果（全部一致 → `consistent`，存在 high → `inconsistent`，仅 medium/low → `partial`）
+2. `checked_endpoints` ← 检查过的接口端点数
+3. `issues` ← 上游的 `issues` 数组或内置检查发现的问题列表
+4. `source` ← `"api-contract-validation"`（上游产出）或 `"inline"`（本 skill 内置检查）
+5. 如 3.2.5 未触发且无上游报告 → `api_contract` 字段不写入
+
 ### 4.5 生成 risk_assessment.json
 
 格式见 [TEMPLATES.md](TEMPLATES.md#risk_assessmentjson)。
@@ -261,8 +340,79 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 - 存在未追溯的代码变更（可能的范围蔓延）→ 中风险
 - 高复杂度变更未映射到明确需求 → 高风险
 - 双向确认率低（正反向结果分歧大）→ 额外风险标记
+- API 契约存在 high 级别不一致（前后端字段/类型/路径不匹配）→ 高风险
+- API 契约存在 medium 级别不一致（命名风格差异、可选字段遗漏等）→ 中风险
+
+### 4.6 缺陷提取与优先级判定（smoke-test 模式）
+
+仅当 `mode == "smoke-test"` 时执行，否则跳过。
+
+回读 `forward_verification.json`、`coverage_report.json`、`traceability_matrix.json`，从以下来源提取缺陷：
+
+**来源 1：正向验证失败**
+
+从 `forward_verification.json` 中提取 `result: "fail"` 且 `confidence >= 70` 的条目：
+
+- 缺陷名称 = 关联需求点名称 + 验证用例的场景描述
+- 预期结果 = `expected` 字段原文
+- 实际结果 = 从 `trace` 字段推导（代码执行路径偏离预期的关键分支点或返回值）
+- 优先级判定：confidence >= 85 → P0；confidence >= 70 → P1
+- `evidence.source` = `"forward_verification"`，`evidence.source_id` = 对应 `case_id`
+
+**来源 2：需求实现缺失**
+
+从 `coverage_report.json` 的 `gaps[]` 中提取 `type == "requirement_not_implemented"` 的条目：
+
+- 缺陷名称 = 需求点名称 + "实现缺失"
+- 预期结果 = 需求点描述（从 `analysis_checklist.md` 或 `traceability_matrix.json` 中获取）
+- 实际结果 = "代码变更中未发现对应实现"
+- 优先级判定：`risk_level == "high"` → P0；`risk_level == "medium"` → P1
+- `evidence.source` = `"coverage_gap"`
+
+**来源 3：API 契约不一致**
+
+从 `coverage_report.json` 的 `api_contract.issues[]` 中提取 severity 为 high 或 medium 的条目：
+
+- 缺陷名称 = 端点路径 + 不一致类型描述
+- 预期结果 = 前端期望的定义
+- 实际结果 = 后端实际提供的定义
+- 优先级判定：`severity == "high"` → P0（类型不匹配、路径不匹配、必填参数缺失）；`severity == "medium"` → P1
+- `evidence.source` = `"api_contract"`
+
+**来源 4：UI 还原度差异（条件触发）**
+
+当 `coverage_report.json` 中存在 `ui_fidelity` 且有 high severity 差异时：
+
+- 优先级：统一为 P1（UI 差异通常不构成 P0 阻断）
+- `evidence.source` = `"ui_fidelity"`
+
+**去重规则**：同一需求点（`requirement_ref` 相同）从多个来源命中时，合并为一个缺陷，取最高优先级，在 `evidence` 中记录所有命中来源。
+
+**confidence 过滤**：来源 1 中 confidence < 70 的 fail 项不提取为缺陷，仅在 `smoke_test_report.json` 的 `low_confidence_items` 中记录供参考。
+
+将提取结果暂存，供 4.7 写入文件。
+
+### 4.7 生成冒烟测试报告（smoke-test 模式）
+
+仅当 `mode == "smoke-test"` 时执行，否则跳过。
+
+1. **写入 `defect_list.json`**：将 4.6 提取的缺陷按优先级排序（P0 在前），格式见 [TEMPLATES.md](TEMPLATES.md#defect_listjson)
+2. **写入 `smoke_test_report.json`**：汇总验证统计和缺陷统计，格式见 [TEMPLATES.md](TEMPLATES.md#smoke_test_reportjson)
+3. **P0 门控判定**：
+   - `defect_list.json` 中 `priority == "P0"` 的缺陷数 > 0 → `verdict: "fail"`，`fail_reason` 列出 P0 缺陷摘要
+   - P0 缺陷数 == 0 → `verdict: "pass"`
+4. **Chat 输出冒烟测试结论**：
+
+```
+冒烟测试结论：{verdict}
+- 验证点：{total_points} 个（通过 {passed}，失败 {failed}，待定 {inconclusive}）
+- 缺陷：{total_defects} 个（P0: {p0}, P1: {p1}, P2: {p2}）
+{如 verdict == "fail": "P0 缺陷列表：\n" + 逐条列出 P0 缺陷名称}
+```
 
 ## 阶段 5: loop - 回溯自循环（条件触发）
+
+> **smoke-test 模式行为**：当 `mode == "smoke-test"` 时，跳过 Phase 5 整个自循环阶段。冒烟测试场景不做交互式缺口修复，4.7 产出即为最终结果。
 
 当 coverage_report.json 存在 `missing` 或 `partial` 状态的需求点时，自动进入缺口修复循环。
 

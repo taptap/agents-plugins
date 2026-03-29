@@ -1,17 +1,18 @@
 name: requirement-traceability
-version: "2.0"
+version: "2.1"
 description: >
   双向追溯需求与代码变更的映射关系。输入需求描述 + 代码变更（MR/PR 或本地 diff），
   输出 traceability_matrix.json + coverage_report.json + risk_assessment.json。
+  支持 smoke-test 模式：在回溯基础上提取缺陷列表并执行 P0 门控判定。
 
 input:
-  one_of:
+  any_of:
     code_changes:
       type: string[]
-      description: 关联的 MR/PR 链接列表（GitLab MR 或 GitHub PR）
+      description: 关联的 MR/PR 链接列表（GitLab MR 或 GitHub PR），可与本地 diff 同时提供
     code_diff:
-      type: file
-      description: 本地 diff 文件（git diff 输出、patch 文件等）
+      type: file[]
+      description: 本地 diff 文件列表（支持多仓库，每个文件为一个仓库的 git diff 输出）
     code_diff_text:
       type: string
       description: 直接提供的代码变更文本（粘贴的 diff 内容）
@@ -41,6 +42,24 @@ input:
       type: file
       description: 上游 UI 还原度检查报告
       from_upstream: ui-fidelity-check
+    openapi_spec:
+      type: file
+      description: OpenAPI 规范文件（用于 API 契约校验的基准，如 openapi.json / swagger.yaml）
+    backend_changes:
+      type: string[]
+      description: 后端关联 MR/PR 链接列表（前后端同步开发时提供，用于交叉比对接口定义）
+    api_contract_report:
+      type: file
+      description: 上游 API 契约校验报告
+      from_upstream: api-contract-validation
+    mode:
+      type: string
+      description: >
+        执行模式。traceability（默认）仅执行需求回溯；
+        smoke-test 在回溯基础上追加缺陷提取和冒烟测试判定
+    test_cases:
+      type: file
+      description: 已有测试用例文件（辅助冒烟验证点生成和优先级判定）
 
 output:
   files:
@@ -59,6 +78,14 @@ output:
     - name: ui_fidelity_report.json
       description: UI 还原度检查报告（条件产出，仅有设计稿时）
       format: json
+    - name: defect_list.json
+      description: 缺陷列表（smoke-test 模式产出，含名称、优先级、实际/预期结果）
+      format: json
+      optional: true
+    - name: smoke_test_report.json
+      description: 冒烟测试报告含 pass/fail 判定（smoke-test 模式产出）
+      format: json
+      optional: true
   structured:
     overall_risk:
       type: string
@@ -90,12 +117,27 @@ output:
     ui_fidelity_overall:
       type: string
       description: UI 还原度评级（high | medium | low | N/A）
+    api_contract_consistency:
+      type: string
+      description: API 契约一致性（consistent | inconsistent | partial | N/A）
+    api_contract_issues_count:
+      type: number
+      description: API 契约不一致问题数（0 表示一致或未触发检查）
     loop_iterations:
       type: number
       description: 回溯自循环执行轮次（0 表示无缺口未触发循环）
     loop_exit_reason:
       type: string
       description: 自循环退出原因（all_covered | max_iterations | no_progress | user_terminated | not_triggered）
+    smoke_test_verdict:
+      type: string
+      description: 冒烟测试结论（pass | fail | N/A），仅 smoke-test 模式有效
+    smoke_test_defect_count:
+      type: number
+      description: 缺陷总数（0 表示无缺陷或非 smoke-test 模式）
+    smoke_test_p0_count:
+      type: number
+      description: P0 缺陷数（>0 则 verdict=fail）
 
 dependencies:
   scripts:

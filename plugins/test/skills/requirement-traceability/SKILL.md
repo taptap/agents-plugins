@@ -3,6 +3,7 @@ name: requirement-traceability
 description: >
   双向追溯需求与代码变更的映射关系。输入需求描述 + 代码变更（MR/PR 或本地 diff），
   输出 traceability_matrix.json + coverage_report.json + risk_assessment.json。
+  支持 smoke-test 模式：在回溯基础上提取缺陷列表并执行 P0 门控判定。
 ---
 
 # 需求回溯
@@ -10,17 +11,18 @@ description: >
 ## Quick Start
 
 - Skill 类型：核心工作流
-- 适用场景：功能开发完成后，验证代码变更是否完整覆盖需求
+- 适用场景：功能开发完成后，验证代码变更是否完整覆盖需求；**smoke-test 模式**下可作为冒烟测试验证引擎
 - 必要输入：代码变更（MR/PR 链接、本地 diff 文件、或直接提供 diff 文本）必须非空；需求描述推荐提供，缺失时基于代码变更做单边追溯（降级模式）
-- 输出产物：`traceability_matrix.json`、`coverage_report.json`、`risk_assessment.json`
-- 失败门控：代码变更为空时停止；无法确认的映射标记为 `[推测]`
-- 执行步骤：`init → fetch → map → output`
+- 输出产物：`traceability_matrix.json`、`coverage_report.json`、`risk_assessment.json`；smoke-test 模式额外输出 `defect_list.json`、`smoke_test_report.json`
+- 失败门控：代码变更为空时停止；无法确认的映射标记为 `[推测]`；smoke-test 模式下 P0 缺陷 > 0 则 verdict = fail
+- 执行步骤：`init → fetch → map → output`（smoke-test 模式在 output 阶段追加 4.6/4.7）
 
 ## 核心能力
 
 - 代码变更分析 — 解析代码 diff，分类变更文件，识别变更类型和影响范围
 - 双向追溯 — 需求 → 代码 和 代码 → 需求 的双向映射
 - 覆盖缺口识别 — 找出未被代码实现的需求和未关联需求的代码变更
+- API 契约感知 — 当代码变更涉及接口交互时，检查前后端定义是否一致
 - 风险评估 — 基于缺口和变更复杂度评估残余风险
 
 ## 追溯原则
@@ -41,6 +43,7 @@ v0.0.10 引入双通道追溯，正向和反向使用不同的验证策略：
 | --- | --- | --- | --- |
 | 正向通道 | 需求 → 代码 | 用例中介验证 | 需求是否被正确实现？ |
 | 反向通道 | 代码 → 需求 | 直接代码追溯 | 代码有没有做需求之外的事？ |
+| ↳ 契约感知 | 前端 ↔ 后端 | 接口签名交叉比对 | 前后端接口定义是否一致？（正向通道子步骤，条件触发） |
 
 ### 正向通道：用例中介验证
 
@@ -62,6 +65,16 @@ v0.0.10 引入双通道追溯，正向和反向使用不同的验证策略：
 
 触发条件：`design_link` 存在且前端页面可在浏览器中访问。
 
+### API 契约感知检查（条件触发）
+
+当代码变更涉及 API 交互（网络请求路径、API 模型、请求参数等）时，正向通道额外执行轻量级前后端契约一致性检查。检查结果合并到 `coverage_report.json` 的 `api_contract` 字段。
+
+触发条件（满足任一）：代码变更包含 API 相关文件、需求点涉及接口交互、同时存在前端和后端 MR。
+
+检查内容：路径一致性、模型字段一致性、请求参数一致性。如提供了 `openapi_spec`，额外做 OpenAPI 基准校验。
+
+与独立 skill 的关系：本 skill 内置的是轻量级检查，专注于从 diff 中提取接口签名并交叉比对。如需深度 schema 对比、breaking change 检测等，应使用独立的 `api-contract-validation` skill，其产出 `api_contract_report.json` 可作为上游输入直接消费，跳过内置检查。
+
 ## 模型分层
 
 按「错误代价」分配模型能力，详见 [CONVENTIONS.md](../../CONVENTIONS.md#模型分层策略)。
@@ -71,6 +84,7 @@ v0.0.10 引入双通道追溯，正向和反向使用不同的验证策略：
 | 冗余对追溯 Agent（forward/reverse-tracer） | Opus | 追溯遗漏 = 需求缺口未被发现 |
 | 正向用例中介验证 | Opus | 代码路径追踪需要深度推理 |
 | UI 还原度检查 Agent | Opus | 视觉和结构差异识别需要精确对比 |
+| API 契约感知检查 | Sonnet | 接口签名提取和字段比对属于规则化处理 |
 | 交叉验证和结果合并 | Sonnet | 规则化处理 |
 
 ## 可用工具
@@ -87,9 +101,19 @@ v0.0.10 引入双通道追溯，正向和反向使用不同的验证策略：
 
 `get_figma_data(url="<链接>")` — 获取设计稿数据。仅当 fetch 阶段发现 Figma 链接时使用。
 
+## 冒烟测试模式（mode=smoke-test）
+
+当 `mode` 参数为 `smoke-test` 时，在标准回溯流程（init → fetch → map → output）完成后，追加执行缺陷提取和冒烟测试判定（详见 PHASES.md 的 4.6 和 4.7 步骤）：
+
+- 从 `forward_verification.json` 的 fail 项、`coverage_report.json` 的 gaps、`api_contract.issues` 中提取缺陷
+- 基于置信度和风险等级判定优先级（P0/P1/P2）
+- **P0 门控**：P0 缺陷数 > 0 → `verdict: "fail"`（冒烟不通过）
+- 额外输出：`defect_list.json`（结构化缺陷列表，含名称、优先级、实际结果、预期结果）+ `smoke_test_report.json`（冒烟测试报告含通过/不通过判定）
+- smoke-test 模式下跳过 Phase 5 自循环（不做交互式缺口修复，直接输出最终结果）
+
 ## 阶段流程
 
-按以下 4 个阶段顺序执行，各阶段详细操作见 [PHASES.md](PHASES.md)。
+按以下阶段顺序执行，各阶段详细操作见 [PHASES.md](PHASES.md)。
 
 | 阶段 | 目标 | 关键产物 |
 | --- | --- | --- |
@@ -97,6 +121,8 @@ v0.0.10 引入双通道追溯，正向和反向使用不同的验证策略：
 | 2. fetch | 获取需求文档和代码 diff | `analysis_checklist.md` |
 | 3. map | 双通道并行：正向用例验证 + 反向代码追溯 | `code_analysis.md` |
 | 4. output | 覆盖验证、风险评估和最终产出 | `traceability_matrix.json`、`coverage_report.json`、`risk_assessment.json` |
+| 4.6 | 缺陷提取与优先级判定（smoke-test 模式） | — |
+| 4.7 | 冒烟测试报告生成 + P0 门控（smoke-test 模式） | `defect_list.json`、`smoke_test_report.json` |
 
 ## 中间文件
 
@@ -104,6 +130,12 @@ v0.0.10 引入双通道追溯，正向和反向使用不同的验证策略：
 | --- | --- | --- |
 | `analysis_checklist.md` | fetch | 需求点和代码变更清单 |
 | `code_analysis.md` | map | 逐代码变更的分析记录 |
+
+## 与其他 skill 的关系
+
+- **change-analysis**：侧重代码变更的影响面分析和测试覆盖评估。本 skill 侧重需求与代码的双通道追溯矩阵，可被 change-analysis 消费（change-analysis 可选引用本 skill 产出的追溯矩阵）
+- **test-case-review**：专注已有测试用例的质量评审。本 skill 的覆盖缺口分析可为 test-case-review 提供补充视角
+- **冒烟测试工作流**：本 skill 的 smoke-test 模式作为冒烟测试的分析引擎，复用双通道追溯能力，追加缺陷提取和 P0 门控。工作流层通过 `mode=smoke-test` 参数触发
 
 ## 注意事项
 
