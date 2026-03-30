@@ -652,8 +652,15 @@ func parseGameDetail() throws {
 
 **方式 2：Bundle.module（仅限 SwiftPM test target）**
 
+Swift Testing：
 ```swift
 let url = try #require(Bundle.module.url(forResource: "game_detail_response", withExtension: "json"))
+let data = try Data(contentsOf: url)
+```
+
+XCTest：
+```swift
+let url = try XCTUnwrap(Bundle.module.url(forResource: "game_detail_response", withExtension: "json"))
 let data = try Data(contentsOf: url)
 ```
 

@@ -277,27 +277,35 @@ Mock 的目的是隔离外部依赖，不是跳过被测逻辑：
 
 ## 项目测试约定（Phase 1 init 产出）
 
+（按实际项目语言填写，以下为两种示例）
+
+**Go 项目示例：**
+- 框架选择：testing + testify/assert
+- 命名风格：`Test_<函数名>_<场景>_<预期>`
+- Mock 模式：interface mock
+
+**Swift 项目示例：**
 - 框架选择：Swift Testing（项目已有测试全部使用 Swift Testing）
 - 命名风格：`@Suite("模块名") struct XxxTests` + `@Test("用户故事描述")`
 - Mock 模式：Protocol Mock + StubURLProtocol
 - 全局配置依赖：Configs.singleInstance（需通过依赖注入控制）
 
-## 文件: path/to/source.go
+## 文件: path/to/source（按实际项目语言填写）
 
-### func ParseConfig(data []byte) (*Config, error)
+### 函数签名（按实际语言格式）
 
 | 用例 | 输入 | 预期 | 类型 | 真相来源 | 防护的错误实现 |
 | --- | --- | --- | --- | --- | --- |
-| 正常 JSON | `{"key": "value"}` | 返回 Config 对象 | 正向 | API 契约文档 | 实现返回空 Config |
-| 空输入 | `[]byte{}` | 返回 error | 边界 | 函数签名约定 | 遗漏空输入校验 |
-| 非法 JSON | `invalid` | 返回 error | 错误 | 函数签名约定 | 吞掉解析错误 |
-| nil 输入 | `nil` | 返回 error | 边界 | 函数签名约定 | 对 nil 直接 Unmarshal |
+| 正常输入 | 典型合法输入 | 返回预期对象 | 正向 | API 契约文档 | 实现返回空对象 |
+| 空输入 | 空值/零值 | 返回 error | 边界 | 函数签名约定 | 遗漏空输入校验 |
+| 非法输入 | 格式错误的数据 | 返回 error | 错误 | 函数签名约定 | 吞掉解析错误 |
+| nil/null 输入 | nil/null | 返回 error | 边界 | 函数签名约定 | 对 nil 直接操作 |
 
 ### 参数化测试决定
 
 | 方法 | 是否参数化 | 理由 |
 | --- | --- | --- |
-| ParseConfig | 是 | 纯函数，输入空间有明确的边界类别 |
+| （目标函数名） | 是/否 | 纯函数，输入空间有明确的边界类别 / 输入空间极小无需参数化 |
 
 ### 跳过的用例
 
@@ -313,8 +321,8 @@ Mock 的目的是隔离外部依赖，不是跳过被测逻辑：
 | 阶段 | 操作 |
 | --- | --- |
 | Phase 1 (init) | **创建** — 记录项目测试约定（框架选择、命名风格、Mock 模式） |
-| Phase 2 (analyze) | **更新** — 补充每个函数的测试点清单、价值评估、真相来源标注 |
-| Phase 3 (design) | **更新** — 补充用例设计细节、参数化测试决定、全局配置依赖标注 |
+| Phase 2 (analyze) | **更新** — 补充每个函数的测试点清单、价值评估、需求关联（如有上游数据） |
+| Phase 3 (design) | **更新** — 补充真相来源标注、用例设计细节、参数化测试决定、全局配置依赖标注 |
 | Phase 4 (generate) | **引用** — 按 test_plan.md 中的设计生成代码 |
 | Phase 5 (verify) | **引用+追加** — 审计时对照 test_plan.md 检查覆盖完整性，追加未通过的自检项 |
 
@@ -345,5 +353,5 @@ Mock 方式应从项目已有测试中学习。如果项目中无已有测试可
 - 不为 trivial 函数（getter/setter、单行委托）生成测试
 - 已有测试的函数默认跳过，除非用户明确要求补充
 - **框架一致性**：同一批次生成的测试文件必须使用同一个框架（不允许混用 XCTest 和 Swift Testing），详见 [PHASES.md 框架一致性规则](PHASES.md#框架一致性规则)
-- **Helper 作用域**：test helper 文件以模块名命名（如 `GameDetailTestHelpers.swift`），helper 函数加模块前缀（如 `makeGameDetailFixture()`），避免跨模块命名冲突，详见 [PHASES.md Helper 作用域规范](PHASES.md#helper-作用域规范)
+- **Helper 作用域**：test helper 文件以模块名为前缀命名（如 Swift `GameDetailTestHelpers.swift`、Go `game_detail_test_helper_test.go`），helper 函数加模块前缀（如 `makeGameDetailFixture()`），避免跨模块命名冲突，详见 [PHASES.md Helper 作用域规范](PHASES.md#helper-作用域规范)
 - 回读中间文件、中断恢复等通用约定见 [CONVENTIONS](../../CONVENTIONS.md)
