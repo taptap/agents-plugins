@@ -15,6 +15,7 @@ Thumbs.db
 # 测试文件
 test-*/
 !plugins/test/skills/test-*/
+!plugins/test/agents/test-*/
 
 # 开发中的插件
 plugins/migrator
