@@ -126,6 +126,12 @@ new_branch="${prefix}/${task_id}-${desc}"
 - `feat/TAP-85404-user-profile`
 - `fix/TAP-85405-login-error`
 
+#### 分支名长度限制（60 字符）
+
+分支名总长度不得超过 60 个字符。构建完成后检查长度：
+- **<= 60 字符**：直接使用
+- **> 60 字符**：缩短 desc 部分，用更简洁的英文表达替代（如 `implement-user-authentication-service` → `impl-user-auth`），保持语义可理解，直到总长度 <= 60 字符。若仍超限，截断到最后一个完整单词（`-` 边界）
+
 ### 第五步：获取远程最新代码
 
 ```bash
@@ -258,6 +264,8 @@ fi
   ↓
 构建分支名：{prefix}/TAP-{id}-{desc}
 （确保任务 ID 包含 TAP- 前缀）
+  ↓
+检查长度（> 60 字符？→ 缩短 desc 语义表达）
   ↓
 git fetch origin
   ↓
