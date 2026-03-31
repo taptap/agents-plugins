@@ -101,7 +101,11 @@ description: >
 
 ### 2. Figma MCP
 
-`get_figma_data(url="<Figma链接>")` — 获取设计稿布局/组件/交互数据。仅当 fetch 阶段发现 Figma 链接时使用。
+仅当 fetch 阶段发现 Figma 链接时使用，按分级协议获取（详见 [shared-tools/SKILL.md](../shared-tools/SKILL.md#figma-设计稿获取)）：
+
+1. `figma_metadata(url)` — 获取页面结构树，识别功能区块
+2. `figma_extract(url, 文本提取脚本)` — 提取 UI 文案和标签文本，用于理解功能点和交互说明
+3. `figma_context(url, nodeId)` — 仅对关键交互节点获取设计详情（如表单、弹窗）
 
 ### 3. GitLab 辅助脚本（条件触发）
 

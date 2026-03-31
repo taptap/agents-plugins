@@ -113,7 +113,9 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py file-content <owner/r
 
 ### 5. Figma MCP
 
-`get_figma_data(url="<链接>")` — 获取设计稿数据。仅当 fetch 阶段发现 Figma 链接时使用。
+仅当 fetch 阶段发现 Figma 链接时使用，设计稿为辅助参考（详见 [shared-tools/SKILL.md](../shared-tools/SKILL.md#figma-设计稿获取)）：
+
+1. `figma_metadata(url)` — 获取页面结构树，了解 UI 布局和组件分布即可（设计稿在变更分析中优先级低）
 
 ## 阶段流程
 

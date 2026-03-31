@@ -61,7 +61,7 @@ v0.0.10 引入双通道追溯，正向和反向使用不同的验证策略：
 
 ### UI 还原度检查（条件触发）
 
-当需求有 Figma 设计稿链接时，正向通道额外执行 UI 还原度对比。使用 Figma MCP 获取设计数据/截图，Browser MCP 获取实现截图/DOM，AI 对比差异。输出 `ui_fidelity_report.json`，合并到 `coverage_report.json`。
+当需求有 Figma 设计稿链接时，正向通道额外执行 UI 还原度对比。使用 Figma MCP 分级获取设计数据（先 `figma_metadata` 探测结构，再 `figma_screenshot` 和 `figma_extract` 按需获取截图与布局数据），Browser MCP 获取实现截图/DOM，AI 对比差异。输出 `ui_fidelity_report.json`，合并到 `coverage_report.json`。
 
 触发条件：`design_link` 存在且前端页面可在浏览器中访问。
 
@@ -99,7 +99,11 @@ v0.0.10 引入双通道追溯，正向和反向使用不同的验证策略：
 
 ### 3. Figma MCP
 
-`get_figma_data(url="<链接>")` — 获取设计稿数据。仅当 fetch 阶段发现 Figma 链接时使用。
+仅当 fetch 阶段发现 Figma 链接时使用，按分级协议获取（详见 [shared-tools/SKILL.md](../shared-tools/SKILL.md#figma-设计稿获取)）：
+
+1. `figma_metadata(url)` — 获取页面结构树，识别需要对比的 UI 区块
+2. `figma_screenshot(url, nodeId)` — 获取目标节点截图，用于 UI 还原度对比
+3. `figma_extract(url, 布局脚本)` — 提取 auto-layout 和间距数据，用于像素级还原度检查
 
 ## 冒烟测试模式（mode=smoke-test）
 

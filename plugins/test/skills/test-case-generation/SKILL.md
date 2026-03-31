@@ -100,7 +100,11 @@ description: >
 
 ### 2. Figma MCP
 
-`get_figma_data(url="<链接>")` — 获取设计稿布局/组件/交互数据。
+当用户提供 Figma 链接时使用，按分级协议获取（详见 [shared-tools/SKILL.md](../shared-tools/SKILL.md#figma-设计稿获取)）：
+
+1. `figma_metadata(url)` — 获取页面结构树，识别功能区块和组件层级
+2. `figma_context(url, nodeId)` — 对关键交互节点获取设计详情（表单、弹窗、列表等）
+3. `figma_extract(url, 交互状态脚本)` — 提取组件属性和变体状态，辅助生成状态类测试用例
 
 ### 3. 子 Agent: test-case-writer
 

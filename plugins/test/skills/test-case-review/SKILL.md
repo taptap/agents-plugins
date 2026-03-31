@@ -78,7 +78,10 @@ description: >
 
 ### 2. Figma MCP
 
-`get_figma_data(url="<链接>")` — 获取设计稿数据。仅当 fetch 阶段发现 Figma 链接时使用。
+仅当 fetch 阶段发现 Figma 链接时使用，按分级协议获取（详见 [shared-tools/SKILL.md](../shared-tools/SKILL.md#figma-设计稿获取)）：
+
+1. `figma_metadata(url)` — 获取页面结构树，建立设计稿覆盖基线
+2. `figma_screenshot(url, nodeId)` — 对关键页面获取截图，用于对照评审用例覆盖率
 
 ## 阶段流程
 
