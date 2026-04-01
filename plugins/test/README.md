@@ -251,19 +251,22 @@ plugins/test/
 │   ├── requirement-understanding/  # 需求理解多视角 Agent
 │   └── requirement-traceability/   # 需求追溯冗余对
 ├── skills/
-│   ├── shared-tools/           # 共享脚本
+│   ├── _shared/                    # 共享协议和框架文件
+│   ├── shared-tools/               # 共享脚本
 │   ├── requirement-clarification/  # 需求澄清（含影响范围分析）
-│   ├── test-case-generation/   # 测试用例生成（含冗余对评审）
-│   ├── test-case-review/       # [NEW] 用例评审（独立深度评审）
-│   ├── change-analysis/        # [NEW] 变更分析（Story/Bug 双场景）
+│   ├── requirement-review/         # 需求评审（12 维度）
+│   ├── test-case-generation/       # 测试用例生成（含冗余对评审）
+│   ├── test-case-review/           # 用例评审（独立深度评审）
+│   ├── change-analysis/            # 变更分析（Story/Bug 双场景）
 │   ├── requirement-traceability/   # 需求回溯（双通道 + UI 还原度）
 │   ├── verification-test-generation/  # 验证用例生成（AI 推理验证）
-│   ├── test-failure-analyzer/  # 测试失败分析（自循环）
-│   ├── ui-fidelity-check/      # UI 还原度检查
-│   ├── bug-fix-review/         # Bug 修复分析
-│   ├── unit-test-design/       # 单元测试代码生成
-│   ├── integration-test-design/ # 集成测试代码生成
-│   └── api-contract-validation/ # API 契约校验
+│   ├── test-failure-analyzer/      # 测试失败分析（自循环）
+│   ├── ui-fidelity-check/          # UI 还原度检查
+│   ├── bug-fix-review/             # [已废弃] 已合并到 change-analysis Bug 场景
+│   ├── unit-test-design/           # 单元测试代码生成
+│   ├── integration-test-design/    # 集成测试代码生成
+│   └── api-contract-validation/    # API 契约校验
+├── PIPELINES.md                    # 链路数据流规格
 └── README.md
 ```
 

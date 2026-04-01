@@ -28,8 +28,6 @@ description: >
 
 ## 模型分层
 
-按「错误代价」分配模型能力，详见 [CONVENTIONS.md](../../CONVENTIONS.md#模型分层策略)。
-
 | 任务 | 推荐模型 | 理由 |
 | --- | --- | --- |
 | API/服务分析（analyze 阶段） | Opus | 理解接口契约和服务交互 |

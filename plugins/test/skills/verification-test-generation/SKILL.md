@@ -44,8 +44,6 @@ description: >
 
 ## 模型分层
 
-按「错误代价」分配模型能力，详见 [CONVENTIONS.md](../../CONVENTIONS.md#模型分层策略)。
-
 | 任务 | 推荐模型 | 理由 |
 | --- | --- | --- |
 | 代码分析和执行路径追踪（verify 阶段） | Opus | 代码推理错误 = 验证结论不可信 |
@@ -54,19 +52,13 @@ description: >
 
 ## 可用工具
 
-### 1. MR/PR 分析脚本
+共享脚本（飞书/GitLab/GitHub）用法见 [shared-tools/SKILL.md](../shared-tools/SKILL.md)。以下为本 skill 特有工具：
 
-用法见 [shared-tools/SKILL.md](../shared-tools/SKILL.md)。当输入为 MR/PR 链接时使用，获取代码变更 diff。
-
-### 2. 飞书文档获取脚本
-
-用法见 [shared-tools/SKILL.md](../shared-tools/SKILL.md)。
-
-### 3. Figma MCP
+### 1. Figma MCP
 
 `get_figma_data(url="<链接>")` — 获取设计稿数据。前端需求时结合设计稿生成 UI 交互类验证用例。
 
-### 4. 子 Agent: verification-test-writer
+### 2. 子 Agent: verification-test-writer
 
 通过 Task 工具调用，为单个功能点并行生成验证用例。当功能点 >= 3 个时启动并行生成。Task prompt 中包含功能点详情和代码实现信息，子 Agent 独立生成该功能点的所有验证用例。
 

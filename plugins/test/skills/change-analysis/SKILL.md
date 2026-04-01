@@ -71,8 +71,6 @@ description: >
 
 ## 模型分层
 
-按「错误代价」分配模型能力，详见 [CONVENTIONS.md](../../CONVENTIONS.md#模型分层策略)。
-
 | 任务 | 推荐模型 | 理由 |
 | --- | --- | --- |
 | 影响面评估、根因分析 | Opus | 遗漏关键影响 = 生产事故 |
@@ -81,6 +79,8 @@ description: >
 | 用例生成、报告输出 | Sonnet | 模板化工作 |
 
 ## 可用工具
+
+共享脚本（飞书/GitLab/GitHub）用法见 [shared-tools/SKILL.md](../shared-tools/SKILL.md)。以下为本 skill 特有工具：
 
 ### 1. MR/PR 搜索脚本
 
@@ -107,11 +107,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py file-content <owner/repo> <file_path> [--ref main]
 ```
 
-### 4. 飞书文档获取脚本
-
-用法见 [shared-tools/SKILL.md](../shared-tools/SKILL.md)。
-
-### 5. Figma MCP
+### 4. Figma MCP
 
 仅当 fetch 阶段发现 Figma 链接时使用，设计稿为辅助参考（详见 [shared-tools/SKILL.md](../shared-tools/SKILL.md#figma-设计稿获取)）：
 

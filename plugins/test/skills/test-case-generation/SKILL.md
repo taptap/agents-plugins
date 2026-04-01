@@ -81,8 +81,6 @@ description: >
 
 ## 模型分层
 
-按「错误代价」分配模型能力，详见 [CONVENTIONS.md](../../CONVENTIONS.md#模型分层策略)。
-
 | 任务 | 推荐模型 | 理由 |
 | --- | --- | --- |
 | 需求理解和多视角分析 | Opus | 理解偏差会级联影响所有用例 |
@@ -94,11 +92,9 @@ description: >
 
 ## 可用工具
 
-### 1. 飞书文档获取脚本
+共享脚本（飞书/GitLab/GitHub）用法见 [shared-tools/SKILL.md](../shared-tools/SKILL.md)。以下为本 skill 特有工具：
 
-用法见 [shared-tools/SKILL.md](../shared-tools/SKILL.md)。
-
-### 2. Figma MCP
+### 1. Figma MCP
 
 当用户提供 Figma 链接时使用，按分级协议获取（详见 [shared-tools/SKILL.md](../shared-tools/SKILL.md#figma-设计稿获取)）：
 
@@ -106,11 +102,11 @@ description: >
 2. `figma_context(url, nodeId)` — 对关键交互节点获取设计详情（表单、弹窗、列表等）
 3. `figma_extract(url, 交互状态脚本)` — 提取组件属性和变体状态，辅助生成状态类测试用例
 
-### 3. 子 Agent: test-case-writer
+### 2. 子 Agent: test-case-writer
 
 通过 Task 工具调用，为单个功能模块生成测试用例。decompose 阶段生成 `context_summary.md` 后，Task prompt 中只需包含模块需求片段和一行 Read 指令指向 `context_summary.md`，子 Agent 自行读取全局上下文。
 
-### 4. 冗余对 Agent: review-agent-1/2
+### 3. 冗余对 Agent: review-agent-1/2
 
 通过 Task 工具并行调用，独立评审生成的用例。Agent 定义见 [agents/test-case-generation/](../../agents/test-case-generation/)。两个 Agent 侧重不同维度（覆盖度 vs 质量），合并结果时应用共识加成。
 

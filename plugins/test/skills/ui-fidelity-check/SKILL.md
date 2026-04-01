@@ -36,8 +36,6 @@ description: >
 
 ## 模型分层
 
-按「错误代价」分配模型能力，详见 [CONVENTIONS.md](../../CONVENTIONS.md#模型分层策略)。
-
 | 任务 | 推荐模型 | 理由 |
 | --- | --- | --- |
 | 视觉 + 结构对比（ui-fidelity-checker Agent） | Opus | 视觉差异识别需要强多模态理解力，遗漏代价高 |

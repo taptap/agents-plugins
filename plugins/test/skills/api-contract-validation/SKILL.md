@@ -54,11 +54,9 @@ api-contract-validation → api_contract_report.json
 
 ## 可用工具
 
-### 1. MR/PR 分析脚本
+共享脚本（飞书/GitLab/GitHub）用法见 [shared-tools/SKILL.md](../shared-tools/SKILL.md)。以下为本 skill 特有工具：
 
-用法见 [shared-tools/SKILL.md](../shared-tools/SKILL.md)。用于获取前后端 MR 的 diff。
-
-### 2. OpenAPI spec 解析
+### OpenAPI spec 解析
 
 直接 Read OpenAPI JSON/YAML 文件，提取 endpoint 定义。
 

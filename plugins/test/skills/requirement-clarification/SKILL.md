@@ -85,8 +85,6 @@ description: >
 
 ## 模型分层
 
-按「错误代价」分配模型能力，详见 [CONVENTIONS.md](../../CONVENTIONS.md#模型分层策略)。
-
 | 任务 | 推荐模型 | 理由 |
 | --- | --- | --- |
 | 需求文档解析和澄清 | Opus | 需求理解是整个 pipeline 质量天花板 |
@@ -95,21 +93,15 @@ description: >
 
 ## 可用工具
 
-### 1. 飞书文档获取脚本
+共享脚本（飞书/GitLab/GitHub）用法见 [shared-tools/SKILL.md](../shared-tools/SKILL.md)。以下为本 skill 特有工具：
 
-用法见 [shared-tools/SKILL.md](../shared-tools/SKILL.md)。
-
-### 2. Figma MCP
+### Figma MCP
 
 仅当 fetch 阶段发现 Figma 链接时使用，按分级协议获取（详见 [shared-tools/SKILL.md](../shared-tools/SKILL.md#figma-设计稿获取)）：
 
 1. `figma_metadata(url)` — 获取页面结构树，识别功能区块
 2. `figma_extract(url, 文本提取脚本)` — 提取 UI 文案和标签文本，用于理解功能点和交互说明
 3. `figma_context(url, nodeId)` — 仅对关键交互节点获取设计详情（如表单、弹窗）
-
-### 3. GitLab 辅助脚本（条件触发）
-
-当需求文档中提到具体模块/功能时，可查看现有代码实现。用法见 [shared-tools/SKILL.md](../shared-tools/SKILL.md)。
 
 ## 阶段流程
 

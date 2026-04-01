@@ -77,8 +77,6 @@ v0.0.10 引入双通道追溯，正向和反向使用不同的验证策略：
 
 ## 模型分层
 
-按「错误代价」分配模型能力，详见 [CONVENTIONS.md](../../CONVENTIONS.md#模型分层策略)。
-
 | 任务 | 推荐模型 | 理由 |
 | --- | --- | --- |
 | 冗余对追溯 Agent（forward/reverse-tracer） | Opus | 追溯遗漏 = 需求缺口未被发现 |
@@ -89,15 +87,9 @@ v0.0.10 引入双通道追溯，正向和反向使用不同的验证策略：
 
 ## 可用工具
 
-### 1. MR/PR 搜索和分析脚本
+共享脚本（飞书/GitLab/GitHub）用法见 [shared-tools/SKILL.md](../shared-tools/SKILL.md)。以下为本 skill 特有工具：
 
-用法见 [shared-tools/SKILL.md](../shared-tools/SKILL.md)。包括 MR/PR 搜索、diff 获取、详情查询、文件内容获取。仅当输入为 MR/PR 链接时使用。
-
-### 2. 飞书文档获取脚本
-
-用法见 [shared-tools/SKILL.md](../shared-tools/SKILL.md)。
-
-### 3. Figma MCP
+### Figma MCP
 
 仅当 fetch 阶段发现 Figma 链接时使用，按分级协议获取（详见 [shared-tools/SKILL.md](../shared-tools/SKILL.md#figma-设计稿获取)）：
 

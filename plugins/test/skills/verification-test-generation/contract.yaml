@@ -1,4 +1,4 @@
-name: verification-test-gen
+name: verification-test-generation
 version: "1.0"
 description: >
   从需求功能点生成结构化验证用例（具体输入→预期输出），AI 逐条对照代码推理验证需求实现。

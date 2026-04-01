@@ -87,8 +87,6 @@ description: >
 
 ## 模型分层
 
-按「错误代价」分配模型能力，详见 [CONVENTIONS.md](../../CONVENTIONS.md#模型分层策略)。
-
 | 任务 | 推荐模型 | 理由 |
 | --- | --- | --- |
 | 需求文档解析和评审 | Opus | 需求理解是整个 pipeline 质量天花板 |
@@ -97,9 +95,9 @@ description: >
 
 ## 可用工具
 
-### 1. 飞书文档获取 / 创建脚本
+共享脚本（飞书/GitLab/GitHub）用法见 [shared-tools/SKILL.md](../shared-tools/SKILL.md)。以下为本 skill 特有工具：
 
-用法和参数见 [shared-tools/SKILL.md](../shared-tools/SKILL.md)。工具选择和禁用项见其「通用约定」章节。
+### 1. 飞书文档导出
 
 本 workflow 导出时使用 `--wiki-parent` 参数（具体 token 由 workflow prompt 注入），文档名格式：`{需求名称}-需求评审-{YYYYMMDDHH}`。
 
