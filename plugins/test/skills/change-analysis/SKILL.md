@@ -117,6 +117,16 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py file-content <owner/r
 
 1. `figma_metadata(url)` — 获取页面结构树，了解 UI 布局和组件分布即可（设计稿在变更分析中优先级低）
 
+## 按需扩展模块
+
+| 模块 | 触发方式 | 文档 |
+| ---- | -------- | ---- |
+| Android 三方交互外部影响评估 | **阶段 3A 强制执行命中检测**，命中时自动激活 | [EXTERNAL-IMPACT.md](EXTERNAL-IMPACT.md) |
+
+> ⚠️ **Android MR 必须执行命中检测**：凡仓库名/路径含 `android` 的 MR，在阶段 3A 必须将所有变更文件路径与 EXTERNAL-IMPACT.md「命中判断规则」表逐条比对，并将检测结果（命中/未命中）写入 `analysis_checklist.md`。**不允许静默跳过**。
+
+命中后在 `code_change_analysis.md` 追加外部影响评估章节、在 `test_coverage_report.md` 追加外部影响测试访问评估章节，并将新增用例合并写入 `supplementary_cases.json`。
+
 ## 阶段流程
 
 ### Story 场景（7 阶段）
@@ -130,6 +140,8 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py file-content <owner/r
 | 5. coverage | 测试覆盖评估 | `test_coverage_report.md` |
 | 6. generate | 为覆盖缺口生成补充用例 | `supplementary_cases.json` |
 | 7. output | 结构化输出 | `change_analysis.json`、`coverage_report.json` |
+
+> **Android 三方交互命中时（按需）**：`code_change_analysis.md` 追加外部影响评估章节，`test_coverage_report.md` 追加外部影响测试访问评估章节，`supplementary_cases.json` 合并外部影响建议用例。不新增文件，详见 [EXTERNAL-IMPACT.md](EXTERNAL-IMPACT.md)。
 
 ### Bug 场景（5 阶段）
 
@@ -208,3 +220,4 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py file-content <owner/r
 - **中间文件回读** — 后续阶段引用前序数据必须通过 Read 工具回读文件，不依赖上下文记忆
 - **语言** — Chat 输出和报告使用中文；技术术语、文件路径、函数名保持原样
 - 回读中间文件、中断恢复、脚本路径等通用约定见 [CONVENTIONS](../../CONVENTIONS.md)
+- **Android MR 三方交互检测强制执行** — 阶段 3A 必须对 Android MR 执行命中检测并将结果写入 `analysis_checklist.md`，检测结果是后续阶段 4 和阶段 6 是否激活外部影响评估的依据

@@ -74,6 +74,22 @@
 - 评估风险（高: API 签名/DB Schema/核心逻辑；中: 新功能/业务调整；低: 文档/格式）
 - 提取变更点列表，使用**完整自然语言描述**
 
+**3A 附加：Android 三方交互命中检测（强制步骤，不可跳过）**
+
+> ⚠️ **凡处理 Android 项目的 MR，此步骤必须执行，不得省略、跳过或静默忽略。**
+
+**判断依据**：MR 所属仓库名称/路径包含 `android`（如 `taptap-android`、`cps/taptap-android`）即视为 Android 项目。
+
+**执行步骤**（按序完成）：
+
+1. 读取 [EXTERNAL-IMPACT.md](EXTERNAL-IMPACT.md) 中的「命中判断规则」表
+2. 将本次 diff 的**所有变更文件路径**与规则表逐条比对
+3. 在 `analysis_checklist.md` 中**必须新增**「三方交互命中检测」节，**无论命中与否都必须写入结果**：
+   - **未命中**：写入"经检测，本次 diff 未命中任何三方交互高风险文件，跳过外部影响评估"
+   - **命中**：写入命中的模块名称和对应文件路径，并新增「外部影响评估待办」节；后续阶段 4 和阶段 6 将激活外部影响评估模块
+
+> 禁止在未执行文件路径比对的情况下直接跳过本步骤。检测结果必须体现在 `analysis_checklist.md` 中，作为可验证的执行痕迹。
+
 **3B: context — 按需获取代码上下文**
 
 只在需要时获取（接口定义/数据模型/调用方/关键配置），避免拉取无关文件。
@@ -102,6 +118,16 @@
 
 追加写入 `code_change_analysis.md` 的影响面和风险评估章节。
 
+#### Android 三方交互外部影响评估（命中时必须执行）
+
+**前提**：回读 `analysis_checklist.md`，确认「三方交互命中检测」节已写入（验证阶段 3A 已执行）。
+
+**触发条件**：`analysis_checklist.md` 中存在「外部影响评估待办」节（即阶段 3A 命中检测有结果）。
+
+**操作**：读取 [EXTERNAL-IMPACT.md](EXTERNAL-IMPACT.md)，按其「步骤 1」模板，将外部影响评估章节追加到 `code_change_analysis.md`。内容包括：命中模块汇总表、逐模块兼容性风险分析（向前兼容性 / 接口契约变化 / 受影响 SDK 模块 / 潜在断链场景）、综合外部影响等级。
+
+若综合外部影响等级为 🔴 高，需在阶段 7 的 `change_analysis.json` 的 `key_findings` 和 `action_items` 中体现外部影响条目。
+
 ### 阶段 5: coverage — 测试覆盖评估
 
 **前提**：回读 `code_change_analysis.md`、`analysis_checklist.md`。
@@ -128,6 +154,12 @@
 写入 `supplementary_cases.json`。追加到 `test_coverage_report.md`。
 
 无覆盖缺口时跳过本阶段。
+
+#### Android 三方交互测试访问评估与建议用例（按需）
+
+**触发条件**：同阶段 4，`analysis_checklist.md` 中存在「外部影响评估待办」节。
+
+**操作**：读取 [EXTERNAL-IMPACT.md](EXTERNAL-IMPACT.md)，按其「步骤 2」模板，将外部影响测试访问评估章节追加到 `test_coverage_report.md`。内容包括：测试访问路径说明（仅列命中模块行）、每个命中模块的建议测试用例（关键路径 + 兼容性边界）、回归范围建议。新增用例同步写入 `supplementary_cases.json`。
 
 ### 阶段 7: output — 结构化输出
 
