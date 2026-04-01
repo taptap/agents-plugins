@@ -18,6 +18,10 @@
 3. `story_link` 参数为 URL → 调用脚本获取
 4. 以上均不满足 → 降级为纯用例质量评审（无需求覆盖率维度）
 
+### 1.0.1 二次评审检测
+
+如输入文件为 `final_cases.json` 且工作目录中存在 `review_summary.json`（test-case-generation 的评审摘要），提示用户：「检测到这些用例已经过 test-case-generation 的冗余对评审，是否确认需要二次独立评审？」用户确认后继续，否则停止。
+
 ### 1.1 验证输入
 
 1. 确认测试用例来源可读

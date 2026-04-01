@@ -12,6 +12,7 @@
 | 需求文档已写好，评审会前质量把关 | requirement-review | `review_checklist.md` + `report.md`（供评审会使用） |
 | "帮我理清需求" | requirement-clarification | — |
 | "帮我评审需求" | requirement-review | — |
+| 不确定用哪个 | 看目的：**拉齐理解**→clarification，**质量检查**→review | — |
 
 ## 1. 功能边界
 

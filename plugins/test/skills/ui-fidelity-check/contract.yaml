@@ -3,6 +3,7 @@ version: "1.0"
 description: >
   对比 Figma 设计稿与浏览器实现的 UI 还原度，
   输出差异清单和还原度评级。
+  触发：还原度、UI 对比、设计稿对照、视觉走查、像素对比、UI 验收。
 
 input:
   required:

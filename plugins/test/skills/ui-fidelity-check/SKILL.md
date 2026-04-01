@@ -3,6 +3,7 @@ name: ui-fidelity-check
 description: >
   对比 Figma 设计稿与浏览器实现的 UI 还原度。输入 Figma 链接 + 页面 URL，
   输出 ui_fidelity_report.json 含差异清单和还原度评级。
+  触发：还原度、UI 对比、设计稿对照、视觉走查、像素对比、UI 验收。
 ---
 
 # UI 还原度检查

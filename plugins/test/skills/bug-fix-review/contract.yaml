@@ -1,8 +1,8 @@
 name: bug-fix-review
 version: "1.1"
+deprecated: true
 description: >
-  分析 Bug 修复代码变更的完整性和残余风险。输入 Bug 链接或本地 Bug 描述文件，
-  输出 bug_fix_analysis.json + risk_assessment.json。
+  [已废弃] Bug 修复分析能力已合并到 change-analysis（Bug 场景）。
 
 input:
   one_of:

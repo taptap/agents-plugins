@@ -4,8 +4,9 @@ description: >
   在需求评审会前，对需求文档做质量把关。输入飞书 Story 链接或需求文档链接，
   输出 Go-No-Go 评审结论、结构化 Checklist 和各职能待确认问题清单。
   适用于拿到新需求时做系统性评审，而非代码变更分析或已有测试用例评审。
+  本 skill 只读评审产出报告，不与用户做交互式问答拉齐理解（交互式澄清请使用 requirement-clarification）。
   已有代码变更的影响面分析请使用 change-analysis；已有测试用例的评审请使用 test-case-review。
-  触发：需求评审、Checklist、需求质量、需求风险。
+  触发：需求评审、Review、Checklist、需求质量、需求风险、Go/No-Go、评审会。
 ---
 
 # 需求评审工作流

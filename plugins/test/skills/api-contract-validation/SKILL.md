@@ -3,6 +3,7 @@ name: api-contract-validation
 description: >
   深度校验前后端 API 契约一致性。输入前端代码变更 + 后端代码变更（或 OpenAPI spec），
   输出 api_contract_report.json。
+  触发：接口校验、API 对齐、前后端一致性、契约校验、Schema 对比、接口不匹配。
 ---
 
 # API 契约校验

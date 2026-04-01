@@ -70,3 +70,13 @@ dependencies:
 8. `version` 遵循语义化版本：主版本号变更表示接口不兼容，次版本号变更表示向后兼容的功能新增
 9. 所有 `description` 使用中文
 10. 对于支持型 guide 或共享工具型 skill（仅作为参考文档被其他 skill 引用，自身不执行分析流程），`input` 和 `output` 可为空对象 `{}`。此时仍需声明 `dependencies`（如有脚本或环境变量依赖）
+
+## 验证方式
+
+使用 `validate_contracts.py` 脚本验证所有 contract.yaml 的格式正确性：
+
+```bash
+python3 plugins/test/skills/shared-tools/scripts/validate_contracts.py plugins/test/skills/
+```
+
+脚本检查：name 与目录名一致、required/one_of/any_of 字段类型合法、output.files 格式正确、from_upstream 引用的 skill 存在。

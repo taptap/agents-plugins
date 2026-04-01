@@ -22,6 +22,8 @@ description: >
 - **test-case-generation**：生成新测试用例（含内置快速评审）。本 skill 专注于**独立深度评审已有用例**，可接收 test-case-generation 的 `final_cases.json` 作为输入
 - **change-analysis**：分析代码变更的测试覆盖。本 skill 不涉及代码变更分析，专注用例本身质量
 
+> **注意**：如果输入的用例来自 `test-case-generation` 的 `final_cases.json`（已含冗余对评审），本 skill 的评审价值有限——建议仅在需要额外独立视角评审、或用例经过人工修改后使用。
+
 ## 核心能力
 
 - 需求理解 — 解析需求文档，提炼编号功能点清单（RP-1, RP-2, ...）

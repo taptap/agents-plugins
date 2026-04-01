@@ -126,6 +126,7 @@ Story 场景:
     │  可选消费: clarified_requirements.json, requirement_points.json, final_cases.json
     │
     ├─→ change_analysis.json
+    ├─→ code_change_analysis.md
     ├─→ change_coverage_report.json
     └─→ supplementary_cases.json (可选)
 
@@ -134,6 +135,7 @@ Bug 场景:
     │  输入: Bug + MR/PR
     │
     ├─→ change_analysis.json
+    ├─→ code_change_analysis.md
     ├─→ change_fix_analysis.json
     └─→ risk_assessment.json
 ```
@@ -198,6 +200,7 @@ work_dir/
 ├── forward_verification.json      (requirement-traceability)
 ├── risk_assessment.json           (requirement-traceability / change-analysis Bug)
 ├── change_analysis.json           (change-analysis)
+├── code_change_analysis.md        (change-analysis, 中间文件)
 ├── change_coverage_report.json    (change-analysis Story)
 ├── change_fix_analysis.json       (change-analysis Bug)
 ├── supplementary_cases.json       (change-analysis / test-case-review)

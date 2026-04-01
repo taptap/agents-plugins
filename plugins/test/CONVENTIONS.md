@@ -361,3 +361,8 @@ requirement-clarification → clarified_requirements.json (functional_point.conf
 | TapSDK | 公司自研客户端 SDK，负责数据采集、推送和基础服务能力 |
 | DE（数仓） | Data Engineering 数据工程团队，负责数据仓库和数据管道 |
 | IEM | ‍智能化引擎与商业化 ，其业务范围涵盖搜索、广告、推荐领域 |
+| 冗余对评审 | 2 个独立 Agent 对同一输入并行评审，合并结果时对共识发现加成置信度 |
+| 正向追溯 | 需求 → 验证用例 → 代码，验证需求是否被实现 |
+| 反向追溯 | 代码变更 → 需求，验证代码变更是否有需求支撑 |
+| 数据充分性门控 | 条件触发的分析章节在信息不足时跳过，不凭推测生成内容 |
+| 置信度加成 | 2+ Agent 独立确认同一发现时 confidence += 20（封顶 100） |
