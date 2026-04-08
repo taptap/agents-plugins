@@ -15,7 +15,6 @@
   - changed-files:
       - any-glob-to-any-file: ".agents/**"
       - any-glob-to-any-file: ".claude/**"
-      - any-glob-to-any-file: ".claude-plugin/**"
       - any-glob-to-any-file: ".githooks/**"
 
 "scope:plugins":
@@ -38,6 +37,5 @@
   - changed-files:
       - any-glob-to-any-file: ".github/workflows/**"
       - any-glob-to-any-file: ".github/CODEOWNERS"
-      - any-glob-to-any-file: ".claude-plugin/**"
       - any-glob-to-any-file: ".claude/rules/versioning.md"
       - any-glob-to-any-file: "tests/validate.sh"
