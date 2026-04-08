@@ -70,17 +70,21 @@ def _cfg(key: str) -> str:
 
 # ==================== AES 签名 ====================
 
+try:
+    from Crypto.Cipher import AES as _AES
+except ImportError:
+    _AES = None
+
+
 def _aes_encrypt(text: str, secret_key: str, iv: str) -> bytes:
     """AES-CBC 加密（移植自 ai-case utils.py）"""
-    try:
-        from Crypto.Cipher import AES
-    except ImportError:
+    if _AES is None:
         print("错误: 需要 pycryptodome 库。请执行: pip install pycryptodome", file=sys.stderr)
         sys.exit(1)
 
-    block_size = AES.block_size
+    block_size = _AES.block_size
     pad = lambda s: s + (block_size - len(s) % block_size) * chr(block_size - len(s) % block_size)
-    cipher = AES.new(secret_key.encode('UTF-8'), AES.MODE_CBC, iv.encode('UTF-8'))
+    cipher = _AES.new(secret_key.encode('UTF-8'), _AES.MODE_CBC, iv.encode('UTF-8'))
     encrypted = cipher.encrypt(pad(text).encode('UTF-8'))
     return base64.b64encode(encrypted)
 
@@ -116,15 +120,15 @@ def _request(method: str, path: str, payload: dict | None = None,
             # multipart/form-data for case creation
             boundary = f'----MSBoundary{uuid.uuid4().hex[:16]}'
             headers['Content-Type'] = f'multipart/form-data; boundary={boundary}'
-            body = b''
+            parts = []
             for name, (filename, content, content_type) in files.items():
-                body += f'--{boundary}\r\n'.encode()
-                body += f'Content-Disposition: form-data; name="{name}"; filename="{filename}"\r\n'.encode()
-                body += f'Content-Type: {content_type}\r\n\r\n'.encode()
-                body += content if isinstance(content, bytes) else content.encode('utf-8')
-                body += b'\r\n'
-            body += f'--{boundary}--\r\n'.encode()
-            data = body
+                parts.append(f'--{boundary}\r\n'.encode())
+                parts.append(f'Content-Disposition: form-data; name="{name}"; filename="{filename}"\r\n'.encode())
+                parts.append(f'Content-Type: {content_type}\r\n\r\n'.encode())
+                parts.append(content if isinstance(content, bytes) else content.encode('utf-8'))
+                parts.append(b'\r\n')
+            parts.append(f'--{boundary}--\r\n'.encode())
+            data = b''.join(parts)
         elif payload is not None:
             headers['Content-Type'] = 'application/json;charset=UTF-8'
             data = json.dumps(payload).encode('utf-8')
@@ -302,9 +306,10 @@ def _resolve_level(parent_id: str) -> int:
 
 
 def _ensure_module(parent_id: str, name: str) -> dict:
-    """查找或创建子模块"""
+    """查找或创建子模块，返回包含 is_new 标志的结果"""
     existing = _find_child(_get_modules(), parent_id, name)
     if existing:
+        existing['is_new'] = False
         return existing
     module_id = _request('POST', '/track/case/node/add', payload={
         'level': _resolve_level(parent_id),
@@ -315,7 +320,7 @@ def _ensure_module(parent_id: str, name: str) -> dict:
         'projectId': _cfg('MS_PROJECT_ID'),
     })
     _invalidate_cache()
-    return {'id': str(module_id), 'name': name, 'parent_id': parent_id}
+    return {'id': str(module_id), 'name': name, 'parent_id': parent_id, 'is_new': True}
 
 
 def _get_module_path(module_id: str) -> str:
@@ -539,40 +544,47 @@ def cmd_import_cases(parent_module_id: str, cases_file: str):
     for cases in by_module.values():
         _dedup_names(cases)
 
-    # 逐模块导入
+    # 逐模块创建子模块（顺序，避免并发创建重复模块）
     total_imported = 0
     total_failed = 0
     modules_created = 0
     case_mapping = []
+    module_meta: dict[str, tuple[str, str]] = {}  # module_name → (module_id, module_path)
 
-    for module_name, cases in by_module.items():
+    for module_name in by_module:
         module_info = _ensure_module(parent_module_id, module_name)
         module_id = module_info['id']
         module_path = _get_module_path(module_id)
-
-        if module_info.get('parent_id') == parent_module_id and not _find_child(
-                _get_modules(), parent_module_id, module_name):
+        module_meta[module_name] = (module_id, module_path)
+        if module_info.get('is_new'):
             modules_created += 1
 
-        for case_data in cases:
-            local_id = case_data.get('case_id', case_data['name'])
-            try:
-                result = _add_case(module_id, case_data, module_path=module_path)
-                ms_id = ''
-                if isinstance(result, dict):
-                    ms_id = str(result.get('id', ''))
-                elif result is not None:
-                    ms_id = str(result)
-                case_mapping.append({
-                    'local_id': local_id,
-                    'ms_id': ms_id,
-                    'module': module_name,
-                    'name': case_data['name'],
-                })
+    # 并发导入用例
+    def _import_one(module_name: str, case_data: dict) -> dict | None:
+        module_id, module_path = module_meta[module_name]
+        local_id = case_data.get('case_id', case_data['name'])
+        try:
+            result = _add_case(module_id, case_data, module_path=module_path)
+            ms_id = ''
+            if isinstance(result, dict):
+                ms_id = str(result.get('id', ''))
+            elif result is not None:
+                ms_id = str(result)
+            return {'local_id': local_id, 'ms_id': ms_id, 'module': module_name, 'name': case_data['name']}
+        except Exception as e:
+            print(f"导入失败: {case_data['name']}: {e}", file=sys.stderr)
+            return None
+
+    tasks = [(mn, cd) for mn, cases in by_module.items() for cd in cases]
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = {executor.submit(_import_one, mn, cd): (mn, cd) for mn, cd in tasks}
+        for future in as_completed(futures):
+            result = future.result()
+            if result:
+                case_mapping.append(result)
                 total_imported += 1
-            except Exception as e:
+            else:
                 total_failed += 1
-                print(f"导入失败: {case_data['name']}: {e}", file=sys.stderr)
 
     report = {
         'imported': total_imported,
@@ -686,17 +698,23 @@ def cmd_batch_update_results(plan_id: str, results_file: str):
 
     success = 0
     failed = 0
-    for item in updates:
+
+    def _do_update(item):
         pcid = item.get('plan_case_id', '')
-        status = item.get('status', '')
-        actual = item.get('actual_result', '')
-        comment = item.get('comment', '')
         try:
-            _update_case_result(pcid, status, actual, comment)
-            success += 1
+            _update_case_result(pcid, item.get('status', ''),
+                                item.get('actual_result', ''), item.get('comment', ''))
+            return True
         except Exception as e:
-            failed += 1
             print(f"更新失败: {pcid}: {e}", file=sys.stderr)
+            return False
+
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        for ok in executor.map(_do_update, updates):
+            if ok:
+                success += 1
+            else:
+                failed += 1
 
     print(json.dumps({
         'plan_id': plan_id,
