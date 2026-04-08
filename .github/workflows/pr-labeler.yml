@@ -94,3 +94,40 @@ jobs:
                 labels: toAdd,
               });
             }
+
+      - name: Remove redundant scope labels
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const existing = await github.paginate(github.rest.issues.listLabelsOnIssue, {
+              owner,
+              repo,
+              issue_number,
+              per_page: 100,
+            });
+
+            const names = new Set(existing.map((label) => label.name));
+            const scopeLabels = [...names].filter((name) => name.startsWith("scope:"));
+            const specificPluginScopes = ["scope:git", "scope:spec", "scope:sync"];
+            const hasSpecificPluginScope = specificPluginScopes.some((name) => names.has(name));
+
+            const toRemove = [];
+            if (hasSpecificPluginScope && names.has("scope:plugins")) {
+              toRemove.push("scope:plugins");
+            }
+
+            const hasNonDocsScope = scopeLabels.some((name) => name !== "scope:docs");
+            if (hasNonDocsScope && names.has("scope:docs")) {
+              toRemove.push("scope:docs");
+            }
+
+            for (const name of toRemove) {
+              await github.rest.issues.removeLabel({
+                owner,
+                repo,
+                issue_number,
+                name,
+              }).catch(() => {});
+            }
