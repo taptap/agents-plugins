@@ -33,6 +33,28 @@
     └─→ risk_assessment.json
 ```
 
+### 可选扩展：MeterSphere 同步
+
+```
+[test-case-generation]
+    └─→ final_cases.json
+        ▼
+[metersphere-sync]    (mode=sync)
+    │  消费: final_cases.json
+    └─→ ms_sync_report.json, ms_case_mapping.json, ms_plan_info.json
+```
+
+[requirement-traceability] 完成后可追加 execute 模式回写验证结果：
+
+```
+[requirement-traceability / verification-test-generation]
+    └─→ verification_cases.json
+        ▼
+[metersphere-sync]    (mode=execute)
+    │  消费: final_cases.json, verification_cases.json, ms_case_mapping.json
+    └─→ ms_sync_report.json (含执行回写统计)
+```
+
 ### 数据流映射
 
 | 上游 Skill | 输出文件 | 下游 Skill | 输入参数 |
@@ -41,6 +63,9 @@
 | requirement-clarification | `requirement_points.json` | test-case-generation | `requirement_points` |
 | requirement-clarification | `clarified_requirements.json` | requirement-traceability | `clarified_requirements` |
 | requirement-clarification | `requirement_points.json` | requirement-traceability | `requirement_points` |
+| test-case-generation | `final_cases.json` | metersphere-sync | `final_cases` |
+| verification-test-generation | `verification_cases.json` | metersphere-sync | `verification_cases` |
+| requirement-clarification | `requirement_points.json` | metersphere-sync | `requirement_points` |
 
 ---
 
@@ -209,7 +234,10 @@ work_dir/
 ├── api_contract_report.json       (api-contract-validation)
 ├── ui_fidelity_report.json        (ui-fidelity-check)
 ├── failure_analysis.json          (test-failure-analyzer)
-└── action_plan.md                 (test-failure-analyzer)
+├── action_plan.md                 (test-failure-analyzer)
+├── ms_case_mapping.json           (metersphere-sync)
+├── ms_plan_info.json              (metersphere-sync)
+└── ms_sync_report.json            (metersphere-sync)
 ```
 
 ## 上游文件检测约定

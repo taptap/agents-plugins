@@ -1,0 +1,81 @@
+name: metersphere-sync
+version: "1.0"
+description: >
+  将 AI 生成的测试用例同步到 MeterSphere：创建模块、导入用例、创建测试计划、关联用例。
+  可选执行验证结果回写（高置信度用例自动标记通过）。
+  输入 final_cases.json 或 supplementary_cases.json，输出 ms_sync_report.json。
+  触发：同步到 MS、导入 MeterSphere、创建测试计划、MS 同步、执行回写。
+
+input:
+  any_of:
+    final_cases:
+      type: file
+      description: 测试用例文件（test-case-generation 产出）
+      from_upstream: test-case-generation
+    supplementary_cases:
+      type: file
+      description: 补充用例文件（change-analysis 或 test-case-review 产出）
+      from_upstream: [change-analysis, test-case-review]
+  optional:
+    verification_cases:
+      type: file
+      description: 验证用例文件（verification-test-generation 产出，含 confidence 和 result）
+      from_upstream: verification-test-generation
+    requirement_points:
+      type: file
+      description: 需求功能点清单（requirement-clarification 产出，用于 VC→TC 桥接匹配）
+      from_upstream: requirement-clarification
+    parent_module_id:
+      type: string
+      description: MeterSphere 用例库父模块 ID（不提供则使用 MS_DEFAULT_NODE_ID）
+    plan_name:
+      type: string
+      description: 测试计划名称（不提供则需用户指定）
+    confidence_threshold:
+      type: number
+      description: 自动标记通过的置信度阈值（默认 90）
+    mode:
+      type: string
+      description: >
+        执行模式：sync（导入用例 + 创建计划）、
+        execute（导入 + 创建计划 + 基于验证结果自动标记执行状态）
+
+output:
+  files:
+    - name: ms_sync_report.json
+      description: 同步结果报告（导入统计、计划链接、执行回写统计）
+      format: json
+    - name: ms_case_mapping.json
+      description: 用例 ID 映射（local_id → ms_id + module）
+      format: json
+    - name: ms_plan_info.json
+      description: 测试计划信息（plan_id, plan_url）
+      format: json
+  structured:
+    imported_count:
+      type: number
+      description: 成功导入的用例数
+    failed_count:
+      type: number
+      description: 导入失败的用例数
+    plan_url:
+      type: string
+      description: MeterSphere 测试计划链接
+    auto_passed:
+      type: number
+      description: 自动标记通过的用例数（execute 模式）
+    manual_required:
+      type: number
+      description: 需人工执行的用例数（execute 模式）
+
+dependencies:
+  scripts:
+    - shared-tools/scripts/metersphere_helper.py
+  env_vars:
+    - MS_BASE_URL
+    - MS_ACCESS_KEY
+    - MS_SECRET_KEY
+    - MS_PROJECT_ID
+    - MS_WORKSPACE_ID
+    - MS_DEFAULT_NODE_ID  # 可选，有默认值
+    - MS_PLAN_NODE_ID     # 可选，有默认值

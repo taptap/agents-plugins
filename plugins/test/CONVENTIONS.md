@@ -62,6 +62,9 @@ plugins/test/workspace/
 │   ├── requirement_points.json
 │   ├── final_cases.json
 │   ├── traceability_matrix.json
+│   ├── ms_case_mapping.json        # metersphere-sync 产出
+│   ├── ms_plan_info.json           # metersphere-sync 产出
+│   ├── ms_sync_report.json         # metersphere-sync 产出
 │   └── ...
 └── user-registration-refactor/  # 需求2
     └── ...

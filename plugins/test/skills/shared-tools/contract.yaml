@@ -1,7 +1,7 @@
 name: shared-tools
 version: "1.0"
 description: >
-  数据获取共享脚本集合：飞书文档获取、GitLab MR/文件、GitHub PR/文件、MR/PR 搜索。
+  数据获取共享脚本集合：飞书文档获取、GitLab MR/文件、GitHub PR/文件、MR/PR 搜索、MeterSphere 用例同步。
   默认由其他 skill 间接引用。
 
 input: {}
@@ -15,6 +15,7 @@ dependencies:
     - shared-tools/scripts/github_helper.py
     - shared-tools/scripts/search_mrs.py
     - shared-tools/scripts/search_prs.py
+    - shared-tools/scripts/metersphere_helper.py
   env_vars:
     - FEISHU_APP_ID
     - FEISHU_APP_SECRET
@@ -26,3 +27,10 @@ dependencies:
     - GITHUB_URL               # 默认 https://api.github.com
     - GITHUB_TOKEN
     - GITHUB_REPO_MAPPING      # search_prs.py 必填，JSON 仓库映射
+    - MS_BASE_URL              # metersphere_helper.py，有默认值
+    - MS_ACCESS_KEY            # metersphere_helper.py，有默认值
+    - MS_SECRET_KEY            # metersphere_helper.py，有默认值
+    - MS_PROJECT_ID            # metersphere_helper.py，有默认值
+    - MS_WORKSPACE_ID          # metersphere_helper.py，有默认值
+    - MS_DEFAULT_NODE_ID       # metersphere_helper.py，用例库父模块，有默认值
+    - MS_PLAN_NODE_ID          # metersphere_helper.py，测试计划分类，有默认值
