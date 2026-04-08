@@ -86,6 +86,7 @@ mkdir -p .claude && echo '{
 | spec    | 0.1.5 | Spec-Driven Development 工作流插件                                     |
 | git     | 0.1.13 | Git 工作流自动化插件（提交/推送/MR + 自动代码审查 + 远程平台操作）            |
 | sync    | 0.1.25 | 开发环境配置同步插件（MCP + LSP + Hooks + Cursor + Claude Skills） |
+| test    | 0.0.1 | QA 工作流插件（需求澄清/测试用例生成/变更分析/需求回溯/代码级测试生成） |
 
 
 详细说明请查看各插件目录下的 README.md。

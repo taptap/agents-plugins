@@ -284,6 +284,8 @@ shared-tools 脚本依赖以下环境变量（按需配置）：
 
 ## 版本历史
 
+- **v0.0.1** - 首次发布；完整 QA 工作流插件，包含需求澄清、测试用例生成（含冗余对评审）、用例评审、变更分析、需求回溯（含冒烟测试模式）、代码级测试生成（单元/集成）、API 契约校验、UI 还原度检查等全流程 Skill；共享工具集（飞书文档获取、MR/PR 分析脚本）；阶段执行保障和输出验证机制
+
 ### v0.0.18
 
 - New skill: `change-analysis` — analyze code change impact and test coverage for Story/Bug scenarios (dual-scenario: Story 7-phase impact analysis + coverage assessment + supplementary case generation; Bug 5-phase root cause + fix completeness + risk assessment)
