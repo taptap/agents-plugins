@@ -267,6 +267,13 @@
 
 本阶段将 review 阶段标记为「待用户确认」的问题抛给用户。
 
+### 6.0 确认策略判定
+
+检查 `confirm_policy` 参数：
+
+- `confirm_policy = "accept_all"` → 自动接受所有评审建议（将所有 60 ≤ confidence < 80 的 findings 视为已确认），跳过用户交互，直接进入 phase 7
+- `confirm_policy = "interactive"` 或未提供（默认）→ 执行 6.1 及后续的用户确认流程
+
 ### 6.1 收集待确认问题
 
 从 phase 5.6 的合并结果中提取 60 ≤ confidence < 80 的 findings。如果没有待确认问题，跳过本阶段直接进入 phase 7。

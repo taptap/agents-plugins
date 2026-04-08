@@ -24,6 +24,11 @@ input:
     design_link:
       type: string
       description: Figma 设计稿链接
+    confirm_policy:
+      type: string
+      description: >
+        确认策略：accept_all（自动接受所有评审建议，适用于编排器自动化）、
+        interactive（默认，用户逐条确认不确定的评审发现）
 
 output:
   files:

@@ -205,6 +205,32 @@ Bug 场景:
 
 ---
 
+## 编排链路 — qa-workflow 端到端编排
+
+`qa-workflow` skill 将链路 A/D/F/H 串联为自动化工作流，支持条件分支和并行执行。
+
+```
+Phase 1: 需求分析
+[requirement-clarification] → [test-case-generation] → [metersphere-sync mode=sync]
+    → 暂停等编码
+
+Phase 2: 代码验证（用户回来后）
+[change-analysis] ─────────────┐
+[verification-test-generation] ┤ 并行
+[ui-fidelity-check]  ──────────┘ 条件：有设计稿
+[api-contract-validation]         条件：前后端协调
+    ↓
+[requirement-traceability] → [metersphere-sync mode=execute]
+    → 暂停等人工验证
+
+Phase 3: 收尾
+[git:code-reviewing] → [git:commit-push-pr]（可选）
+```
+
+详见 `skills/qa-workflow/SKILL.md` 和 `skills/qa-workflow/WORKFLOW_DEFS.md`。
+
+---
+
 ## 工作目录布局约定
 
 Pipeline 中所有 skill 共享同一工作目录。各 skill 的输出文件直接写入工作目录根（非子目录），下游 skill 在 init/fetch 阶段检查上游文件是否存在。

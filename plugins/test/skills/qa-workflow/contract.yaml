@@ -1,0 +1,75 @@
+name: qa-workflow
+version: "1.0"
+description: >
+  QA 工作流编排器。用户提供需求链接，自动编排需求澄清→用例生成→MS同步→
+  变更分析→需求还原度→执行回写→代码审查的完整 QA 流程。支持条件分支（UI 还原度、API 契约）
+  和多种代码变更来源（MR 链接/本地 diff）。
+  触发：QA 工作流、帮我做 QA、完整测试流程、端到端 QA、qa-workflow。
+
+input:
+  one_of:
+    story_link:
+      type: string
+      description: 需求链接（飞书 Story / 文档链接）
+    requirement_doc:
+      type: file
+      description: 本地需求文档
+  optional:
+    design_link:
+      type: string
+      description: Figma 设计稿链接（有则触发 UI 还原度检查）
+    code_changes:
+      type: string[]
+      description: MR/PR 链接列表（Phase 2 启动时提供，或编码完成后追加）
+    pipeline:
+      type: string
+      description: >
+        工作流模板：qa-full（默认，完整流程）、
+        qa-lite（跳过 MS 同步）、verify-only（仅验证，跳过用例生成）
+    resume:
+      type: boolean
+      description: 从上次暂停的位置继续执行
+
+output:
+  files:
+    - name: workflow_state.json
+      description: 工作流状态文件（进度追踪、参数记录）
+      format: json
+    - name: qa_summary.md
+      description: QA 流程摘要报告（各阶段关键指标汇总）
+      format: markdown
+  structured:
+    current_phase:
+      type: string
+      description: 当前阶段（"1"=需求分析, "2"=代码验证, "3"=收尾, "done"=完成）
+    completed_steps:
+      type: number
+      description: 已完成步骤数
+    total_steps:
+      type: number
+      description: 总步骤数（含跳过的）
+    plan_url:
+      type: string
+      description: MeterSphere 测试计划链接
+    pending_action:
+      type: string
+      description: 当前等待的用户操作
+
+dependencies:
+  skills:
+    - requirement-clarification
+    - test-case-generation
+    - metersphere-sync
+    - change-analysis
+    - verification-test-generation
+    - requirement-traceability
+    - ui-fidelity-check
+    - api-contract-validation
+    - shared-tools
+    - git:code-reviewing      # 跨插件依赖
+    - git:commit-push-pr      # 跨插件依赖（可选步骤）
+  env_vars:
+    - MS_BASE_URL       # 可选，有默认值
+    - MS_ACCESS_KEY     # 可选，有默认值
+    - MS_SECRET_KEY     # 可选，有默认值
+    - MS_PROJECT_ID     # 可选，有默认值
