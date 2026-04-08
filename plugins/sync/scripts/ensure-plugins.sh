@@ -22,10 +22,11 @@ SETTINGS_FILE="$HOME/.claude/settings.json"
 # 期望的插件列表
 REQUIRED_PLUGINS=("spec@taptap-plugins" "sync@taptap-plugins" "git@taptap-plugins" "skill-creator@claude-plugins-official")
 
-# 需要清理的废弃插件
+# 需要清理的退役插件
 DEPRECATED_PLUGINS=("ralph@taptap-plugins" "quality@taptap-plugins")
 
-# 检查是否已有全部插件且无废弃插件
+# ========== Step 1: 确保 enabledPlugins 完整 ==========
+
 check_plugins_ok() {
   local file="$1"
   if [ ! -f "$file" ]; then
@@ -69,43 +70,39 @@ sys.exit(0 if all(k in plugins for k in required) and not any(k in plugins for k
 
 if check_plugins_ok "$SETTINGS_FILE"; then
   echo "✅ enabledPlugins 已包含全部插件且无废弃插件，跳过"
-  exit 0
-fi
+else
+  echo "正在配置 enabledPlugins..."
 
-echo "正在配置 enabledPlugins..."
-
-# jq 优先
-if has_command jq; then
-  if [ -f "$SETTINGS_FILE" ]; then
-    jq '(.enabledPlugins // {}) as $ep |
-    .enabledPlugins = ($ep + {
-      "spec@taptap-plugins": true,
-      "sync@taptap-plugins": true,
-      "git@taptap-plugins": true,
-      "skill-creator@claude-plugins-official": true
-    } | del(.["ralph@taptap-plugins"]) | del(.["quality@taptap-plugins"])) |
-    .extraKnownMarketplaces = ((.extraKnownMarketplaces // {}) + {
-      "taptap-plugins": {
-        "source": {
-          "source": "github",
-          "repo": "taptap/claude-plugins-marketplace"
+  # jq 优先
+  if has_command jq; then
+    if [ -f "$SETTINGS_FILE" ]; then
+      jq '(.enabledPlugins // {}) as $ep |
+      .enabledPlugins = ($ep + {
+        "spec@taptap-plugins": true,
+        "sync@taptap-plugins": true,
+        "git@taptap-plugins": true,
+        "skill-creator@claude-plugins-official": true
+      } | del(.["ralph@taptap-plugins"]) | del(.["quality@taptap-plugins"])) |
+      .extraKnownMarketplaces = ((.extraKnownMarketplaces // {}) + {
+        "taptap-plugins": {
+          "source": {
+            "source": "github",
+            "repo": "taptap/claude-plugins-marketplace"
+          }
         }
-      }
-    })' "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp" \
-      && mv "${SETTINGS_FILE}.tmp" "$SETTINGS_FILE"
-  else
-    mkdir -p "$(dirname "$SETTINGS_FILE")"
-    echo '{"enabledPlugins": {"spec@taptap-plugins": true, "sync@taptap-plugins": true, "git@taptap-plugins": true, "quality@taptap-plugins": true}, "extraKnownMarketplaces": {"taptap-plugins": {"source": {"source": "github", "repo": "taptap/claude-plugins-marketplace"}}}}' \
-      | jq '.' > "${SETTINGS_FILE}.tmp" \
-      && mv "${SETTINGS_FILE}.tmp" "$SETTINGS_FILE"
-  fi
-  echo "✅ 已配置 enabledPlugins (jq)"
-  exit 0
-fi
+      })' "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp" \
+        && mv "${SETTINGS_FILE}.tmp" "$SETTINGS_FILE"
+    else
+      mkdir -p "$(dirname "$SETTINGS_FILE")"
+      echo '{"enabledPlugins": {"spec@taptap-plugins": true, "sync@taptap-plugins": true, "git@taptap-plugins": true, "skill-creator@claude-plugins-official": true}, "extraKnownMarketplaces": {"taptap-plugins": {"source": {"source": "github", "repo": "taptap/claude-plugins-marketplace"}}}}' \
+        | jq '.' > "${SETTINGS_FILE}.tmp" \
+        && mv "${SETTINGS_FILE}.tmp" "$SETTINGS_FILE"
+    fi
+    echo "✅ 已配置 enabledPlugins (jq)"
 
-# python3 兜底
-if has_command python3; then
-  python3 - "$SETTINGS_FILE" <<'PY'
+  # python3 兜底
+  elif has_command python3; then
+    python3 - "$SETTINGS_FILE" <<'PY'
 import json
 import os
 import sys
@@ -180,8 +177,120 @@ if __name__ == "__main__":
         print("⚠️  执行异常，跳过")
         raise SystemExit(0)
 PY
-  exit 0
+
+  else
+    echo "⚠️  未检测到 jq 或 python3，跳过 enabledPlugins 配置"
+  fi
 fi
 
-echo "⚠️  未检测到 jq 或 python3，跳过 enabledPlugins 配置"
-exit 0
+# ========== Step 2: 清理 installed_plugins.json 中的退役插件 ==========
+
+INSTALLED_FILE="$HOME/.claude/plugins/installed_plugins.json"
+if [ -f "$INSTALLED_FILE" ]; then
+  # installed_plugins.json v2 结构: {"version": 2, "plugins": {...}}
+  # 需要在 .plugins 下查找和删除
+  needs_clean=false
+  for plugin in "${DEPRECATED_PLUGINS[@]}"; do
+    if has_command jq; then
+      if jq -e ".plugins[\"$plugin\"]" "$INSTALLED_FILE" >/dev/null 2>&1; then
+        needs_clean=true
+        break
+      fi
+    elif has_command python3; then
+      if python3 -c "import json; d=json.load(open('$INSTALLED_FILE')); exit(0 if '$plugin' in d.get('plugins', d) else 1)" 2>/dev/null; then
+        needs_clean=true
+        break
+      fi
+    fi
+  done
+
+  if $needs_clean; then
+    if has_command jq; then
+      jq_filter="."
+      for plugin in "${DEPRECATED_PLUGINS[@]}"; do
+        jq_filter="$jq_filter | del(.plugins[\"$plugin\"])"
+      done
+      jq "$jq_filter" "$INSTALLED_FILE" > "${INSTALLED_FILE}.tmp" \
+        && mv "${INSTALLED_FILE}.tmp" "$INSTALLED_FILE"
+      echo "✅ 已清理 installed_plugins.json 中的退役插件"
+    elif has_command python3; then
+      python3 -c "
+import json, os
+path = '$INSTALLED_FILE'
+with open(path) as f:
+    d = json.load(f)
+plugins = d.get('plugins', d)
+deprecated = [p.strip() for p in '${DEPRECATED_PLUGINS[*]}'.split()]
+changed = False
+for p in deprecated:
+    if p in plugins:
+        del plugins[p]
+        changed = True
+if changed:
+    tmp = path + '.tmp'
+    with open(tmp, 'w') as f:
+        json.dump(d, f, ensure_ascii=False, indent=2)
+        f.write('\n')
+    os.replace(tmp, path)
+    print('✅ 已清理 installed_plugins.json 中的退役插件')
+"
+    fi
+  else
+    echo "✅ installed_plugins.json 无退役插件，跳过"
+  fi
+fi
+
+# ========== Step 3: 清理当前项目的 settings 中的退役插件 ==========
+# SessionStart hook 的工作目录是当前项目目录
+
+for settings_file in ".claude/settings.json" ".claude/settings.local.json"; do
+  if [ -f "$settings_file" ]; then
+    needs_project_clean=false
+    for plugin in "${DEPRECATED_PLUGINS[@]}"; do
+      if has_command jq; then
+        if jq -e ".enabledPlugins[\"$plugin\"]" "$settings_file" >/dev/null 2>&1; then
+          needs_project_clean=true
+          break
+        fi
+      elif has_command python3; then
+        if python3 -c "import json; d=json.load(open('$settings_file')); exit(0 if '$plugin' in d.get('enabledPlugins',{}) else 1)" 2>/dev/null; then
+          needs_project_clean=true
+          break
+        fi
+      fi
+    done
+
+    if $needs_project_clean; then
+      if has_command jq; then
+        jq_filter=".enabledPlugins"
+        for plugin in "${DEPRECATED_PLUGINS[@]}"; do
+          jq_filter="$jq_filter | del(.[\"$plugin\"])"
+        done
+        jq ".enabledPlugins = ($jq_filter)" "$settings_file" > "${settings_file}.tmp" \
+          && mv "${settings_file}.tmp" "$settings_file"
+        echo "✅ 已清理 $settings_file 中的退役插件"
+      elif has_command python3; then
+        python3 -c "
+import json, os
+path = '$settings_file'
+with open(path) as f:
+    d = json.load(f)
+plugins = d.get('enabledPlugins', {})
+deprecated = [p.strip() for p in '${DEPRECATED_PLUGINS[*]}'.split()]
+changed = False
+for p in deprecated:
+    if p in plugins:
+        del plugins[p]
+        changed = True
+if changed:
+    tmp = path + '.tmp'
+    with open(tmp, 'w') as f:
+        json.dump(d, f, ensure_ascii=False, indent=2)
+        f.write('\n')
+    os.replace(tmp, path)
+    print('✅ 已清理 $settings_file 中的退役插件')
+"
+      fi
+    fi
+  fi
+done

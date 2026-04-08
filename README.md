@@ -25,8 +25,7 @@ mkdir -p .claude && echo '{
   "enabledPlugins": {
     "spec@taptap-plugins": true,
     "sync@taptap-plugins": true,
-    "git@taptap-plugins": true,
-    "quality@taptap-plugins": true
+    "git@taptap-plugins": true
   }
 }' > .claude/settings.json
 ```
@@ -84,10 +83,9 @@ mkdir -p .claude && echo '{
 
 | 插件      | 版本    | 描述                                                                |
 | ------- | ----- | ----------------------------------------------------------------- |
-| spec    | 0.1.4 | Spec-Driven Development 工作流插件                                     |
+| spec    | 0.1.5 | Spec-Driven Development 工作流插件                                     |
 | git     | 0.1.13 | Git 工作流自动化插件（提交/推送/MR + 自动代码审查 + 远程平台操作）            |
-| sync    | 0.1.23 | 开发环境配置同步插件（MCP + LSP + Hooks + Cursor + Claude Skills） |
-| quality | 0.0.4 | AI 驱动的代码质量检查插件（9 个并行 Agent，支持 Bug 检测、代码质量、安全检查、性能分析）              |
+| sync    | 0.1.25 | 开发环境配置同步插件（MCP + LSP + Hooks + Cursor + Claude Skills） |
 
 
 详细说明请查看各插件目录下的 README.md。
@@ -189,7 +187,7 @@ Git 插件提供三种提交方式，根据需求选择：
 
 #### 模块发现（module-discovery）
 
-AI 开始工作时**自动读取**模块索引，快速了解项目结构：
+AI 仅在采用模块索引协作机制的项目中按需读取模块索引，快速了解项目结构：
 
 
 | 路径                                    | 说明                                   |
@@ -201,9 +199,10 @@ AI 开始工作时**自动读取**模块索引，快速了解项目结构：
 
 **工作流程：**
 
-1. AI 检查 `module-map.md` 是否存在
-2. 如不存在，询问用户是否生成（使用 `generate-module-map.md` prompt）
-3. 读取模块索引，利用关键词快速定位代码
+1. 先判断仓库是否真的使用 `tap-agents` 模块索引体系，且团队是否将其作为模块定位入口
+2. 仅在相关模块定位任务中检查 `module-map.md` 是否存在
+3. 如不存在且用户明确要启用该体系，再询问是否生成
+4. 读取模块索引，利用关键词快速定位代码
 
 #### 文档自动同步（doc-auto-sync）
 
@@ -226,29 +225,27 @@ AI 修改代码时**自动维护**模块文档：
 - `「主要类后缀」`：识别主要类的后缀（如 `ViewController`、`Service`）
 - `「文件扩展名」`：代码文件扩展名（如 `.swift`、`.kt`、`.go`）
 
-### 代码质量检查
+### 代码审查
 
-使用 AI 驱动的代码审查，自动检测潜在问题：
+使用 Git 插件内置的审查能力检查本地变更或 MR：
 
 ```bash
-# 审查当前分支的所有变更
-/review
+# 审查当前工作区/分支改动
+/git:code-reviewing
 
-# 审查特定 Merge Request
-/review --mr 123
+# 审查特定 Merge Request / Pull Request
+/git:code-reviewing https://gitlab.example.com/group/project/-/merge_requests/123
 
-# 审查特定文件
-/review path/to/file.go
+# 审查特定提交或分支
+/git:code-reviewing HEAD~1
 ```
 
 **功能亮点：**
 
-- **9 个并行 Agent**：同时执行，审查速度快
-- **四维度审查**：Bug 检测、代码质量、安全检查、性能分析
-- **置信度评分**：阈值 80，自动过滤低置信度问题
-- **冗余确认**：同类问题由 2 个 Agent 独立发现，置信度 +20
-- **多语言支持**：Go/Java/Python/Kotlin/Swift/TypeScript
-- **智能规范检查**：自动检测 CLAUDE.md/CONTRIBUTING.md 并遵循项目规范
+- **双引擎审查**：Claude Agent Team + Codex 双视角交叉验证
+- **本地/MR 双模式**：支持未提交变更、提交、分支和 MR/PR URL
+- **项目规则接入**：自动读取 review checklist 和 review rules
+- **风险优先输出**：先给阻塞问题，再给剩余风险和验证缺口
 
 ### 开发环境同步
 

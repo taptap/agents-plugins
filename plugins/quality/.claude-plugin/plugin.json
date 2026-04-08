@@ -1,8 +1,0 @@
-{
-  "name": "quality",
-  "description": "代码质量插件，提供 AI 驱动的代码审查和质量检查功能，支持多个并行 Agent（Bug/质量/安全/性能全维度审查）",
-  "version": "0.0.4",
-  "author": {
-    "name": "TapTap AI Team"
-  }
-}

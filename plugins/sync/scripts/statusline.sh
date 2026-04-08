@@ -95,31 +95,6 @@ main() {
     out+=" ${GRAY}v${version}${RESET}"
 
     echo -e "$out"
-
-    # Ralph loop 状态（第二行，仅循环活跃时显示）
-    local ralph_file="${cwd}/.claude/ralph-loop.local.md"
-    if [ -f "$ralph_file" ]; then
-        local r_iter r_max r_promise r_prompt
-        r_iter=$(sed -n 's/^iteration: *//p' "$ralph_file" 2>/dev/null)
-        r_max=$(sed -n 's/^max_iterations: *//p' "$ralph_file" 2>/dev/null)
-        r_promise=$(sed -n 's/^completion_promise: *//p' "$ralph_file" 2>/dev/null | sed 's/^"\(.*\)"$/\1/')
-        r_prompt=$(awk '/^---$/{i++; next} i>=2{print; exit}' "$ralph_file" 2>/dev/null)
-
-        if [ -n "$r_iter" ]; then
-            local iter_str
-            if [ "$r_max" -gt 0 ] 2>/dev/null; then
-                iter_str="${r_iter}/${r_max}"
-            else
-                iter_str="${r_iter}"
-            fi
-
-            local ralph_line="${BAR_YELLOW}🔄 Ralph ${iter_str}${RESET}"
-            [ -n "$r_promise" ] && [ "$r_promise" != "null" ] && ralph_line+=" ${GRAY}promise:${r_promise}${RESET}"
-            [ -n "$r_prompt" ] && ralph_line+=" ${GRAY}| ${r_prompt:0:40}${RESET}"
-
-            echo -e "$ralph_line"
-        fi
-    fi
 }
 
 main

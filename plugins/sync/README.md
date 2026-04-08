@@ -19,7 +19,7 @@
 - ✅ 同步 GitLab Merge Request 默认模板
 - ✅ 同步 Claude Skills（grafana-dashboard-design）
 - ✅ 配置 Status Line（项目/分支/Context/模型/Worktree）
-- ✅ 启用 TapTap Plugins（spec/sync/git/quality）
+- ✅ 启用 TapTap Plugins（spec/sync/git）
 - ✅ 检测项目语言并配置 LSP 代码智能（自动安装 binary）
 - 📎 可选：`--with-spec` 同步 Spec Skills 到 Cursor
 
@@ -158,7 +158,7 @@ chmod +x .githooks/pre-commit
 - 同步 Git Flow Rules 到 `.cursor/rules/git-flow.mdc`
 - 同步 Spec Skills 规则到 `.cursor/rules/`（需 `/sync:basic --with-spec`）
   - `doc-auto-sync.mdc` - AI 改动模块代码时自动同步文档（alwaysApply: true）
-  - `module-discovery.mdc` - 开发前必须读取模块索引定位目标（alwaysApply: true）
+  - `module-discovery.mdc` - 模块索引定位（alwaysApply: true）
   - `generate-module-map.mdc` - 生成模块索引的 prompt（alwaysApply: false）
   - 已跳过：`implementing-from-task`、`merging-parallel-work`（测试中）
 - 同步 Git Commands 到 `.cursor/commands/`
@@ -344,9 +344,10 @@ chmod +x .githooks/pre-commit
 
 ## 版本历史
 
+- **v0.1.25** - 新增 feishu-bot-card skill；移除 quality 插件启用；清理 statusline Ralph 显示；优化退役 skill 清理逻辑；修复退役插件残留在 installed_plugins.json 导致报错问题；新增项目级 settings 退役插件自动清理；修复 context7 插件与 MCP 配置冲突
 - **v0.1.23** - 移除 context7@claude-plugins-official 自动安装（避免与项目级 .mcp.json 冲突）
 - **v0.1.22** - 新增 Codex 官方 TUI status_line 同步到 ~/.codex/config.toml；更新 codex-statusline agent/skill 文档；GitLab 域名从 git.gametaptap.com 迁移到 git.tapsvc.com
-- **v0.1.21** - 新增 ensure-codex-skills.sh 自动同步插件 skills 到 ~/.agents/skills/（Codex 可发现）；基于 manifest 跟踪管理的 symlink；迁移清理旧硬链接和非本 marketplace symlink；排除未发布插件（ralph）；注册为 SessionStart hook
+- **v0.1.21** - 新增 ensure-codex-skills.sh 自动同步插件 skills 到 ~/.agents/skills/（Codex 可发现）；基于 manifest 跟踪管理的 symlink；迁移清理旧硬链接和非本 marketplace symlink；排除未发布插件；注册为 SessionStart hook
 - **v0.1.20** - 修复 context usage 显示 100% 问题（改用 last_token_usage）；修复多实例 context 串扰；修复 tmux 普通模式无 statusline（_is_tmux_cc 区分 -CC 模式）；修复 tmux -CC 报错（passthrough 包裹）；iTerm2 配置改用 defaults export/import（防止被覆盖）；zsh hooks 更新检测改用 hash 比较；新增 /clean-codex-statusline skill
 - **v0.1.19** - 新增 codex-statusline（tmux + iTerm2）；飞书 MCP 的 Codex 配置改为可选（--with-codex）；hooks 迁移至 $HOME 级（Codex 兼容）；移除 sequential-thinking MCP；新增 plugin-status skill
 - **v0.1.17** - skills-sync 新增 review-rules 模板同步（不覆盖项目已有规则）

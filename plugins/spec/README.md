@@ -25,7 +25,7 @@ Spec-Driven Development 插件，从任务工单和 PRD 自动执行完整开发
 
 ### module-discovery
 
-**触发条件**：需要定位代码位置或询问模块功能时（自动执行）
+**触发条件**：仅适用于已维护 `tap-agents/prompts/module-map.md` 且明确采用模块索引协作机制的仓库；需要按模块索引定位代码或查看模块结构时触发
 
 **功能**：
 - 读取 `module-map.md` 获取项目模块索引
@@ -37,6 +37,7 @@ Spec-Driven Development 插件，从任务工单和 PRD 自动执行完整开发
 - 收到开发需求时，快速定位代码模块
 - 需要了解模块详情时，读取模块文档
 - 新增或修改模块时，配合 doc-auto-sync 同步更新
+- 未采用该协作机制的仓库、无 module-map 的仓库和通用问答场景不使用该 skill
 
 ### doc-auto-sync
 

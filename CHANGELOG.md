@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.1.29 — Remove quality plugin, refine module-discovery scope, add feishu-bot-card skill
+
+### Spec Plugin (0.1.5)
+
+- Changed module-discovery skill from auto-execute to on-demand (only for repos that adopt the module-index workflow)
+
+### Sync Plugin (0.1.25)
+
+- Added feishu-bot-card skill for sending Feishu webhook card messages
+- Removed quality plugin from enabled plugins list and added cleanup for retired plugins (quality, ralph)
+- Removed Ralph loop status display from statusline
+- Updated ensure-codex-skills.sh to only remove symlinks (not directories) for retired skills
+- Updated ensure-plugins.sh to include skill-creator and clean retired plugins
+- Fixed ensure-plugins.sh to also clean retired plugins from installed_plugins.json (prevents "plugin not found" errors after plugin removal)
+- Added ensure-plugins.sh Step 3: auto-clean retired plugins from current project's settings.json and settings.local.json on SessionStart
+- Fixed ensure-mcp.sh to skip context7 MCP config when context7 plugin is already installed (prevents duplicate MCP server conflict)
+
+### Marketplace
+
+- Removed quality plugin registration from marketplace
+- Bumped version from 0.1.28 to 0.1.29
+- Updated spec plugin to version 0.1.5
+- Updated sync plugin to version 0.1.25
+
 ## 0.1.27 — Remove context7 from auto-install plugins
 
 ### Sync Plugin (0.1.23)
