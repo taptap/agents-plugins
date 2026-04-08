@@ -19,13 +19,13 @@ cat ~/.claude/settings.json 2>/dev/null | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
 plugins=d.get('enabledPlugins',{})
-required=['spec@taptap-plugins','sync@taptap-plugins','git@taptap-plugins','quality@taptap-plugins']
+required=['spec@taptap-plugins','sync@taptap-plugins','git@taptap-plugins']
 for p in required:
     status='✅' if plugins.get(p) else '❌'
     print(f'{status} {p}')
-deprecated=['ralph@taptap-plugins']
-for p in deprecated:
-    if plugins.get(p): print(f'⚠️  {p} (废弃，需清理)')
+legacy=['ralph@taptap-plugins','quality@taptap-plugins']
+for p in legacy:
+    if plugins.get(p): print(f'⚠️  {p} (遗留配置，重启会话后应自动清理)')
 " 2>/dev/null || echo "❌ ~/.claude/settings.json 不存在"
 
 # 2. Marketplace 配置
@@ -169,7 +169,7 @@ echo "=== REPO ==="
 📋 插件配置状态检查
 
 $HOME 级：
-  Plugins:     ✅ spec / ✅ sync / ✅ git / ✅ quality
+  Plugins:     ✅ spec / ✅ sync / ✅ git
   Marketplace: ✅ taptap-plugins
   Versions:    ✅ taptap-plugins (marketplace vX.Y.Z) — git vA.B.C / sync vD.E.F / ...
   Hooks:       ✅ 10/10 scripts（symlink，版本一致）

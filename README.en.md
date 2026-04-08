@@ -25,8 +25,7 @@ mkdir -p .claude && echo '{
   "enabledPlugins": {
     "spec@taptap-plugins": true,
     "sync@taptap-plugins": true,
-    "git@taptap-plugins": true,
-    "quality@taptap-plugins": true
+    "git@taptap-plugins": true
   }
 }' > .claude/settings.json
 ```
@@ -84,10 +83,9 @@ One-click configuration for MCP, auto-update, and Cursor synchronization:
 
 | Plugin  | Version | Description                                                                                          |
 | ------- | ------- | ---------------------------------------------------------------------------------------------------- |
-| spec    | 0.1.4   | Spec-Driven Development workflow plugin                                                              |
+| spec    | 0.1.5   | Spec-Driven Development workflow plugin                                                              |
 | git     | 0.1.13  | Git workflow automation plugin (commit/push/MR + dual-mode code review + remote platform ops)        |
-| sync    | 0.1.23  | Dev environment config sync plugin (MCP + LSP + Hooks + Cursor + Claude Skills)                      |
-| quality | 0.0.4   | AI-powered code quality plugin (9 parallel Agents: Bug detection, code quality, security, performance) |
+| sync    | 0.1.25  | Dev environment config sync plugin (MCP + LSP + Hooks + Cursor + Claude Skills)                      |
 
 
 See the README.md in each plugin directory for detailed documentation.
@@ -189,7 +187,7 @@ Generate technical specifications and execute development from requirement docum
 
 #### Module Discovery
 
-AI **automatically reads** the module index when starting work, quickly understanding the project structure:
+AI reads the module index on demand for repositories that adopt the module-index workflow, quickly understanding the project structure:
 
 
 | Path                                    | Description                                                                           |
@@ -201,9 +199,10 @@ AI **automatically reads** the module index when starting work, quickly understa
 
 **Workflow:**
 
-1. AI checks if `module-map.md` exists
-2. If not, prompts the user to generate it (using `generate-module-map.md` prompt)
-3. Reads the module index, using keywords for quick code navigation
+1. First determine whether the repository actually uses the `tap-agents` module index workflow and treats it as the module discovery entry point
+2. Only for module-location tasks, check whether `module-map.md` exists
+3. If it is missing and the user explicitly wants this workflow, ask whether it should be generated
+4. Read the module index and use its keywords for quick code navigation
 
 #### Documentation Auto-Sync
 
@@ -226,29 +225,27 @@ AI **automatically maintains** module documentation when modifying code:
 - `「Main Class Suffix」`: Suffixes for identifying main classes (e.g., `ViewController`, `Service`)
 - `「File Extension」`: Code file extensions (e.g., `.swift`, `.kt`, `.go`)
 
-### Code Quality Review
+### Code Review
 
-Use AI-powered code review to automatically detect potential issues:
+Use the Git plugin's built-in review flow to inspect local changes or MR/PRs:
 
 ```bash
-# Review all changes on the current branch
-/review
+# Review current workspace or branch changes
+/git:code-reviewing
 
-# Review a specific Merge Request
-/review --mr 123
+# Review a specific Merge Request / Pull Request
+/git:code-reviewing https://gitlab.example.com/group/project/-/merge_requests/123
 
-# Review specific files
-/review path/to/file.go
+# Review a specific commit or branch
+/git:code-reviewing HEAD~1
 ```
 
 **Highlights:**
 
-- **9 Parallel Agents**: Execute simultaneously for fast review
-- **Four-Dimensional Review**: Bug detection, code quality, security checks, performance analysis
-- **Confidence Scoring**: Threshold at 80, automatically filters low-confidence issues
-- **Redundancy Confirmation**: When the same issue is found by 2 Agents independently, confidence +20
-- **Multi-Language Support**: Go/Java/Python/Kotlin/Swift/TypeScript
-- **Smart Standards Compliance**: Automatically detects CLAUDE.md/CONTRIBUTING.md and follows project conventions
+- **Dual-engine review**: Claude Agent Team + Codex cross-checking
+- **Local and MR modes**: Works with uncommitted changes, commits, branches, and MR/PR URLs
+- **Project-aware rules**: Loads repo review checklist and review rules automatically
+- **Risk-first output**: Reports blockers first, then residual risks and verification gaps
 
 ### Development Environment Sync
 

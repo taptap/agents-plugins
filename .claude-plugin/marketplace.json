@@ -14,7 +14,7 @@
       "name": "spec",
       "source": "./plugins/spec",
       "description": "Spec-Driven Development 插件，自动执行完整开发流程",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "author": {
         "name": "TapTap AI Team"
       },
@@ -26,7 +26,7 @@
       "name": "git",
       "source": "./plugins/git",
       "description": "Git 工作流命令插件，提供提交/推送/MR、远程平台操作、自动代码审查（Agent Team 审查+辩论 + Codex 双视角），支持项目自定义审查规则",
-      "version": "0.1.13",
+      "version": "0.1.14",
       "author": {
         "name": "TapTap AI Team"
       },
@@ -38,7 +38,7 @@
       "name": "sync",
       "source": "./plugins/sync",
       "description": "项目配置同步插件，提供 MCP、LSP 和开发环境配置同步功能",
-      "version": "0.1.23",
+      "version": "0.1.25",
       "author": {
         "name": "TapTap AI Team"
       },

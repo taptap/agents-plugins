@@ -17,11 +17,10 @@ MANIFEST_FILE="$MANIFEST_DIR/managed.txt"
 # All other marketplaces (claude-plugins-official, pua-skills, etc.) are excluded
 INCLUDE_MARKETPLACE="taptap-plugins"
 
-# Excluded plugins within our marketplace (not published, under development)
+# Retired plugins within our marketplace; keep cleanup so legacy HOME sync artifacts disappear
 EXCLUDE_PLUGINS="ralph"
 
-# Excluded skill names (cleaned on every run from both ~/.codex/skills and ~/.agents/skills)
-# Covers old hardlinks/real dirs that migration can't detect
+# Retired skill names cleaned on every run from both ~/.codex/skills and ~/.agents/skills
 EXCLUDE_SKILLS="ralph-loop ralph-pause ralph-resume ralph-status ralph-adjust ralph-decompose ralph-workflow cancel-ralph prd-to-json"
 
 # Log
@@ -42,13 +41,14 @@ fi
 mkdir -p "$AGENTS_SKILLS"
 mkdir -p "$MANIFEST_DIR"
 
-# ========== Step 1: Clean excluded skills from both directories ==========
+# ========== Step 1: Clean retired skill symlinks from both directories ==========
 
 for skill in $EXCLUDE_SKILLS; do
   for dir in "$CODEX_SKILLS" "$AGENTS_SKILLS"; do
-    if [ -e "$dir/$skill" ] || [ -L "$dir/$skill" ]; then
-      rm -rf "${dir:?}/${skill:?}"
-      echo "🗑️  已删除排除 skill: $dir/$skill"
+    target="$dir/$skill"
+    if [ -L "$target" ]; then
+      rm -f "$target"
+      echo "🗑️  已删除退役 skill symlink: $target"
     fi
   done
 done

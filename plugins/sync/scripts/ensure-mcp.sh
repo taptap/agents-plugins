@@ -102,8 +102,16 @@ ensure_mcp_jq() {
     jq '. + {"mcpServers":{}}' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
   fi
 
-  # 检查并添加 context7
-  if ! jq -e '.mcpServers.context7' "$file" >/dev/null 2>&1; then
+  # 检查并添加 context7（如果用户已安装 context7 插件则跳过，避免冲突）
+  local installed_file="$HOME/.claude/plugins/installed_plugins.json"
+  local has_context7_plugin=false
+  if [ -f "$installed_file" ] && jq -e '.plugins["context7@claude-plugins-official"]' "$installed_file" >/dev/null 2>&1; then
+    has_context7_plugin=true
+  fi
+
+  if [ "$has_context7_plugin" = "true" ]; then
+    echo "✅ context7 插件已安装，跳过 MCP 配置（避免冲突）"
+  elif ! jq -e '.mcpServers.context7' "$file" >/dev/null 2>&1; then
     jq '.mcpServers.context7 = {"command":"npx","args":["-y","@upstash/context7-mcp"],"env":{}}' \
       "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
     echo "✅ 已添加 context7 MCP"
@@ -235,8 +243,22 @@ def main():
     if "mcpServers" not in data or not isinstance(data["mcpServers"], dict):
         data["mcpServers"] = {}
 
+    # 检查 context7 插件是否已安装（避免与 MCP 配置冲突）
+    installed_file = os.path.expanduser("~/.claude/plugins/installed_plugins.json")
+    has_context7_plugin = False
+    if os.path.exists(installed_file):
+        try:
+            with open(installed_file) as f:
+                installed = json.load(f)
+            has_context7_plugin = "context7@claude-plugins-official" in installed.get("plugins", installed)
+        except Exception:
+            pass
+
     changed = False
     for name, config in MCP_SERVERS.items():
+        if name == "context7" and has_context7_plugin:
+            print(f"✅ {name} 插件已安装，跳过 MCP 配置（避免冲突）")
+            continue
         if name not in data["mcpServers"]:
             data["mcpServers"][name] = config
             print(f"✅ 已添加 {name} MCP")

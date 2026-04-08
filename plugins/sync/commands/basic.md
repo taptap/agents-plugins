@@ -287,7 +287,7 @@ bash {SCRIPTS_DIR}/detect-lsp.sh "$(pwd)"
 
 ### 自动更新钩子
 - **SessionStart hook**: 会话启动时自动启用 marketplace 插件自动更新（autoUpdate）
-- **插件启用 hook**: 确保 `enabledPlugins` 包含 spec, sync, git, quality 插件
+- **插件启用 hook**: 确保 `enabledPlugins` 包含 spec, sync, git 插件，并清理已退役插件
 - **ToolSearch hook**: 确保 `env.ENABLE_TOOL_SEARCH` 已配置（不覆盖已有值）
 - **效果**: 插件更新将由 Claude marketplace 自动更新机制接管（无需手动 uninstall + install）
 
@@ -296,7 +296,7 @@ bash {SCRIPTS_DIR}/detect-lsp.sh "$(pwd)"
 - **Commands**: git-commit、git-commit-push、git-commit-push-pr 命令
 - **Spec Skills**（需 `--with-spec` 参数启用）: 自动同步 spec 插件的 skills 规则
   - `doc-auto-sync.mdc` - AI 改动模块代码时自动同步文档（alwaysApply: true）
-  - `module-discovery.mdc` - 开发前必须读取模块索引定位目标（alwaysApply: true）
+  - `module-discovery.mdc` - 模块索引定位（alwaysApply: true）
   - `generate-module-map.mdc` - 生成模块索引的 prompt（alwaysApply: false）
   - 已跳过：`implementing-from-task`、`merging-parallel-work`（测试中）
 

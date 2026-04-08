@@ -44,6 +44,8 @@ alwaysApply: false
 
 分支格式：`{prefix}-{TAP-ID}-{short-description}`
 
+**分支名总长度不超过 60 字符**（超出时缩短 description 部分的语义表达）
+
 ## 提交信息规范
 
 ### 格式

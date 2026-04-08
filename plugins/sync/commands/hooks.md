@@ -11,7 +11,7 @@ description: 同步 plugin hooks 配置到项目级，启用自动更新功能
 2. **CLI 工具检测**：检测并自动安装 gh/glab CLI 工具，检查认证状态
 3. **状态栏配置**：自动复制 statusline.sh 到 `~/.claude/scripts/` 并配置 `~/.claude/settings.json`
 4. **MCP 配置**：自动配置 context7 MCP 到 `~/.claude.json`
-5. **插件启用**：确保 `enabledPlugins` 包含 spec, sync, git, quality 插件
+5. **插件启用**：确保 `enabledPlugins` 包含 spec, sync, git 插件，并清理已退役插件
 6. **ToolSearch 配置**：确保 `env.ENABLE_TOOL_SEARCH` 已配置（不覆盖已有值）
 
 **工作原理**：
