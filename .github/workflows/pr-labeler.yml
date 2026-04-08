@@ -1,0 +1,96 @@
+name: PR Labeler
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+      - edited
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply path labels
+        uses: actions/labeler@v5
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          configuration-path: .github/labeler.yml
+          sync-labels: true
+
+      - name: Apply size and kind labels
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const changedLines = (pr.additions || 0) + (pr.deletions || 0);
+
+            let sizeLabel = "size:xl";
+            if (changedLines <= 25) sizeLabel = "size:xs";
+            else if (changedLines <= 100) sizeLabel = "size:s";
+            else if (changedLines <= 300) sizeLabel = "size:m";
+            else if (changedLines <= 800) sizeLabel = "size:l";
+
+            const title = (pr.title || "").toLowerCase();
+            let kindLabel = null;
+            if (/^feat(?:\(|:)/.test(title)) kindLabel = "kind:feature";
+            else if (/^fix(?:\(|:)/.test(title)) kindLabel = "kind:fix";
+            else if (/^docs?(?:\(|:)/.test(title)) kindLabel = "kind:docs";
+            else if (/^refactor(?:\(|:)/.test(title)) kindLabel = "kind:refactor";
+            else if (/^test(?:\(|:)/.test(title)) kindLabel = "kind:test";
+            else if (/^perf(?:\(|:)/.test(title)) kindLabel = "kind:perf";
+            else if (/^chore\(release\)(?:\(|:)?/.test(title) || /^release(?:\(|:)/.test(title)) {
+              kindLabel = "kind:release";
+            } else if (/^chore(?:\(|:)/.test(title) || /^ci(?:\(|:)/.test(title)) {
+              kindLabel = "kind:chore";
+            }
+
+            const { owner, repo } = context.repo;
+            const issue_number = pr.number;
+            const existing = await github.paginate(github.rest.issues.listLabelsOnIssue, {
+              owner,
+              repo,
+              issue_number,
+              per_page: 100,
+            });
+
+            const keep = new Set([sizeLabel]);
+            if (kindLabel) keep.add(kindLabel);
+
+            if (!kindLabel) {
+              const labelNames = existing.map((label) => label.name);
+              if (labelNames.includes("scope:docs") && !labelNames.includes("scope:plugins")) keep.add("kind:docs");
+              else if (labelNames.includes("scope:tests") && !labelNames.includes("scope:plugins")) keep.add("kind:test");
+            }
+
+            const toRemove = existing
+              .map((label) => label.name)
+              .filter((name) => (name.startsWith("size:") || name.startsWith("kind:")) && !keep.has(name));
+
+            for (const name of toRemove) {
+              await github.rest.issues.removeLabel({
+                owner,
+                repo,
+                issue_number,
+                name,
+              }).catch(() => {});
+            }
+
+            const toAdd = [...keep].filter(
+              (name) => !existing.some((label) => label.name === name),
+            );
+
+            if (toAdd.length > 0) {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number,
+                labels: toAdd,
+              });
+            }

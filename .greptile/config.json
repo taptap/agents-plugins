@@ -1,0 +1,7 @@
+{
+  "strictness": 2,
+  "commentTypes": ["logic", "syntax", "style", "info"],
+  "triggerOnUpdates": false,
+  "ignorePatterns": ".claude-plugin/marketplace.json\nREADME.md\nREADME.en.md",
+  "instructions": "Review for correctness, regressions, workflow safety, and release/versioning mistakes. Prefer concrete behavioral issues over style comments. Treat AGENTS.md and .claude/rules/versioning.md as repository policy."
+}

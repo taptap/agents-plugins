@@ -1,0 +1,16 @@
+{
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "description": "Repository-specific workflow and GitHub token instructions."
+    },
+    {
+      "path": ".claude/rules/versioning.md",
+      "description": "Mandatory plugin versioning rules for development and release."
+    },
+    {
+      "path": ".github/PULL_REQUEST_TEMPLATE.md",
+      "description": "Expected pull request structure and author checklist."
+    }
+  ]
+}

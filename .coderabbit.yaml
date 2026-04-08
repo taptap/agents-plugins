@@ -1,0 +1,8 @@
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: false
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: false
