@@ -1,0 +1,67 @@
+name: test-failure-analyzer
+version: "1.0"
+description: >
+  分析测试失败原因，分类为预期变化/回归/不稳定，
+  给出处理方案。支持 分析→修复→重测 自循环。
+  触发：测试失败、用例挂了、跑不过、失败分析、回归分析、flaky test。
+
+input:
+  one_of:
+    test_output:
+      type: string
+      description: 测试执行的 stdout/stderr 输出
+    test_report:
+      type: file
+      description: 测试执行报告文件（优先消费上游 unit-test-design / integration-test-design 产出的 test_execution_report.json，也支持其他 JSON/XML/文本格式）
+      from_upstream: [unit-test-design, integration-test-design]
+  optional:
+    test_command:
+      type: string
+      description: 测试执行命令（如 go test ./...、pytest、npm test），用于自循环阶段自动重测
+    code_diff:
+      type: file
+      description: 当前代码变更 diff
+    code_diff_text:
+      type: string
+      description: 直接提供的代码变更文本
+    requirement_points:
+      type: file
+      description: 需求功能点清单
+      from_upstream: requirement-clarification
+    previous_analysis:
+      type: file
+      description: 上一轮的 failure_analysis.json（自循环时使用）
+    max_iterations:
+      type: number
+      description: 最大自循环次数（默认 3）
+
+output:
+  files:
+    - name: failure_analysis.json
+      format: json
+      description: 失败分类结果
+    - name: action_plan.md
+      format: markdown
+      description: 处理方案（供人确认）
+  structured:
+    iteration:
+      type: number
+      description: 当前迭代轮次（从 1 开始）
+    total_failures:
+      type: number
+      description: 本轮失败用例总数
+    expected_change_count:
+      type: number
+      description: 分类为「预期变化」的用例数
+    regression_count:
+      type: number
+      description: 分类为「回归问题」的用例数
+    flaky_count:
+      type: number
+      description: 分类为「不稳定」的用例数
+    convergence:
+      type: boolean
+      description: 是否收敛（本轮失败数 < 上轮失败数）
+    all_passed:
+      type: boolean
+      description: 是否全部测试通过

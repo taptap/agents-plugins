@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.1.30 — Add QA workflow plugin with multi-agent test skills
+
+### Test Plugin (0.0.1)
+
+- Added QA workflow plugin with full test lifecycle skills
+- Added test-case-generation skill with multi-agent review pipeline (dual reviewer + redundancy audit)
+- Added unit-test-design skill with business-scenario-driven principles and language-specific methods (Go/Java/Kotlin/Python/Swift/TypeScript)
+- Added integration-test-design skill with framework-specific methods
+- Added verification-test-generation skill for code-level test generation with phase execution guarantees
+- Added change-analysis skill with Android third-party interaction impact assessment
+- Added requirement-clarification skill with structured Q&A cards and ask_question output format
+- Added requirement-review skill with 12-dimension evaluation framework
+- Added requirement-traceability skill with smoke-test mode, defect extraction, and P0 gate
+- Added test-case-review skill with 4-dimension review protocol
+- Added api-contract-validation skill with contract enforcement
+- Added bug-fix-review and test-failure-analyzer skills
+- Added ui-fidelity-check skill with Figma MCP tiered data fetching protocol
+- Added shared-tools (fetch_feishu_doc.py, search_prs.py, search_mrs.py, gitlab_helper.py, github_helper.py, validate_contracts.py)
+- Added output workspace convention for requirement-based artifact organization
+- Added phase execution guarantees and output validation for all multi-phase skills
+
+### Marketplace
+
+- Bumped version from 0.1.29 to 0.1.30
+- Added test plugin version 0.0.1
+- Removed orphaned quality plugin entry (directory does not exist)
+
 ## 0.1.29 — Remove quality plugin, refine module-discovery scope, add feishu-bot-card skill
 
 ### Spec Plugin (0.1.5)

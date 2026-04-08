@@ -1,0 +1,111 @@
+name: change-analysis
+version: "1.0"
+description: >
+  分析代码变更的影响面和测试覆盖。输入 Story/Bug 链接或需求文档 + 代码变更（MR/PR 或本地 diff），
+  输出 change_analysis.json + change_coverage_report.json + 可选 supplementary_cases.json。
+
+input:
+  any_of:
+    code_changes:
+      type: string[]
+      description: 关联的 MR/PR 链接列表（GitLab MR 或 GitHub PR），可与本地 diff 同时提供
+    code_diff:
+      type: file[]
+      description: 本地 diff 文件列表（支持多仓库，每个文件为一个仓库的 git diff 输出）
+    code_diff_text:
+      type: string
+      description: 直接提供的代码变更文本（粘贴的 diff 内容）
+  optional:
+    story_link:
+      type: string
+      description: Story/需求链接（飞书 Story / 文档链接，或其他可通过脚本获取的 URL）
+    bug_link:
+      type: string
+      description: Bug 链接（飞书 Bug 链接，或其他可通过脚本获取的 URL）
+    requirement_doc:
+      type: file
+      description: 本地需求文档（.md / .json 文件）
+    bug_doc:
+      type: file
+      description: 本地 Bug 描述文件（.md / .json 文件）
+    design_link:
+      type: string
+      description: Figma 设计稿链接
+    clarified_requirements:
+      type: file
+      description: 上游需求澄清结果
+      from_upstream: requirement-clarification
+    requirement_points:
+      type: file
+      description: 上游功能点清单
+      from_upstream: requirement-clarification
+    existing_test_cases:
+      type: file
+      description: 已有测试用例文件（用于覆盖评估的对照基准）
+      from_upstream: [test-case-generation, test-case-review]
+
+output:
+  files:
+    - name: change_analysis.json
+      description: 变更分析总结（场景、风险等级、关键发现、行动项）
+      format: json
+    - name: code_change_analysis.md
+      description: 逐代码变更的详细分析记录
+      format: markdown
+    - name: change_coverage_report.json
+      description: 测试覆盖率统计和缺口清单（Story 场景）
+      format: json
+    - name: test_coverage_report.md
+      description: 测试覆盖分析过程记录（Story 场景）
+      format: markdown
+    - name: change_fix_analysis.json
+      description: 根因分析和修复完整性评估（Bug 场景）
+      format: json
+    - name: risk_assessment.json
+      description: 残余风险评估和行动建议（Bug 场景）
+      format: json
+      optional: true
+    - name: supplementary_cases.json
+      description: 为覆盖缺口生成的补充用例（Story 场景，可选）
+      format: json
+      optional: true
+  structured:
+    scenario:
+      type: string
+      description: 执行场景（story | bug）
+    risk_level:
+      type: string
+      description: 总体风险等级（high | medium | low）
+    changes_analyzed:
+      type: number
+      description: 分析的代码变更数
+    coverage_rate:
+      type: string
+      description: 测试覆盖率（Story 场景，Bug 场景为 N/A）
+    gap_count:
+      type: number
+      description: 覆盖缺口数（Story 场景）
+    fix_completeness:
+      type: string
+      description: 修复完整性（Bug 场景，complete | partial | insufficient | N/A）
+    supplementary_cases_count:
+      type: number
+      description: 补充用例数
+
+dependencies:
+  skills:
+    - shared-tools
+  scripts:
+    - shared-tools/scripts/fetch_feishu_doc.py
+    - shared-tools/scripts/gitlab_helper.py
+    - shared-tools/scripts/github_helper.py
+    - shared-tools/scripts/search_mrs.py
+    - shared-tools/scripts/search_prs.py
+  env_vars:
+    - FEISHU_APP_ID
+    - FEISHU_APP_SECRET
+    - GITLAB_URL
+    - GITLAB_TOKEN
+    - GITLAB_PROJECT_MAPPING
+    - GITHUB_TOKEN
+    - GITHUB_REPO_MAPPING

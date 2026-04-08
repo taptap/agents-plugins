@@ -1,0 +1,55 @@
+name: ui-fidelity-check
+version: "1.0"
+description: >
+  对比 Figma 设计稿与浏览器实现的 UI 还原度，
+  输出差异清单和还原度评级。
+  触发：还原度、UI 对比、设计稿对照、视觉走查、像素对比、UI 验收。
+
+input:
+  required:
+    design_link:
+      type: string
+      description: Figma 设计稿链接（至少包含一个 node）
+  optional:
+    page_url:
+      type: string
+      description: 前端页面 URL（可在浏览器中访问）
+    code_dir:
+      type: string
+      description: 前端代码目录（structural-only 模式下用于提取样式定义）
+    states_to_check:
+      type: string[]
+      description: 需要检查的 UI 状态列表（如 ["default", "empty", "loading", "error"]）
+
+output:
+  files:
+    - name: ui_fidelity_report.json
+      format: json
+      description: UI 还原度报告（差异清单 + 评级）
+  structured:
+    overall_fidelity:
+      type: string
+      description: 还原度评级（high | medium | low）
+    comparison_mode:
+      type: string
+      description: 对比模式（visual+structural | structural-only）
+    total_differences:
+      type: number
+      description: 差异总数
+    high_severity_count:
+      type: number
+      description: 高严重度差异数
+    states_coverage:
+      type: string
+      description: 状态覆盖率（如 "75%"）
+
+dependencies:
+  mcp_servers:
+    - plugin-figma-figma
+    - cursor-ide-browser
+  tools:
+    - get_screenshot
+    - get_design_context
+    - browser_navigate
+    - browser_take_screenshot
+    - browser_snapshot

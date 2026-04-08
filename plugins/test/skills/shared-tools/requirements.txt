@@ -1,0 +1,4 @@
+# shared-tools Python scripts dependencies
+# All scripts use Python standard library only (urllib, json, argparse, etc.)
+# No third-party packages required.
+# Minimum Python version: 3.8+ (for typing module compatibility)

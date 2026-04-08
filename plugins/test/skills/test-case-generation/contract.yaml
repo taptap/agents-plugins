@@ -1,0 +1,94 @@
+name: test-case-generation
+version: "2.0"
+description: >
+  根据需求文档和澄清结果拆解功能模块，生成结构化测试用例，并通过冗余对评审确保质量。
+  输入需求链接、本地需求文档或上游澄清结果，输出 final_cases.json。
+
+input:
+  one_of:
+    story_link:
+      type: string
+      description: 需求链接（飞书 Story / 文档链接，或其他可通过脚本获取的 URL）
+    requirement_doc:
+      type: file
+      description: 本地需求文档（AI 对话生成或手动提供的 .md / .json 文件）
+  optional:
+    clarified_requirements:
+      type: file
+      description: 上游 requirement-clarification 的澄清结果
+      from_upstream: requirement-clarification
+    requirement_points:
+      type: file
+      description: 上游功能点清单
+      from_upstream: requirement-clarification
+    design_link:
+      type: string
+      description: Figma 设计稿链接
+
+output:
+  files:
+    - name: final_cases.json
+      description: 评审通过 + 补充的完整用例集（含 review_confidence 和 source 字段）
+      format: json
+    - name: test_cases.json
+      description: 生成阶段的用例集（review 前的中间版本，保留供对比）
+      format: json
+    - name: decomposition.md
+      description: 功能模块拆解清单
+      format: markdown
+    - name: context_summary.md
+      description: 全局上下文摘要
+      format: markdown
+    - name: tc_gen_review.md
+      description: 4 维度冗余对评审结果
+      format: markdown
+    - name: review_summary.json
+      description: 评审摘要统计（用例数/覆盖率/问题数/维度评分）
+      format: json
+    - name: supplementary_cases.json
+      description: 补充用例（如有覆盖缺口）
+      format: json
+      optional: true
+  structured:
+    total_modules:
+      type: number
+      description: 模块总数
+    total_cases:
+      type: number
+      description: 生成的用例总数（review 前）
+    priority_distribution:
+      type: object
+      description: 优先级分布 {P0, P1, P2, P3}
+    avg_confidence:
+      type: number
+      description: 用例平均置信度（0-100）
+    coverage_rate:
+      type: string
+      description: 需求覆盖率
+    issues_found:
+      type: number
+      description: 评审发现问题数
+    consensus_issues:
+      type: number
+      description: 两个评审 Agent 一致发现的问题数
+    cases_supplemented:
+      type: number
+      description: 补充用例数
+    review_mode:
+      type: string
+      description: 评审模式（single-agent | redundancy-pair）
+    user_confirmed_count:
+      type: number
+      description: 用户确认的问题数
+
+dependencies:
+  scripts:
+    - shared-tools/scripts/fetch_feishu_doc.py
+    - shared-tools/scripts/gitlab_helper.py  # 条件触发：获取技术文档涉及代码时
+    - shared-tools/scripts/github_helper.py  # 条件触发：获取技术文档涉及代码时
+  env_vars:
+    - FEISHU_APP_ID
+    - FEISHU_APP_SECRET
+    - GITLAB_URL      # 条件触发
+    - GITLAB_TOKEN    # 条件触发
+    - GITHUB_TOKEN    # 条件触发

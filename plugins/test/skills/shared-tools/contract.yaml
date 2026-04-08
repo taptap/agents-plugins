@@ -1,0 +1,28 @@
+name: shared-tools
+version: "1.0"
+description: >
+  数据获取共享脚本集合：飞书文档获取、GitLab MR/文件、GitHub PR/文件、MR/PR 搜索。
+  默认由其他 skill 间接引用。
+
+input: {}
+
+output: {}
+
+dependencies:
+  scripts:
+    - shared-tools/scripts/fetch_feishu_doc.py
+    - shared-tools/scripts/gitlab_helper.py
+    - shared-tools/scripts/github_helper.py
+    - shared-tools/scripts/search_mrs.py
+    - shared-tools/scripts/search_prs.py
+  env_vars:
+    - FEISHU_APP_ID
+    - FEISHU_APP_SECRET
+    - FEISHU_BASE_URL          # 默认 https://open.feishu.cn（别名 FEISHU_HOST）
+    - GITLAB_URL
+    - GITLAB_TOKEN
+    - GITLAB_SSL_VERIFY        # 可选，默认开启
+    - GITLAB_PROJECT_MAPPING   # search_mrs.py 必填，JSON 项目映射
+    - GITHUB_URL               # 默认 https://api.github.com
+    - GITHUB_TOKEN
+    - GITHUB_REPO_MAPPING      # search_prs.py 必填，JSON 仓库映射

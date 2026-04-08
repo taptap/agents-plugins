@@ -1,0 +1,43 @@
+name: requirement-review
+version: "1.0"
+description: >
+  在需求评审会前，对需求文档做质量把关。输入飞书 Story 链接或需求文档链接，
+  通过 12 维度评审框架和可选的多视角并行分析，
+  输出 Go-No-Go 评审结论、结构化 Checklist 和各职能待确认问题清单。
+
+input:
+  one_of:
+    story_link:
+      type: string
+      description: 飞书 Story 链接或需求文档链接（/story/detail/ 或 /wiki/ 或 /docx/）
+  optional:
+    design_link:
+      type: string
+      description: Figma 设计稿链接（提供时触发文档-设计稿交叉比对）
+
+output:
+  files:
+    - name: requirement_understanding.md
+      description: 需求理解结构化文档（目标、功能点、业务规则、依赖）
+      format: markdown
+    - name: review_checklist.md
+      description: 12 维度评审清单（含每项状态标记和发现的问题）
+      format: markdown
+    - name: report.md
+      description: 评审报告（7 章结构，含就绪度判定和按职能分组问题列表），发布到飞书 Wiki
+      format: markdown
+
+dependencies:
+  scripts:
+    - shared-tools/scripts/fetch_feishu_doc.py
+    - shared-tools/scripts/create_feishu_doc.py
+    - shared-tools/scripts/gitlab_helper.py  # 条件触发
+  agents:
+    - requirement-understanding/functional-perspective  # 多视角模式
+    - requirement-understanding/exception-perspective    # 多视角模式
+    - requirement-understanding/user-perspective         # 多视角模式
+  env_vars:
+    - FEISHU_APP_ID
+    - FEISHU_APP_SECRET
+    - GITLAB_URL      # 条件触发
+    - GITLAB_TOKEN    # 条件触发

@@ -1,0 +1,156 @@
+name: requirement-traceability
+version: "2.1"
+description: >
+  双向追溯需求与代码变更的映射关系。输入需求描述 + 代码变更（MR/PR 或本地 diff），
+  输出 traceability_matrix.json + traceability_coverage_report.json + risk_assessment.json。
+  支持 smoke-test 模式：在回溯基础上提取缺陷列表并执行 P0 门控判定。
+
+input:
+  any_of:
+    code_changes:
+      type: string[]
+      description: 关联的 MR/PR 链接列表（GitLab MR 或 GitHub PR），可与本地 diff 同时提供
+    code_diff:
+      type: file[]
+      description: 本地 diff 文件列表（支持多仓库，每个文件为一个仓库的 git diff 输出）
+    code_diff_text:
+      type: string
+      description: 直接提供的代码变更文本（粘贴的 diff 内容）
+  optional:
+    story_link:
+      type: string
+      description: 需求链接（飞书 Story / 文档链接，或其他可通过脚本获取的 URL）
+    requirement_doc:
+      type: file
+      description: 本地需求文档（AI 对话生成或手动提供的 .md / .json 文件）
+    clarified_requirements:
+      type: file
+      description: 上游需求澄清结果
+      from_upstream: requirement-clarification
+    requirement_points:
+      type: file
+      description: 上游功能点清单
+      from_upstream: requirement-clarification
+    verification_cases:
+      type: file
+      description: 上游验证用例（verification-test-generation 产出）
+      from_upstream: verification-test-generation
+    design_link:
+      type: string
+      description: Figma 设计稿链接（UI 还原度检查时使用）
+    ui_fidelity_report:
+      type: file
+      description: 上游 UI 还原度检查报告
+      from_upstream: ui-fidelity-check
+    openapi_spec:
+      type: file
+      description: OpenAPI 规范文件（用于 API 契约校验的基准，如 openapi.json / swagger.yaml）
+    backend_changes:
+      type: string[]
+      description: 后端关联 MR/PR 链接列表（前后端同步开发时提供，用于交叉比对接口定义）
+    api_contract_report:
+      type: file
+      description: 上游 API 契约校验报告
+      from_upstream: api-contract-validation
+    mode:
+      type: string
+      description: >
+        执行模式。traceability（默认）仅执行需求回溯；
+        smoke-test 在回溯基础上追加缺陷提取和冒烟测试判定
+    test_cases:
+      type: file
+      description: 已有测试用例文件（辅助冒烟验证点生成和优先级判定）
+
+output:
+  files:
+    - name: traceability_matrix.json
+      description: 需求×代码双向映射矩阵
+      format: json
+    - name: traceability_coverage_report.json
+      description: 覆盖率统计和缺口清单
+      format: json
+    - name: risk_assessment.json
+      description: 风险评估和行动建议
+      format: json
+    - name: forward_verification.json
+      description: 正向用例中介验证结果
+      format: json
+    - name: ui_fidelity_report.json
+      description: UI 还原度检查报告（条件产出，仅有设计稿时）
+      format: json
+    - name: defect_list.json
+      description: 缺陷列表（smoke-test 模式产出，含名称、优先级、实际/预期结果）
+      format: json
+      optional: true
+    - name: smoke_test_report.json
+      description: 冒烟测试报告含 pass/fail 判定（smoke-test 模式产出）
+      format: json
+      optional: true
+  structured:
+    overall_risk:
+      type: string
+      description: 总体风险等级
+    requirement_coverage_rate:
+      type: string
+      description: 需求覆盖率
+    code_traceability_rate:
+      type: string
+      description: 代码变更需求归属率
+    gap_count:
+      type: number
+      description: 覆盖缺口数
+    mode:
+      type: string
+      description: 执行模式（full | degraded），降级模式无需求源
+    tracing_mode:
+      type: string
+      description: 追溯模式（single-pass | redundancy-pair）
+    bidirectional_confirmation_rate:
+      type: string
+      description: 双向确认率（两个追溯 Agent 一致的映射占比）
+    verification_channel:
+      type: string
+      description: 验证通道模式（dual_channel | forward_only | reverse_only）
+    forward_verification_rate:
+      type: string
+      description: 正向用例验证通过率
+    ui_fidelity_overall:
+      type: string
+      description: UI 还原度评级（high | medium | low | N/A）
+    api_contract_consistency:
+      type: string
+      description: API 契约一致性（consistent | inconsistent | partial | N/A）
+    api_contract_issues_count:
+      type: number
+      description: API 契约不一致问题数（0 表示一致或未触发检查）
+    loop_iterations:
+      type: number
+      description: 回溯自循环执行轮次（0 表示无缺口未触发循环）
+    loop_exit_reason:
+      type: string
+      description: 自循环退出原因（all_covered | max_iterations | no_progress | user_terminated | not_triggered）
+    smoke_test_verdict:
+      type: string
+      description: 冒烟测试结论（pass | fail | N/A），仅 smoke-test 模式有效
+    smoke_test_defect_count:
+      type: number
+      description: 缺陷总数（0 表示无缺陷或非 smoke-test 模式）
+    smoke_test_p0_count:
+      type: number
+      description: P0 缺陷数（>0 则 verdict=fail）
+
+dependencies:
+  scripts:
+    - shared-tools/scripts/fetch_feishu_doc.py
+    - shared-tools/scripts/gitlab_helper.py
+    - shared-tools/scripts/github_helper.py
+    - shared-tools/scripts/search_mrs.py
+    - shared-tools/scripts/search_prs.py
+  env_vars:
+    - FEISHU_APP_ID
+    - FEISHU_APP_SECRET
+    - GITLAB_URL
+    - GITLAB_TOKEN
+    - GITLAB_PROJECT_MAPPING
+    - GITHUB_TOKEN
+    - GITHUB_REPO_MAPPING

@@ -1,0 +1,75 @@
+name: test-case-review
+version: "1.0"
+description: >
+  评审已有测试用例的覆盖度和质量。输入测试用例 + 需求文档，
+  输出 review_result.json + review_summary.md + 可选 supplementary_cases.json。
+
+input:
+  one_of:
+    test_cases_json:
+      type: file
+      description: 测试用例 JSON 文件（符合 CONVENTIONS.md 用例格式，或其他结构化用例文件）
+      from_upstream: test-case-generation
+    test_cases_text:
+      type: string
+      description: 直接提供的测试用例文本
+  optional:
+    story_link:
+      type: string
+      description: 需求链接（飞书 Story / 文档链接）
+    requirement_doc:
+      type: file
+      description: 本地需求文档（.md / .json 文件）
+    clarified_requirements:
+      type: file
+      description: 上游需求澄清结果
+      from_upstream: requirement-clarification
+    requirement_points:
+      type: file
+      description: 上游功能点清单
+      from_upstream: requirement-clarification
+    design_link:
+      type: string
+      description: Figma 设计稿链接
+
+output:
+  files:
+    - name: review_result.json
+      description: 结构化评审结果（4 维度统计、问题清单、行动项）
+      format: json
+    - name: review_summary.md
+      description: 评审摘要报告
+      format: markdown
+    - name: requirement_points.md
+      description: 从需求中提炼的编号功能点清单
+      format: markdown
+    - name: tc_review_detail.md
+      description: 4 维度逐项评审详细记录
+      format: markdown
+    - name: supplementary_cases.json
+      description: 补充用例（如有覆盖缺口）
+      format: json
+      optional: true
+  structured:
+    total_requirement_points:
+      type: number
+      description: 需求功能点总数
+    total_test_cases:
+      type: number
+      description: 评审的测试用例总数
+    coverage_rate:
+      type: string
+      description: 需求覆盖率
+    issues_found:
+      type: number
+      description: 评审发现问题总数
+    supplementary_count:
+      type: number
+      description: 生成的补充用例数
+
+dependencies:
+  scripts:
+    - shared-tools/scripts/fetch_feishu_doc.py
+  env_vars:
+    - FEISHU_APP_ID
+    - FEISHU_APP_SECRET

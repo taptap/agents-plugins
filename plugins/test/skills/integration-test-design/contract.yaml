@@ -1,0 +1,87 @@
+name: integration-test-design
+version: "1.1"
+description: >
+  分析 API 接口、服务模块或客户端模块，自动生成可执行的集成测试代码。
+  支持后端服务（API/数据库/消息队列）和客户端应用（路由导航/网络请求/跨模块数据流）。
+  输入 API 定义/服务路径/客户端模块路径，输出集成测试文件。
+
+input:
+  one_of:
+    api_spec:
+      type: file
+      description: API 定义文件（OpenAPI/Swagger YAML/JSON、Proto 文件）— 适用于后端服务
+    service_path:
+      type: string
+      description: 服务模块目录路径（包含路由定义、handler、service 层代码）— 适用于后端服务
+    module_path:
+      type: string
+      description: 客户端模块目录路径（包含 ViewController、ViewModel、Router 等）— 适用于 iOS/Android 等客户端项目
+  optional:
+    tech_doc:
+      type: file
+      description: 技术方案文档，辅助理解服务架构和业务逻辑
+    requirement_points:
+      type: file
+      description: 上游功能点清单，用于指导测试覆盖重点（优先为 P0/P1 功能点对应的接口/模块生成集成测试）
+      from_upstream: requirement-clarification
+    test_framework:
+      type: string
+      description: 指定测试框架，默认自动检测
+    db_config:
+      type: string
+      description: 测试数据库连接配置（如未提供则自动检测项目配置）— 仅后端服务
+    route_definitions:
+      type: file
+      description: 路由表/深链定义文件 — 适用于客户端路由导航集成测试
+    xctestplan:
+      type: file
+      description: Xcode 测试计划文件（.xctestplan），用于了解集成测试分组策略 — 仅 iOS/macOS 项目
+
+output:
+  files:
+    - name: integration_test_plan.md
+      description: 集成测试场景清单（每个接口/模块的测试矩阵）
+      format: markdown
+    - name: test_execution_report.json
+      description: 测试执行结果（verify 阶段执行测试后产出，环境不支持时不生成）
+      format: json
+      optional: true
+  structured:
+    total_endpoints:
+      type: number
+      description: 分析的接口/模块总数
+    total_test_cases:
+      type: number
+      description: 生成的测试场景总数
+    files_generated:
+      type: number
+      description: 生成的测试文件数
+    test_types:
+      type: string[]
+      description: 涵盖的测试类型（API/数据库/服务间调用/中间件/路由导航/网络Stub/通知处理/跨模块数据流）
+    quality_audit:
+      type: object
+      description: 断言审计结果（参见 CONVENTIONS.md 断言审计协议）
+      properties:
+        audit_mode:
+          type: string
+          description: "independent-audit（独立 agent 审计）或 self-audit（降级自审）"
+        total_methods:
+          type: number
+          description: 审计的测试方法总数
+        zero_assertion_methods:
+          type: number
+          description: 零断言方法数（审计前应为 0）
+        weak_assertion_methods:
+          type: number
+          description: 仅含弱断言的方法数
+        crash_safety_methods:
+          type: number
+          description: 显式标注为 [crashSafety] 的方法数
+        all_passed:
+          type: boolean
+          description: 审计是否全部通过（无 BLOCKED 且无未处理的 WEAK）
+
+dependencies:
+  scripts: []
+  env_vars: []

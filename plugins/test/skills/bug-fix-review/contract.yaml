@@ -1,0 +1,71 @@
+name: bug-fix-review
+version: "1.1"
+deprecated: true
+description: >
+  [已废弃] Bug 修复分析能力已合并到 change-analysis（Bug 场景）。
+
+input:
+  one_of:
+    bug_link:
+      type: string
+      description: Bug 链接（飞书 Bug 链接，或其他可通过脚本获取的 URL）
+    bug_doc:
+      type: file
+      description: 本地 Bug 描述文件（AI 对话生成或手动提供的 .md / .json 文件）
+  any_of:
+    code_changes:
+      type: string[]
+      description: 关联的 MR/PR 链接列表（如未提供则通过 search 脚本自动搜索）
+    code_diff:
+      type: file[]
+      description: 本地 diff 文件列表（git diff 输出、patch 文件等，适用于修复代码尚未推送到 MR 的场景）
+    code_diff_text:
+      type: string
+      description: 直接提供的代码变更文本（粘贴的 diff 内容）
+  optional:
+    clarified_requirements:
+      type: file
+      description: 上游需求澄清结果（辅助理解修复背景）
+      from_upstream: requirement-clarification
+    requirement_points:
+      type: file
+      description: 上游功能点清单（辅助副作用评估）
+      from_upstream: requirement-clarification
+
+output:
+  files:
+    - name: bug_fix_analysis.json
+      description: 根因分析和修复完整性评估
+      format: json
+    - name: risk_assessment.json
+      description: 残余风险评估和行动建议
+      format: json
+    - name: code_analysis.md
+      description: 代码变更分析过程记录
+      format: markdown
+  structured:
+    overall_risk:
+      type: string
+      description: 总体风险等级
+    fix_completeness:
+      type: string
+      description: 修复完整性判断
+    side_effect_count:
+      type: number
+      description: 潜在副作用数
+
+dependencies:
+  scripts:
+    - shared-tools/scripts/fetch_feishu_doc.py
+    - shared-tools/scripts/gitlab_helper.py
+    - shared-tools/scripts/github_helper.py
+    - shared-tools/scripts/search_mrs.py
+    - shared-tools/scripts/search_prs.py
+  env_vars:
+    - FEISHU_APP_ID
+    - FEISHU_APP_SECRET
+    - GITLAB_URL
+    - GITLAB_TOKEN
+    - GITLAB_PROJECT_MAPPING
+    - GITHUB_TOKEN
+    - GITHUB_REPO_MAPPING

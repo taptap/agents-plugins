@@ -86,6 +86,7 @@ One-click configuration for MCP, auto-update, and Cursor synchronization:
 | spec    | 0.1.5   | Spec-Driven Development workflow plugin                                                              |
 | git     | 0.1.13  | Git workflow automation plugin (commit/push/MR + dual-mode code review + remote platform ops)        |
 | sync    | 0.1.25  | Dev environment config sync plugin (MCP + LSP + Hooks + Cursor + Claude Skills)                      |
+| test    | 0.0.1   | QA workflow plugin (requirement clarification/test case generation/change analysis/traceability/code-level test generation) |
 
 
 See the README.md in each plugin directory for detailed documentation.

@@ -3,6 +3,9 @@
 .vscode/
 *.iml
 
+# Claude Code local settings
+.claude/settings.json
+
 # OS
 .DS_Store
 Thumbs.db
@@ -14,6 +17,12 @@ Thumbs.db
 
 # 测试文件
 test-*/
+!plugins/test/skills/test-*/
+!plugins/test/agents/test-*/
+
+# test 插件运行时产出
+plugins/test/workspace/
+plugins/test/skills/*/output/
 
 # 开发中的插件
 plugins/migrator

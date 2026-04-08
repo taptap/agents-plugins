@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "TapTap Claude Code 插件库 - 提供开发工作流自动化插件",
-    "version": "0.1.29",
+    "version": "0.1.30",
     "pluginRoot": "./plugins"
   },
   "plugins": [
@@ -44,6 +44,18 @@
       },
       "category": "productivity",
       "keywords": ["sync", "mcp", "lsp", "config"],
+      "strict": true
+    },
+    {
+      "name": "test",
+      "source": "./plugins/test",
+      "description": "QA 工作流插件，提供需求评审与澄清、测试用例生成（含冗余对评审）、用例评审、变更分析、代码级测试生成（单元/集成）、需求回溯（含冒烟测试模式）、Bug 修复分析等 QA 全流程 Skill",
+      "version": "0.0.1",
+      "author": {
+        "name": "TapTap AI Team"
+      },
+      "category": "testing",
+      "keywords": ["test", "qa", "unit-test", "integration-test", "test-case-generation", "test-review", "verification", "ui-fidelity"],
       "strict": true
     }
   ]
