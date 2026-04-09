@@ -10,7 +10,7 @@ input:
   one_of:
     story_link:
       type: string
-      description: 需求链接（飞书 Story / 文档链接）
+      description: 飞书文档链接（需求文档 URL）
     requirement_doc:
       type: file
       description: 本地需求文档
