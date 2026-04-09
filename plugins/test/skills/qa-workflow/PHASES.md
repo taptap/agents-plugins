@@ -33,9 +33,14 @@
 
 ### 1.1 需求澄清
 
-调用：
+根据输入类型调用（三选一）：
 ```
+# 飞书链接
 Skill(skill: "test:requirement-clarification", args: "story_link=<story_link>")
+# 本地文档
+Skill(skill: "test:requirement-clarification", args: "requirement_doc=<file_path>")
+# 文字说明
+Skill(skill: "test:requirement-clarification", args: "requirement_text=<text>")
 ```
 
 如用户同时提供了 `design_link`，追加到 args：

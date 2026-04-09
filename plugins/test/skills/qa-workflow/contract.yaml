@@ -14,6 +14,9 @@ input:
     requirement_doc:
       type: file
       description: 本地需求文档
+    requirement_text:
+      type: string
+      description: 需求文字说明（用户直接描述的需求内容，无链接无文档时使用）
   optional:
     design_link:
       type: string
