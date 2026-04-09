@@ -43,7 +43,7 @@ description: >
 
 ## 交叉验证（可选）
 
-当运行环境支持并行 Agent 且功能点 > 5 个时，review 阶段可启用交叉验证模式（详见 [CONVENTIONS — 交叉验证模式](../../CONVENTIONS.md#交叉验证协议)）：
+当运行环境支持并行 Agent 且功能点 > 5 个时，review 阶段可启用交叉验证模式（详见 [AGENT_PROTOCOL — 交叉验证协议](../_shared/AGENT_PROTOCOL.md#交叉验证协议)）：
 
 - **视角 A（覆盖率）**：聚焦需求覆盖率维度和场景完整性维度
 - **视角 B（质量）**：聚焦用例正确性维度和用例规范性维度
@@ -76,10 +76,7 @@ description: >
 
 ### Figma MCP
 
-仅当 fetch 阶段发现 Figma 链接时使用，按分级协议获取（详见 [shared-tools/SKILL.md](../shared-tools/SKILL.md#figma-设计稿获取)）：
-
-1. `figma_metadata(url)` — 获取页面结构树，建立设计稿覆盖基线
-2. `figma_screenshot(url, nodeId)` — 对关键页面获取截图，用于对照评审用例覆盖率
+仅当 fetch 阶段发现 Figma 链接时使用，按分级协议获取，详见 [shared-tools/SKILL.md](../shared-tools/SKILL.md#figma-设计稿获取)。
 
 ## 阶段流程
 

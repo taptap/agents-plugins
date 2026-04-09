@@ -18,7 +18,6 @@
 | **verification-test-generation** | 仅 CLI/手工调用 | 从需求点生成结构化验证用例，AI 逐条对照代码推理 |
 | **test-failure-analyzer** | 仅 CLI/手工调用 | 分析测试失败原因，分类处理，支持自循环 |
 | **ui-fidelity-check** | 仅 CLI/手工调用 | 对比 Figma 设计稿与浏览器实现的 UI 还原度 |
-| **bug-fix-review** | 已废弃 | 已合并到 change-analysis Bug 场景 |
 | **api-contract-validation** | 独立校验工具 | 深度校验前后端 API 契约一致性（路径/参数/响应/Breaking Change） |
 | **unit-test-design** | 代码级生成 | 分析源代码，生成可执行的单元测试代码 |
 | **integration-test-design** | 代码级生成 | 分析 API/服务，生成可执行的集成测试代码 |
@@ -274,7 +273,6 @@ plugins/test/
 │   ├── verification-test-generation/  # 验证用例生成（AI 推理验证）
 │   ├── test-failure-analyzer/      # 测试失败分析（自循环）
 │   ├── ui-fidelity-check/          # UI 还原度检查
-│   ├── bug-fix-review/             # [已废弃] 已合并到 change-analysis Bug 场景
 │   ├── unit-test-design/           # 单元测试代码生成
 │   ├── integration-test-design/    # 集成测试代码生成
 │   ├── api-contract-validation/    # API 契约校验

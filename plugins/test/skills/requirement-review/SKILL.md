@@ -13,6 +13,7 @@ description: >
 
 ## Quick Start
 
+- Skill 类型：独立 skill
 - 适用场景：对需求文档做质量评审，识别逻辑缺口、边界风险、协作前置条件与跨职能待确认问题
 - 必要输入：飞书 Story 链接或需求文档链接；如有设计稿、关联文档、相关代码信息可一并读取
 - 输出产物：`requirement_understanding.md`、`review_checklist.md`、`report.md`
@@ -114,13 +115,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/gitlab_helper.py file-content <project
 
 ### 3. Figma MCP（条件触发）
 
-当用户提供设计稿链接或 Story 中包含设计稿链接时，按 [shared-tools Figma 分级协议](../shared-tools/SKILL.md#figma-设计稿获取) 获取设计稿数据：
-
-1. `figma_metadata(url)` — 获取页面结构树，识别功能区块
-2. `figma_extract(url, 文本提取脚本)` — 提取 UI 文案和标签文本
-3. `figma_context(url, nodeId)` — 仅对关键交互节点获取设计详情
-
-不要用 WebFetch 获取 Figma 设计稿。
+当用户提供设计稿链接或 Story 中包含设计稿链接时，按分级协议获取，详见 [shared-tools/SKILL.md](../shared-tools/SKILL.md#figma-设计稿获取)。
 
 ## 各阶段详细操作
 

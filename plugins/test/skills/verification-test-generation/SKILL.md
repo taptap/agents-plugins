@@ -1,9 +1,9 @@
 ---
-name: verification-test-gen
+name: verification-test-generation
 description: >
   从需求功能点生成结构化验证用例（具体输入→预期输出），供 AI 逐条对照代码推理验证需求实现。
   当前阶段为 AI 推理验证；未来可渐进升级为可执行自动化测试。
-  触发：验证测试、验收测试、冒烟测试、需求验证、代码验证、实现验证。
+  触发：验证测试、验收测试、冒烟测试、需求验证、代码验证、实现验证、验收用例、smoke test、冒烟用例。
 ---
 
 # 验证用例生成
@@ -57,7 +57,7 @@ description: >
 
 ### 1. Figma MCP
 
-`get_figma_data(url="<链接>")` — 获取设计稿数据。前端需求时结合设计稿生成 UI 交互类验证用例。
+前端需求时结合设计稿生成 UI 交互类验证用例，按分级协议获取，详见 [shared-tools/SKILL.md](../shared-tools/SKILL.md#figma-设计稿获取)。
 
 ### 2. 子 Agent: verification-test-writer
 

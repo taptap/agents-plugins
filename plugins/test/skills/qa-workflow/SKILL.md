@@ -14,6 +14,7 @@ description: >
 - 适用场景：用户说"帮我做 XX 功能的 QA"，自动编排全流程 skills
 - 必要输入：需求链接（`story_link`）、本地需求文档（`requirement_doc`）或需求文字说明（`requirement_text`），三选一
 - 输出产物：`workflow_state.json`（进度追踪）、`qa_summary.md`（最终报告）
+- 失败门控：需求输入为空时停止；子 skill 失败时记录错误并继续后续步骤，不中断整体工作流
 - 执行步骤：`init → Phase 1(需求+用例) → [等编码] → Phase 2(验证) → [等人工] → Phase 3(收尾)`
 
 ## 核心能力

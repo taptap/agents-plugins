@@ -3,6 +3,7 @@ name: unit-test-design
 description: >
   分析源代码文件，自动生成可执行的单元测试代码。
   输入源码文件/模块路径，输出对应语言的测试文件（如 *_test.go、test_*.py、*.test.ts、*Tests.swift）。
+  触发：写单测、生成单测、帮我写测试、UT、unit test、补充测试、生成测试代码。
 ---
 
 # 单元测试设计
@@ -188,7 +189,7 @@ func freePublishedIOSGame() {
 - 被测类型是项目内部类型，源码可读且转换逻辑简单直接（无条件分支、无 fallback）
 - 存在服务端 API 契约文档（OpenAPI/Swagger）定义了响应结构
 
-更多高风险假设场景参见 [CONVENTIONS.md 高风险假设模式](../../CONVENTIONS.md#高风险假设模式)。
+更多高风险假设场景参见本文件的 [跳过标准](#跳过标准不生成的场景) 章节。
 
 ## 测试质量防线
 
