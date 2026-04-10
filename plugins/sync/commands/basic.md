@@ -41,6 +41,13 @@ description: 一键配置开发环境（MCP + Hooks + MR 模板 + Claude Skills 
 - cache 路径：`~/.claude/plugins/cache/taptap-plugins/sync/<latest>/`
 - 默认模式优先 marketplace，`--dev` 模式优先 cache
 
+确定 `BASE` 后，各变量的子目录映射：
+
+- `SCRIPTS_DIR` = `{BASE}/scripts`
+- `MCP_TEMPLATES_DIR` = `{BASE}/skills/mcp-templates`
+- `MR_TEMPLATE_DIR` = `{BASE}/skills/merge-request-templates`
+- `SKILLS_DIR` = `{BASE}/skills`
+
 如果 `GIT_CHECK=FAIL`，立即停止并提示用户在项目根目录执行。
 
 **步骤 0.3：检测项目语言**
