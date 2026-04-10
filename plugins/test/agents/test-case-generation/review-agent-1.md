@@ -29,12 +29,22 @@ Opus
 - **异常路径**：断网/无权限/数据冲突/并发
 - **状态流转**：合法+非法转换
 
+### 3. 推测性内容审查（条件启动：`sufficiency_assessment.overall != "sufficient"`）
+
+当 `sufficiency_assessment.json` 存在且 `overall` 为 `partial` 或 `insufficient` 时启用：
+
+- 逐条检查用例 steps 和 expected 中的具体细节（数值、文案、字段名、状态名、业务规则）
+- 对每个细节判断：能否在需求文档（`requirement_points.md`）或 `decomposition.md` 中找到原文依据
+- 无原文依据的细节标记为 finding，`category = "推测性细节"`，`severity = "medium"`
+- 置信度评分：有原文依据的给 90+，无依据但合理推断的给 70-89，纯臆测的给 50-69
+
 ## 输入
 
 1. **需求功能点清单**：Read `./requirement_points.md`（或 `./requirement_points.json`）获取编号功能点列表
 2. **待评审用例**：Read `./test_cases.json` 获取全部测试用例
 3. **评审检查项**：Read `$SKILLS_ROOT/test-case-generation/CHECKLIST.md` 获取 4 维度检查标准
 4. **补充上下文**（如有）：Read `./context_summary.md` 或 `./decomposition.md`
+5. **充分性评估**（如有）：Read `./sufficiency_assessment.json` 获取需求充分性评估结果
 
 ## 输出格式
 

@@ -29,6 +29,17 @@ input:
       description: >
         确认策略：accept_all（自动接受所有评审建议，适用于编排器自动化）、
         interactive（默认，用户逐条确认不确定的评审发现）
+    re_entry_phase:
+      type: string
+      description: >
+        从指定阶段重新执行（用于需求变更后的迭代更新）。
+        合法值：understand | decompose | generate | review。
+        默认为空（从 init 开始完整执行）。
+    requirement_change_summary:
+      type: string
+      description: >
+        需求变更摘要（配合 re_entry_phase 使用）。
+        描述本次变更的内容，用于增量更新时的影响范围判断。
 
 output:
   files:
@@ -52,6 +63,10 @@ output:
       format: json
     - name: supplementary_cases.json
       description: 补充用例（如有覆盖缺口）
+      format: json
+      optional: true
+    - name: sufficiency_assessment.json
+      description: 需求充分性评估结果（4 维度评分 + 置信度上限）
       format: json
       optional: true
   structured:
@@ -79,6 +94,12 @@ output:
     cases_supplemented:
       type: number
       description: 补充用例数
+    requirement_sufficiency:
+      type: string
+      description: 需求充分性（sufficient / partial / insufficient）
+    confidence_ceiling:
+      type: number
+      description: 置信度上限（100 / 70 / 50），由充分性评估决定
     review_mode:
       type: string
       description: 评审模式（single-agent | redundancy-pair）
