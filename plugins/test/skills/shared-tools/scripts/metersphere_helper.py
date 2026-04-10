@@ -523,6 +523,8 @@ def cmd_ensure_module(parent_id: str, name: str):
 
 def cmd_import_cases(parent_module_id: str, cases_file: str):
     """按 module 字段分组导入用例"""
+    if not parent_module_id:
+        parent_module_id = _cfg('MS_DEFAULT_NODE_ID')
     with open(cases_file, 'r', encoding='utf-8') as f:
         raw_cases = json.load(f)
 
