@@ -1,7 +1,7 @@
 {
   "name": "sync",
-  "description": "项目配置同步插件，提供 MCP、LSP 和开发环境配置同步功能",
-  "version": "0.1.25",
+  "description": "项目配置同步插件，提供 MCP、LSP、Hooks、状态栏和 Claude Skills 同步功能",
+  "version": "0.1.26",
   "author": {
     "name": "TapTap AI Team"
   }

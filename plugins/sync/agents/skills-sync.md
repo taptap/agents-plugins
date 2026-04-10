@@ -54,8 +54,7 @@ test -f {PROJECT_ROOT}/.claude/skills/code-reviewing/review-rules.md || \
 
 ### 4. 清理旧版 git skills（不再同步到 .claude/skills/）
 
-git-commit 系列已由 git 插件提供（Claude Code）和 `.cursor/commands/`（Cursor），
-不再复制到 `.claude/skills/`。清理旧版残留：
+git-commit 系列已由 git 插件提供，不再复制到 `.claude/skills/`。清理旧版残留：
 
 ```bash
 rm -rf {PROJECT_ROOT}/.claude/skills/git-commit 2>/dev/null

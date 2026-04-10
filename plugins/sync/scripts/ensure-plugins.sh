@@ -24,6 +24,7 @@ REQUIRED_PLUGINS=("spec@taptap-plugins" "sync@taptap-plugins" "git@taptap-plugin
 
 # 需要清理的退役插件
 DEPRECATED_PLUGINS=("ralph@taptap-plugins" "quality@taptap-plugins")
+EXPECTED_MARKETPLACE_REPO="taptap/claude-plugins-marketplace"
 
 # ========== Step 1: 确保 enabledPlugins 完整 ==========
 
@@ -45,8 +46,8 @@ check_plugins_ok() {
         return 1
       fi
     done
-    # 检查 extraKnownMarketplaces.taptap-plugins 存在
-    if ! jq -e '.extraKnownMarketplaces["taptap-plugins"]' "$file" >/dev/null 2>&1; then
+    # 检查 extraKnownMarketplaces.taptap-plugins 存在且 repo 正确
+    if ! jq -e ".extraKnownMarketplaces[\"taptap-plugins\"].source.repo == \"$EXPECTED_MARKETPLACE_REPO\"" "$file" >/dev/null 2>&1; then
       return 1
     fi
     return 0
@@ -60,7 +61,7 @@ plugins = d.get('enabledPlugins', {})
 marketplaces = d.get('extraKnownMarketplaces', {})
 required = ['spec@taptap-plugins', 'sync@taptap-plugins', 'git@taptap-plugins', 'skill-creator@claude-plugins-official']
 deprecated = ['ralph@taptap-plugins', 'quality@taptap-plugins']
-has_marketplace = 'taptap-plugins' in marketplaces
+has_marketplace = marketplaces.get('taptap-plugins', {}).get('source', {}).get('repo') == 'taptap/claude-plugins-marketplace'
 sys.exit(0 if all(k in plugins for k in required) and not any(k in plugins for k in deprecated) and has_marketplace else 1)
 " 2>/dev/null
     return $?
@@ -135,17 +136,16 @@ def main():
     plugins.pop("quality@taptap-plugins", None)  # 已废弃，由 code-reviewing skill 替代
     data["enabledPlugins"] = plugins
 
-    # 确保 extraKnownMarketplaces 包含 taptap-plugins
+    # 确保 extraKnownMarketplaces 包含 taptap-plugins 且 repo 指向最新仓库名
     marketplaces = data.get("extraKnownMarketplaces", {})
     if not isinstance(marketplaces, dict):
         marketplaces = {}
-    if "taptap-plugins" not in marketplaces:
-        marketplaces["taptap-plugins"] = {
-            "source": {
-                "source": "github",
-                "repo": "taptap/claude-plugins-marketplace"
-            }
+    marketplaces["taptap-plugins"] = {
+        "source": {
+            "source": "github",
+            "repo": "taptap/claude-plugins-marketplace"
         }
+    }
     data["extraKnownMarketplaces"] = marketplaces
 
     dir_path = os.path.dirname(path)

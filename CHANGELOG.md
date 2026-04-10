@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.31 — Simplify sync workflow and remove Cursor-side distribution
+
+### Sync Plugin (0.1.26)
+
+- Removed Cursor-specific commands, templates, and snippet mirroring assets from the sync plugin
+- Changed `/sync:basic` and related MCP commands to focus on Claude Code environment setup only
+- Removed the `ensure-codex-skills.sh` SessionStart hook and stopped sync from maintaining `~/.agents/skills` for Codex
+- Updated sync documentation, status checks, and helper skills to match the reduced Claude Code scope
+- Cleaned up repo-local optional hook guidance after removing the bundled snippet sync pre-commit flow
+
+### Marketplace
+
+- Bumped version from 0.1.30 to 0.1.31
+- Updated sync plugin to version 0.1.26
+
 ## 0.1.30 — Add QA workflow plugin with multi-agent test skills
 
 ### Test Plugin (0.0.1)

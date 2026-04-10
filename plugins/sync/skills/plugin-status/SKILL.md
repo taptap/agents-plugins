@@ -48,16 +48,13 @@ for s in set-auto-update-plugins ensure-cli-tools ensure-statusline ensure-plugi
   fi
 done
 
-# 4. Agents skills（Codex 兼容）
-echo "=== AGENTS SKILLS ==="
+# 4. Agents skills（信息项，不再由 sync 管理）
+echo "=== AGENTS SKILLS (INFO) ==="
 if [ -d ~/.agents/skills ]; then
   count=$(ls -d ~/.agents/skills/*/ 2>/dev/null | wc -l | tr -d ' ')
-  echo "✅ ~/.agents/skills/（${count} 个 skills）"
-  for s in git-flow code-reviewing fix-conflict grafana-dashboard-design; do
-    [ -L ~/.agents/skills/$s ] && echo "  ✅ $s" || echo "  ❌ $s 缺失"
-  done
+  echo "➖ ~/.agents/skills/（${count} 个 skills，sync 不再管理）"
 else
-  echo "❌ ~/.agents/skills/ 不存在"
+  echo "➖ ~/.agents/skills/ 未配置（sync 不再管理）"
 fi
 
 # 5. 插件版本检测
@@ -116,20 +113,10 @@ done
 
 echo "--- ~/.agents/skills/ ---"
 if [ -d ~/.agents/skills ]; then
-  total=0; valid=0; invalid=0
-  for s in ~/.agents/skills/*/; do
-    [ -d "$s" ] || continue
-    total=$((total+1))
-    name=$(basename "$s")
-    if [ -L "${s%/}" ]; then
-      if [ -e "${s%/}" ]; then valid=$((valid+1))
-      else invalid=$((invalid+1)); echo "  ❌ $name (symlink 失效)"
-      fi
-    fi
-  done
-  [ $invalid -eq 0 ] && echo "  ✅ ${valid}/${total} 全部有效 symlink" || echo "  总计: ${total} skills, ${valid} 有效, ${invalid} 失效"
+  total=$(ls -d ~/.agents/skills/*/ 2>/dev/null | wc -l | tr -d ' ')
+  echo "  ➖ ${total} 个目录（sync 不再校验）"
 else
-  echo "  ❌ ~/.agents/skills/ 不存在"
+  echo "  ➖ 未配置（sync 不再管理）"
 fi
 
 # 7. MCP 配置
@@ -175,13 +162,12 @@ $HOME 级：
   Hooks:       ✅ 10/10 scripts（symlink，版本一致）
   Symlinks:
     ~/.claude/hooks/scripts/  ✅ N/N 全部有效 symlink
-    ~/.agents/skills/         ✅ N/N 全部有效 symlink
   MCP:         ✅ context7 / ...
 
 Repo 级：
   Settings:    ✅ .claude/settings.json
   AGENTS.md:   ✅ / CLAUDE.md: ✅ → AGENTS.md
-  Skills:      ✅ .agents/skills → .claude/skills
+  Skills:      ➖ 由 Codex plugins 原生处理
   Hooks:       ✅ 无旧版 project hooks
 
 问题：

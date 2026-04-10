@@ -18,7 +18,7 @@ description: 当用户需要新建、重构、优化、复制、扩展 Grafana D
 
 不要处理这些任务：
 - 安装 `mcp-grafana`
-- 配置 `~/.claude.json`、`~/.cursor/mcp.json`、`~/.codex/config.toml`
+- 配置 `~/.claude.json` 或 `~/.codex/config.toml`
 - 排查 Grafana 登录、LDAP、网络、权限问题
 
 ## 执行流程

@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'D=~/.claude/hooks/scripts; [ -L \"$D/ensure-agents-skills.sh\" ] && [ -e \"$D/ensure-agents-skills.sh\" ] && exit 0; for loc in $(python3 -c \"import json,os; d=json.load(open(os.path.expanduser(\\\"~/.claude/plugins/known_marketplaces.json\\\"))); [print(v.get(\\\"installLocation\\\",\\\"\\\")) for v in d.values()]\" 2>/dev/null); do s=\"$loc/plugins/sync/scripts\"; [ -d \"$s\" ] && { mkdir -p \"$D\"; for f in \"$s\"/*.sh; do ln -sf \"$f\" \"$D/$(basename \"$f\")\"; done; break; }; done'"
+            "command": "bash -c 'D=~/.claude/hooks/scripts; [ -L \"$D/ensure-plugins.sh\" ] && [ -e \"$D/ensure-plugins.sh\" ] && exit 0; for loc in $(python3 -c \"import json,os; d=json.load(open(os.path.expanduser(\\\"~/.claude/plugins/known_marketplaces.json\\\"))); [print(v.get(\\\"installLocation\\\",\\\"\\\")) for v in d.values()]\" 2>/dev/null); do s=\"$loc/plugins/sync/scripts\"; [ -d \"$s\" ] && { mkdir -p \"$D\"; for f in \"$s\"/*.sh; do ln -sf \"$f\" \"$D/$(basename \"$f\")\"; done; break; }; done'"
           },
           {
             "type": "command",
@@ -27,10 +27,6 @@
           {
             "type": "command",
             "command": "(bash ~/.claude/hooks/scripts/ensure-codex-statusline.sh >/dev/null 2>&1 &)"
-          },
-          {
-            "type": "command",
-            "command": "(bash ~/.claude/hooks/scripts/ensure-codex-skills.sh >/dev/null 2>&1 &)"
           }
         ]
       }
