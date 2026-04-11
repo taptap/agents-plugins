@@ -70,10 +70,16 @@ main() {
         [[ "$pct" =~ ^[0-9]+$ ]] || pct="--"
     fi
 
-    # 提取信息
-    local project branch
-    project=$(basename "$project_dir")
-    branch=$(git -C "$cwd" branch --show-current 2>/dev/null)
+    # 提取信息：用 cwd 所在的 git 仓库名 + 分支
+    local project branch git_toplevel
+    git_toplevel=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null || echo "")
+    if [ -n "$git_toplevel" ]; then
+        project=$(basename "$git_toplevel")
+        branch=$(git -C "$cwd" branch --show-current 2>/dev/null || echo "")
+    else
+        project=$(basename "$project_dir")
+        branch=""
+    fi
     local worktree
     worktree=$(get_worktree "$cwd" 2>/dev/null || echo "")
     local bar_color="$GRAY"
