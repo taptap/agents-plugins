@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "TapTap Claude Code 插件库 - 提供开发工作流自动化插件",
-    "version": "0.1.31",
+    "version": "0.1.32",
     "pluginRoot": "./plugins"
   },
   "plugins": [
@@ -56,6 +56,18 @@
       },
       "category": "testing",
       "keywords": ["test", "qa", "unit-test", "integration-test", "test-case-generation", "test-review", "verification", "ui-fidelity"],
+      "strict": true
+    },
+    {
+      "name": "toprank",
+      "source": "./plugins/toprank",
+      "description": "SEO、Google Ads、关键词研究、内容优化和 schema 标记插件，支持基于真实搜索与广告数据生成可执行建议。",
+      "version": "0.10.0",
+      "author": {
+        "name": "nowork-studio"
+      },
+      "category": "productivity",
+      "keywords": ["seo", "google-ads", "keyword-research", "content", "schema"],
       "strict": true
     }
   ]

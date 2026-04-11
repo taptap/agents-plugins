@@ -86,6 +86,7 @@ mkdir -p .claude && echo '{
 | git     | 0.1.14 | Git 工作流自动化插件（提交/推送/MR + 自动代码审查 + 远程平台操作）            |
 | sync    | 0.1.26 | 开发环境配置同步插件（MCP + LSP + Hooks + Claude Skills） |
 | test    | 0.0.1 | QA 工作流插件（需求澄清/测试用例生成/变更分析/需求回溯/代码级测试生成） |
+| toprank | 0.10.0 | SEO + Google Ads 工作流插件（SEO 审计、关键词研究、内容优化、Schema 标记） |
 
 
 详细说明请查看各插件目录下的 README.md。
