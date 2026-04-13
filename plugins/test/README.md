@@ -304,6 +304,11 @@ shared-tools 脚本依赖以下环境变量（按需配置）：
 - **v0.0.2** - 新增 `metersphere-sync` skill（MeterSphere 用例同步与测试计划管理）；新增 `metersphere_helper.py` 共享脚本（模块管理、用例导入、测试计划 CRUD、执行结果回写）
 - **v0.0.1** - 首次发布；完整 QA 工作流插件，包含需求澄清、测试用例生成（含冗余对评审）、用例评审、变更分析、需求回溯（含冒烟测试模式）、代码级测试生成（单元/集成）、API 契约校验、UI 还原度检查等全流程 Skill；共享工具集（飞书文档获取、MR/PR 分析脚本）；阶段执行保障和输出验证机制
 
+### v0.0.19
+
+- Migrate `ask_question` text-based output format to native AskUserQuestion tool calls; align constraints with tool schema (1-4 questions, 2-4 options, required description, header <=12 chars)
+- Update all skill references: requirement-clarification, requirement-review, test-case-generation, and shared TRACEABILITY_PROTOCOL
+
 ### v0.0.18
 
 - New skill: `change-analysis` — analyze code change impact and test coverage for Story/Bug scenarios (dual-scenario: Story 7-phase impact analysis + coverage assessment + supplementary case generation; Bug 5-phase root cause + fix completeness + risk assessment)

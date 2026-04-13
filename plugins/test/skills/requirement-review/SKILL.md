@@ -155,7 +155,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/gitlab_helper.py file-content <project
 - 飞书工具选择和禁用项见 [shared-tools/SKILL.md](../shared-tools/SKILL.md) 的「工具选择快速参考」和「禁用工具」
 - **每个阶段结束时必须输出进度统计**
 - 回读中间文件等通用约定见 [CONVENTIONS](../../CONVENTIONS.md)
-- 阻断项确认使用结构化 ask_question 格式，见 [CONVENTIONS.md](../../CONVENTIONS.md#ask_question-输出格式) 和 [PHASES.md](PHASES.md) 阶段 4.4
+- 阻断项确认通过调用 AskUserQuestion 工具完成，见 [CONVENTIONS.md](../../CONVENTIONS.md#askuserquestion-交互式提问) 和 [PHASES.md](PHASES.md) 阶段 4.4
 
 ## 约束规则
 

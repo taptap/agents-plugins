@@ -111,13 +111,13 @@ python3 $SKILLS_ROOT/shared-tools/scripts/fetch_feishu_doc.py \
 **设计稿模式**：从设计稿反推功能点列表：
 1. 基于 `design_analysis` 中提取的页面/组件树，为每个独立页面或功能模块生成功能点
 2. 从交互流中识别隐含的业务逻辑（如状态变体暗示的业务规则）
-3. 通过 ask_question 让用户确认功能点列表：「从设计稿中识别出以下功能点：① ... ② ...，是否准确？有遗漏的业务逻辑吗？」
+3. 通过 AskUserQuestion 工具让用户确认功能点列表：「从设计稿中识别出以下功能点：① ... ② ...，是否准确？有遗漏的业务逻辑吗？」
 4. 用户确认后编号（FP-1, FP-2, ...）
 5. 设计稿中能确定的交互规则直接标记 `source: "design"`，无法从设计稿推断的业务规则进入维度深挖
 
 **探索模式**：通过问答构建功能点列表：
 1. 基于已有文本提出初步功能点列表
-2. 通过 ask_question 让用户确认/补充/删减：「根据你的描述，我梳理出以下功能点：① ... ② ... ③ ...，是否准确？有遗漏吗？」
+2. 通过 AskUserQuestion 工具让用户确认/补充/删减：「根据你的描述，我梳理出以下功能点：① ... ② ... ③ ...，是否准确？有遗漏吗？」
 3. 用户确认后编号（FP-1, FP-2, ...），作为后续维度分析的基础
 
 ### 3.1.5 文档-设计稿交叉比对（文档+设计稿联合模式专属）
@@ -262,7 +262,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/fetch_feishu_doc.py \
 **Step 3：生成契约草案和澄清问题**
 
 为每个前后端交互点生成初步契约草案：
-- 如 `api_evidence_level` 为 `"sufficient"` 且 method、path、核心字段已知 → 生成完整契约草案（每个字段标注 source），通过 ask_question 确认
+- 如 `api_evidence_level` 为 `"sufficient"` 且 method、path、核心字段已知 → 生成完整契约草案（每个字段标注 source），通过 AskUserQuestion 工具确认
 - 如 `api_evidence_level` 为 `"partial"` → 仅输出有 source 标注的字段，缺失部分生成针对性的澄清问题：「{功能}需要调用后端接口，请确认接口路径和核心字段」。不填充推测值作为占位
 - 如 `api_evidence_level` 为 `"none"` → 此步骤已在 Step 1.5 跳过，不会到达
 
@@ -270,7 +270,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/fetch_feishu_doc.py \
 
 ### 3.3 渐进式确认
 
-按 SKILL.md 中定义的问题编排策略执行。所有提问**必须**使用 CONVENTIONS.md「ask_question 输出格式」中定义的结构化 JSON 格式输出。
+按 SKILL.md 中定义的问题编排策略执行。所有提问**必须**通过调用 AskUserQuestion 工具完成，格式见 CONVENTIONS.md「[AskUserQuestion 交互式提问](../../CONVENTIONS.md#askuserquestion-交互式提问)」。
 
 **首轮（骨架确认）** — 各模式均必经：
 - 确认功能范围、目标用户、核心场景
@@ -281,10 +281,8 @@ python3 $SKILLS_ROOT/shared-tools/scripts/fetch_feishu_doc.py \
 - 3-4 个开放式问题
 - 探索模式下此轮与 3.1 合并执行
 
-首轮提问示例：
+首轮提问示例（调用 AskUserQuestion 工具）：
 
-````
-AskUserQuestion
 ```json
 {
   "questions": [
@@ -292,9 +290,9 @@ AskUserQuestion
       "question": "本次需求涉及哪些平台？",
       "header": "平台范围",
       "options": [
-        {"label": "仅前端（iOS/Android/Web/PC）"},
-        {"label": "仅后端"},
-        {"label": "前后端同时修改"},
+        {"label": "仅前端", "description": "iOS/Android/Web/PC 平台"},
+        {"label": "仅后端", "description": "服务端逻辑变更"},
+        {"label": "前后端同时修改", "description": "前后端联动变更"},
         {"label": "多端同步", "description": "请在回复中列出具体平台"}
       ],
       "multiSelect": false
@@ -303,21 +301,20 @@ AskUserQuestion
       "question": "核心变更属于以下哪种类型？",
       "header": "变更类型",
       "options": [
-        {"label": "新增功能模块"},
-        {"label": "修改现有功能逻辑"},
-        {"label": "UI/交互调整"},
-        {"label": "性能优化/重构"}
+        {"label": "新增功能模块", "description": "全新的功能模块开发"},
+        {"label": "修改现有逻辑", "description": "对已有功能的行为变更"},
+        {"label": "UI/交互调整", "description": "界面或交互流程变化"},
+        {"label": "性能优化/重构", "description": "非功能性改进"}
       ],
       "multiSelect": true
     }
   ]
 }
 ```
-````
 
 **中间轮（维度深挖）**：
 - 按优先级逐维度提问：功能边界 + 平台范围 → 交互与 UI 规则 → 依赖关系（含 API 契约） → 状态流转 → 验收标准 → 异常处理 → 影响范围 → 其他
-- 每次 ask_question 控制在 3-5 个问题
+- 每次调用 AskUserQuestion 工具控制在 1-4 个问题
 - 每个问题必须提供选项或默认值
 
 **末轮（查缺补漏）**：

@@ -25,7 +25,7 @@ requirement-clarification 在澄清阶段对已有功能的修改类需求执行
 
 1. `module-relations.json`（模块关系索引，由 `spec` 插件的 `module-discovery` 生成维护）→ 读取结构化的模块依赖和实体归属关系
 2. 定向代码扫描（限定在主要业务代码目录，不全库扫描）→ 当索引不存在或不足以回答时使用
-3. 人工确认 → 将发现的影响范围转为 ask_question 向用户确认
+3. 人工确认 → 将发现的影响范围通过 AskUserQuestion 工具向用户确认
 
 **`module-relations.json` 标准格式**：
 

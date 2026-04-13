@@ -30,7 +30,7 @@ description: >
 - 需求文档深度解析 — 识别功能边界、状态流转、业务规则、数据约束
 - 多视角并行分析 — 复杂需求时启动功能/异常/用户 3 个视角 Agent 并行分析，交叉验证提升置信度
 - 结构化问题生成 — 按 12 个维度生成针对性的澄清问题
-- 交互式确认 — 通过 ask_question 渐进式确认，记录人工回答
+- 交互式确认 — 通过 AskUserQuestion 工具渐进式确认，记录人工回答
 - 结构化输出 — 产出可被下游 skill 直接消费的 JSON 数据
 
 ## 执行模式
@@ -42,7 +42,7 @@ description: >
 | **文档澄清模式** | 输入为 story_link 或 requirement_doc | 先解析文档，再针对模糊点提问 |
 | **设计稿澄清模式** | 输入仅为 design_link（无需求文档） | 从设计稿反推功能点，识别交互规则和状态，再澄清业务逻辑 |
 | **文档+设计稿联合模式** | 同时提供 story_link/requirement_doc 和 design_link | 解析文档和设计稿，交叉比对识别差集和矛盾，再针对性提问 |
-| **探索式澄清模式** | 输入为 requirement_text 或碎片化信息 | 先通过多轮 ask_question 构建需求骨架，再逐维度深挖 |
+| **探索式澄清模式** | 输入为 requirement_text 或碎片化信息 | 先通过多轮 AskUserQuestion 工具调用构建需求骨架，再逐维度深挖 |
 
 各模式的阶段流程和输出产物一致，区别在于信息获取方式和问答侧重点。详见 [PHASES.md](PHASES.md)。
 
@@ -321,6 +321,6 @@ description: >
 - 回读中间文件、中断恢复等通用约定见 [CONVENTIONS](../../CONVENTIONS.md)
 - 条件触发的分析章节（如 API 契约提取）在源材料信息不足时跳过，不生成推测性内容。详见 [CONVENTIONS.md 数据充分性门控](../../CONVENTIONS.md#条件触发章节的数据充分性门控)
 - 澄清过程中，从需求文档能直接获得答案的问题标记 `source: "document"`，不需要向人提问
-- 只在文档无法回答的问题上使用 ask_question，避免过度打扰
+- 只在文档无法回答的问题上调用 AskUserQuestion 工具，避免过度打扰
 - 每个功能点的 `clarification_status` 反映当前澄清程度，`unconfirmed` 的项目会传递给下游 skill 作为风险标记
 - 探索模式下，首轮问答侧重功能范围而非细节，避免在信息不足时过早深挖

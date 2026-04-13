@@ -146,58 +146,55 @@ Agent 因 context 截断或异常中断后恢复执行时：
 - JSON 文件顶层必须是数组或对象，不能是字符串
 - 所有文本使用中文
 
-## ask_question 输出格式
+## AskUserQuestion 交互式提问
 
-所有 skill 需要向用户提问并等待回答时，**必须**使用以下结构化格式输出，确保平台能将问题渲染为可点击的交互式卡片。
+所有 skill 需要向用户提问并等待回答时，**必须**直接调用 `AskUserQuestion` 工具。不要将问题输出为纯文本，调用工具可以让 CLI 和 Web 端均渲染为可交互的选项卡片。
 
 ### 格式规范
 
-输出一行 `AskUserQuestion` 标记，紧接一个 JSON code fence：
+调用 `AskUserQuestion` 工具，传入以下结构：
 
-````
-AskUserQuestion
 ```json
 {
   "questions": [
     {
       "question": "完整的问题文本",
-      "header": "简短标题（2-6 字）",
+      "header": "简短标题（不超过12字）",
       "options": [
-        {"label": "选项显示文本"},
-        {"label": "另一选项", "description": "补充说明（可选）"}
+        {"label": "选项显示文本", "description": "选项补充说明"},
+        {"label": "另一选项", "description": "另一说明"}
       ],
       "multiSelect": false
     }
   ]
 }
 ```
-````
 
 ### 字段说明
 
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `questions` | array | 是 | 问题列表，每次 3-5 个 |
+| `questions` | array | 是 | 问题列表，每次 **1-4 个** |
 | `questions[].question` | string | 是 | 完整问题描述 |
-| `questions[].header` | string | 是 | 简短标题，用于卡片标题栏 |
-| `questions[].options` | array | 是 | 选项列表，至少 2 个 |
-| `questions[].options[].label` | string | 是 | 选项显示文本 |
-| `questions[].options[].description` | string | 否 | 选项补充说明 |
-| `questions[].multiSelect` | boolean | 否 | 是否允许多选，默认 `false` |
+| `questions[].header` | string | 是 | 简短标题（不超过 12 字），用于卡片标题栏 |
+| `questions[].options` | array | 是 | 选项列表，**2-4 个** |
+| `questions[].options[].label` | string | 是 | 选项显示文本（1-5 词，简洁明了） |
+| `questions[].options[].description` | string | 是 | 选项补充说明（解释选择后的影响） |
+| `questions[].multiSelect` | boolean | 是 | 是否允许多选 |
 
 ### 约束
 
-- 每次提问控制在 **3-5 个问题**
-- 每个问题必须提供 **选项或默认值**，降低用户认知负担
-- `AskUserQuestion` 标记行前后不要夹杂其他文字；分析说明放在标记行之前单独输出
+- 每次提问控制在 **1-4 个问题**
+- 每个问题提供 **2-4 个选项**，降低用户认知负担
+- 每个选项**必须**提供 `description` 字段
+- 分析说明在调用工具之前单独输出为文本
 - 不要在 JSON 中使用 Markdown 格式（如 `**加粗**`），保持纯文本
+- 如果一次需要确认的问题超过 4 个，分多次调用
 
 ### 示例
 
-```
-分析完成，需要您确认以下信息：
+先输出分析说明文本，再调用 AskUserQuestion 工具：
 
-AskUserQuestion
 ```json
 {
   "questions": [
@@ -205,9 +202,9 @@ AskUserQuestion
       "question": "本次需求涉及哪些平台？",
       "header": "平台范围",
       "options": [
-        {"label": "仅前端（iOS/Android/Web/PC）"},
-        {"label": "仅后端"},
-        {"label": "前后端同时修改"},
+        {"label": "仅前端", "description": "iOS/Android/Web/PC 平台"},
+        {"label": "仅后端", "description": "服务端逻辑变更"},
+        {"label": "前后端同时修改", "description": "前后端联动变更"},
         {"label": "多端同步", "description": "请在回复中列出具体平台"}
       ],
       "multiSelect": false
@@ -216,16 +213,15 @@ AskUserQuestion
       "question": "核心变更是什么？请选择最接近的描述",
       "header": "核心变更",
       "options": [
-        {"label": "新增功能模块"},
-        {"label": "修改现有功能逻辑"},
-        {"label": "UI/交互调整"},
-        {"label": "性能优化/重构"}
+        {"label": "新增功能模块", "description": "全新的功能模块开发"},
+        {"label": "修改现有逻辑", "description": "对已有功能的行为变更"},
+        {"label": "UI/交互调整", "description": "界面或交互流程变化"},
+        {"label": "性能优化/重构", "description": "非功能性改进"}
       ],
       "multiSelect": true
     }
   ]
 }
-```
 ```
 
 ## 脚本失败重试策略
