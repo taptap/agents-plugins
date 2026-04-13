@@ -25,6 +25,10 @@ input:
       type: file
       description: 需求功能点清单（requirement-clarification 产出，用于 VC→TC 桥接匹配）
       from_upstream: requirement-clarification
+    smoke_test_report:
+      type: file
+      description: 冒烟测试报告（requirement-traceability smoke-test 模式产出，含 verdict 和 defect_summary）
+      from_upstream: requirement-traceability
     parent_module_id:
       type: string
       description: MeterSphere 用例库父模块 ID（不提供则使用 MS_DEFAULT_NODE_ID）

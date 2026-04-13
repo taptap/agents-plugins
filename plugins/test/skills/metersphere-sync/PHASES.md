@@ -113,6 +113,20 @@ python3 $SKILLS_ROOT/shared-tools/scripts/metersphere_helper.py \
 
 此阶段仅在 `mode=execute` 时执行，需要 `verification_cases.json` 输入。
 
+### 4.0 冒烟测试报告前置检查
+
+读取 `smoke_test_report.json`（如存在）。若文件存在且 `verdict == "fail"`：
+
+1. 提取 P0 缺陷摘要：`defect_summary.by_priority.P0` 数量 + `fail_reason`
+2. **全量降级**：跳过正常 VC 判定逻辑（4.3-4.4），将计划中**所有用例**标记为 `Prepare`：
+```bash
+python3 $HELPER update-case-result <plan_case_id> Prepare \
+  --comment "冒烟测试未通过（P0 缺陷 {N} 个：{fail_reason}），需人工验证"
+```
+3. 降级完成后直接跳到 4.5
+
+若文件不存在或 `verdict == "pass"`，继续正常流程（4.1-4.4）。Pass 时将 `traceability_summary` 追加到回写评论中作为补充信息。
+
 ### 4.1 加载验证数据
 
 读取 `verification_cases.json`，提取每条 VC 的：
