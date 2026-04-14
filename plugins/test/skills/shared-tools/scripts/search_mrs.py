@@ -20,11 +20,19 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 import ssl
 import sys
 import urllib.request
 from typing import Dict, List, Optional, Union
 from urllib.parse import urlencode
+
+# ==================== .env 自动加载 ====================
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).with_name('.env'))
+except ImportError:
+    pass  # python-dotenv not installed; rely on shell env
 
 # ==================== 配置 ====================
 

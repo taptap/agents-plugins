@@ -19,10 +19,18 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 import sys
 import urllib.request
 from typing import Dict, List, Optional, Set
 from urllib.parse import urlencode
+
+# ==================== .env 自动加载 ====================
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).with_name('.env'))
+except ImportError:
+    pass  # python-dotenv not installed; rely on shell env
 
 GITHUB_URL = os.environ.get("GITHUB_URL", "https://api.github.com").rstrip("/")
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")

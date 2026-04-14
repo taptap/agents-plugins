@@ -29,6 +29,7 @@
 import argparse
 import json
 import os
+from pathlib import Path
 import re
 import sys
 import time
@@ -36,6 +37,12 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+# ==================== .env 自动加载 ====================
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).with_name('.env'))
+except ImportError:
+    pass  # python-dotenv not installed; rely on shell env
 
 # ==================== 配置 ====================
 

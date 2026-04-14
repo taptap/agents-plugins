@@ -24,6 +24,10 @@ test-*/
 plugins/test/workspace/
 plugins/test/skills/*/output/
 
+# Secrets
+.env
+!.env.example
+
 # 开发中的插件
 plugins/migrator
 plugins/metrics
