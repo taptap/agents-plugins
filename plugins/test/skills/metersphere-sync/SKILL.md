@@ -45,8 +45,8 @@ HELPER="$SKILLS_ROOT/shared-tools/scripts/metersphere_helper.py"
 # 连通性检查
 python3 $HELPER ping
 
-# 导入用例（自动按 module 分组创建子模块）
-python3 $HELPER import-cases <parent_module_id> <cases.json>
+# 导入用例（自动按 module 分组创建子模块，--requirement 指定需求名作为父模块）
+python3 $HELPER import-cases <parent_module_id> <cases.json> [--requirement <需求名>]
 
 # 查找或创建测试计划
 python3 $HELPER find-or-create-plan <plan_name> [--stage smoke]

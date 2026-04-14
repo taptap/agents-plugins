@@ -42,12 +42,15 @@
 
 ```bash
 python3 $SKILLS_ROOT/shared-tools/scripts/metersphere_helper.py \
-  import-cases <parent_module_id> <cases_file>
+  import-cases <parent_module_id> <cases_file> [--requirement <需求名>]
 ```
+
+- `--requirement`（推荐）：指定需求名称，会先在 `parent_module_id` 下创建需求级父模块，子模块再挂在其下。结构为：`父模块 / 需求名 / 子模块A, 子模块B...`
+- 不指定时，子模块直接挂在 `parent_module_id` 下（向后兼容）
 
 该命令自动：
 - 按用例的 `module` 字段分组
-- 为每个 module 调用 `ensure-module` 创建子模块（已存在则复用）
+- 为每个 module 创建子模块（已存在则复用），支持 `/` 分隔的多层路径
 - 逐条导入用例，统一打上 `AI 用例生成` 标签
 - 格式转换：`{action, expected}` → `{num, desc, result}`
 - 名称清洗：去除内部标记（AC-1, RP-3）、截断超长名称（250 字）、处理重名
