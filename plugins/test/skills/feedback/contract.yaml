@@ -1,0 +1,31 @@
+name: feedback
+version: "1.0"
+description: 处理 Slack #taptap-feedback 频道用户反馈，分析问题、判断 Bug、协助响应
+
+input:
+  one_of:
+    slack_url:
+      type: string
+      description: Slack 消息链接
+    slack_channel:
+      type: string
+      description: Slack 频道 ID（获取最新消息）
+
+output:
+  structured:
+    is_bug:
+      type: boolean
+      description: 是否判定为 Bug
+    business_line:
+      type: string
+      description: 归属业务线
+    priority:
+      type: string
+      description: 建议优先级
+
+dependencies:
+  scripts:
+    - feedback/scripts/feishu_api.py
+  mcp_servers:
+    - slack
+  env_vars: []

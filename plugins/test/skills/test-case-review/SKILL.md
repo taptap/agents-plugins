@@ -3,6 +3,7 @@ name: test-case-review
 description: >
   评审已有测试用例的覆盖度和质量。输入测试用例 + 需求文档，
   输出 review_result.json + review_summary.md + 可选 supplementary_cases.json。
+  如输入来自 test-case-generation（已含冗余对评审），建议仅在用例经人工修改后使用。
   触发：用例评审、测试覆盖率、补充用例、用例质量。
 ---
 

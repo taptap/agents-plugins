@@ -83,3 +83,15 @@ python3 $HELPER update-case-result <plan_case_id> <Pass|Failure|Prepare> \
 ## 详细阶段操作
 
 详见 [PHASES.md](PHASES.md)。
+
+## Closing Checklist（CRITICAL）
+
+skill 执行的最终阶段完成后，**必须**逐一验证以下产出文件：
+
+- [ ] `ms_sync_report.json` — 非空，包含导入结果和计划信息
+- [ ] `ms_case_mapping.json` — 非空，包含用例 ID 映射
+- [ ] `ms_plan_info.json` — 非空，包含测试计划信息
+
+全部必须项通过后，输出完成总结。如文件缺失，**停止并补生成**，不允许声明完成。
+
+通用阶段执行约定见 [CONVENTIONS.md](../../CONVENTIONS.md#阶段执行保障)。

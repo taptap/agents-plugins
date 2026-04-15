@@ -326,6 +326,21 @@ requirement-clarification → clarified_requirements.json (functional_point.conf
 
 各 Agent 定义文件中 `## 模型` 节标注推荐模型。PHASES.md 中的 Task 调用通过 `model` 参数指定。
 
+### 模型选择判断树
+
+为新 Agent 或任务选择模型时，按以下顺序判断：
+
+1. 如果做错了下游损失有多大？（高 → Opus，中/低 → Sonnet）
+2. 创造性理解 vs 模板化生成？（理解 → Opus，生成 → Sonnet）
+3. 输出有明确结构约束可机械校验？（是 → Sonnet，否 → Opus）
+
+以下任务在大多数场景下适合 Sonnet：
+
+- 简单分类（Bug 端分类、业务线归类）
+- 模板填充和报告格式化
+- 数据格式转换和合并
+- 已有明确规则的校验（字段格式、枚举值）
+
 ## 多 Agent 并行执行
 
 详见 [skills/_shared/AGENT_PROTOCOL.md](skills/_shared/AGENT_PROTOCOL.md)。

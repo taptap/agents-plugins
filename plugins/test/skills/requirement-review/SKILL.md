@@ -6,6 +6,7 @@ description: >
   适用于拿到新需求时做系统性评审，而非代码变更分析或已有测试用例评审。
   本 skill 只读评审产出报告，不与用户做交互式问答拉齐理解（交互式澄清请使用 requirement-clarification）。
   已有代码变更的影响面分析请使用 change-analysis；已有测试用例的评审请使用 test-case-review。
+  不适用于：交互式需求拉齐（使用 requirement-clarification）。
   触发：需求评审、Review、Checklist、需求质量、需求风险、Go/No-Go、评审会。
 ---
 
@@ -156,6 +157,18 @@ python3 $SKILLS_ROOT/shared-tools/scripts/gitlab_helper.py file-content <project
 - **每个阶段结束时必须输出进度统计**
 - 回读中间文件等通用约定见 [CONVENTIONS](../../CONVENTIONS.md)
 - 阻断项确认通过调用 AskUserQuestion 工具完成，见 [CONVENTIONS.md](../../CONVENTIONS.md#askuserquestion-交互式提问) 和 [PHASES.md](PHASES.md) 阶段 4.4
+
+## Closing Checklist（CRITICAL）
+
+skill 执行的最终阶段（output）完成后，**必须**逐一验证以下产出文件：
+
+- [ ] `requirement_understanding.md` — 非空，包含需求理解结构化文档
+- [ ] `review_checklist.md` — 非空，包含 12 维度评审清单
+- [ ] `report.md` — 非空，包含精简评审报告
+
+全部必须项通过后，输出完成总结。如任一必须文件缺失，**停止并补生成**，不允许声明完成。
+
+通用阶段执行约定见 [CONVENTIONS.md](../../CONVENTIONS.md#阶段执行保障)。
 
 ## 约束规则
 

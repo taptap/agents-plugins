@@ -4,6 +4,7 @@ description: >
   双向追溯需求与代码变更的映射关系。输入需求描述 + 代码变更（MR/PR 或本地 diff），
   输出 traceability_matrix.json + traceability_coverage_report.json + risk_assessment.json。
   支持 smoke-test 模式：在回溯基础上提取缺陷列表并执行 P0 门控判定。
+  触发：需求回溯、需求还原度、追溯矩阵、代码覆盖、实现验证、traceability。
 ---
 
 # 需求回溯

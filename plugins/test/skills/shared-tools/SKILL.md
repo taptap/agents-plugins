@@ -2,7 +2,7 @@
 name: shared-tools
 description: >
   数据获取共享脚本集合：飞书文档获取、GitLab MR/文件、GitHub PR/文件、MR/PR 搜索。
-  默认由其他 skill 间接引用。
+  触发：默认由其他 skill 间接引用，不直接触发。
 ---
 
 # 共享工具集

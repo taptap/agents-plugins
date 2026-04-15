@@ -48,6 +48,12 @@
 | 需求文档已写好，评审会前质量把关 | requirement-review | 评估式，产出报告供评审会使用 |
 | 已有测试用例，评审覆盖度和质量 | test-case-review | 对照需求 4 维度评审 |
 | 代码变更已提交，分析影响和覆盖 | change-analysis | Story/Bug 双场景 |
+| 需求实现后验证代码是否正确 | verification-test-generation → requirement-traceability | 验证用例 + 双通道追溯 |
+| 为已有代码写单元测试 | unit-test-design | 分析代码逻辑，生成测试文件 |
+| 为 API/服务写集成测试 | integration-test-design | 分析接口定义，生成集成测试 |
+| 测试失败了，分析原因 | test-failure-analyzer | 分类（预期/回归/不稳定）+ 行动方案 |
+| 跑完整 QA 流程 | qa-workflow | 端到端编排，自动串联各 skill |
+| 处理 Slack 用户反馈 | feedback | 分析反馈 + 判断 Bug + 创建工单 |
 
 ## 使用场景
 
@@ -314,7 +320,7 @@ shared-tools 脚本依赖以下环境变量（按需配置）：
 - New skill: `change-analysis` — analyze code change impact and test coverage for Story/Bug scenarios (dual-scenario: Story 7-phase impact analysis + coverage assessment + supplementary case generation; Bug 5-phase root cause + fix completeness + risk assessment)
 - New skill: `test-case-review` — independent 4-dimension review of existing test cases (coverage, completeness, correctness, quality) with supplementary case generation
 - New skill: `api-contract-validation` — deep validation of frontend-backend API contract consistency (path/param/response/breaking change detection)
-- Add cross-references between related skills (test-case-generation ↔ test-case-review, requirement-traceability ↔ change-analysis, bug-fix-review ↔ change-analysis)
+- Add cross-references between related skills (test-case-generation ↔ test-case-review, requirement-traceability ↔ change-analysis)
 - Add "使用场景" section to README with manual testing and AI coding workflow mapping
 - Add Link F (change-analysis), Link G (test-case-review), and Link H (api-contract-validation) to quick start guide
 - Update core skills table to include new skills
@@ -323,8 +329,6 @@ shared-tools 脚本依赖以下环境变量（按需配置）：
 - Add `platform_scope` and `coordination_needed` to requirement-clarification output
 - Add design-draft clarification mode and document+design joint mode to requirement-clarification
 - Enhance CHECKLIST.md with API contract dimension and impact scope dimension
-- Rename bug-fix-review output from `fix_analysis.json` to `bug_fix_analysis.json`
-- Add local diff input support (`code_diff` / `code_diff_text`) to bug-fix-review
 - Add `story_link` shortcut input to verification-test-generation
 
 ### v0.0.17

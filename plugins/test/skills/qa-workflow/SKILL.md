@@ -103,6 +103,17 @@ Phase 2 的入口支持三种方式：
 
 详见 [PHASES.md](PHASES.md)。
 
+## Closing Checklist（CRITICAL）
+
+skill 执行的最终阶段完成后，**必须**逐一验证以下产出文件：
+
+- [ ] `workflow_state.json` — 非空，包含工作流进度和各步骤状态
+- [ ] `qa_summary.md` — 非空，包含最终 QA 报告
+
+全部必须项通过后，输出完成总结。如任一必须文件缺失，**停止并补生成**，不允许声明完成。
+
+通用阶段执行约定见 [CONVENTIONS.md](../../CONVENTIONS.md#阶段执行保障)。
+
 ## 工作流模板定义
 
 详见 [WORKFLOW_DEFS.md](WORKFLOW_DEFS.md)。
