@@ -52,7 +52,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/metersphere_helper.py \
 - 按用例的 `module` 字段分组
 - 为每个 module 创建子模块（已存在则复用），支持 `/` 分隔的多层路径
 - 逐条导入用例，统一打上 `AI 用例生成` 标签
-- 格式转换：`{action, expected}` → `{num, desc, result}`
+- 格式转换（后端自动完成，AI 无需手动转换）：`{action, expected}` → `{num, desc, result}`
 - 名称清洗：去除内部标记（AC-1, RP-3）、截断超长名称（250 字）、处理重名
 
 ### 2.2 保存映射文件

@@ -196,7 +196,7 @@
 
 ### 阶段 6: generate — 补充用例生成
 
-为覆盖缺口生成测试用例，使用 [CONVENTIONS.md 用例 JSON 格式](../../CONVENTIONS.md#用例-json-格式)。
+为覆盖缺口生成测试用例，使用 [CONVENTIONS.md 用例 JSON 格式](../../CONVENTIONS.md#用例-json-格式)。**顶层必须是 JSON 数组**，禁止用对象包裹（如 `{modules:[...]}` 或 `{cases:[...]}`）。
 
 写入 `supplementary_cases.json`。追加到 `test_coverage_report.md`。
 

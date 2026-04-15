@@ -107,7 +107,7 @@ description: >
 
 ## 用例文件格式（`final_cases.json`）
 
-JSON 字段定义见 [CONVENTIONS.md](../../CONVENTIONS.md#用例-json-格式)。顶层为数组，每条用例通过 `module` 字段标识归属模块。补充要求：
+JSON 字段定义见 [CONVENTIONS.md 用例 JSON 格式](../../CONVENTIONS.md#用例-json-格式)（含完整字段表和约束）。顶层必须是 JSON 数组，每条用例通过 `module` 字段标识归属模块。补充要求：
 
 - `test_method` 取值：等价类划分 / 边界值分析 / 场景法 / 错误推测法 / 判定表法 / 状态迁移法
 - `module` 填写模块名称（不带编号前缀）
