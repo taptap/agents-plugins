@@ -1,27 +1,19 @@
 # Changelog
 
-## 0.1.33 — Add QA workflow plugin with metersphere-sync and multi-agent test skills
+## 0.1.33 — Add metersphere-sync, feedback skill, and Urhox binary analysis to test plugin
 
 ### Test Plugin (0.0.3)
 
-- Added QA workflow plugin with full test lifecycle skills
 - Added metersphere-sync skill for test plan management and case import with hierarchical module support
 - Added qa-workflow orchestrator skill for end-to-end QA pipeline execution
-- Added test-case-generation skill with multi-agent review pipeline (dual reviewer + redundancy audit + sufficiency gate)
-- Added unit-test-design skill with business-scenario-driven principles and language-specific methods (Go/Java/Kotlin/Python/Swift/TypeScript)
-- Added integration-test-design skill with framework-specific methods
-- Added verification-test-generation skill for code-level test generation with phase execution guarantees
-- Added change-analysis skill with Android third-party interaction impact assessment
-- Added requirement-clarification skill with structured Q&A cards and native AskUserQuestion tool calls
-- Added requirement-review skill with 12-dimension evaluation framework
-- Added requirement-traceability skill with smoke-test mode, defect extraction, and P0 gate
-- Added test-case-review skill with 4-dimension review protocol
-- Added api-contract-validation skill with contract enforcement
-- Added bug-fix-review and test-failure-analyzer skills
-- Added ui-fidelity-check skill with Figma MCP tiered data fetching protocol
-- Added shared-tools (fetch_feishu_doc.py, metersphere_helper.py, search_prs.py, search_mrs.py, gitlab_helper.py, github_helper.py, validate_contracts.py)
+- Added feedback skill: analyze Slack #taptap-feedback channel user feedback, classify issues, and create Feishu Bug tickets
+- Added feedback skill knowledge base (10 reference docs: TapSDK, 实名, 下载安装, 评分, 配置, 内容发布, 注册登录, 青少年, 缺陷提交规范, 商店线产品分工)
+- Added feedback skill Feishu API script for creating and updating Bug work items
+- Added Urhox binary diff scope filtering to change-analysis phase 2.3
+- Added Urhox binary impact analysis in change-analysis phase 3A
+- Added test-case-generation sufficiency gate and iterative re-entry
 - Added unified .env-based config for all Python scripts via python-dotenv
-- Added output workspace convention for requirement-based artifact organization
+- Added requirement-clarification native AskUserQuestion tool calls
 - Added phase execution guarantees and output validation for all multi-phase skills
 
 ### Marketplace
