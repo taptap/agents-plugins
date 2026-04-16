@@ -151,6 +151,34 @@
 2. 后续：追加到对应章节
 3. 更新清单标记为 `[x]`，chat 输出进度
 
+### 阶段 3.5: cross-validation — Codex 交叉验证（可选）
+
+> 触发条件：变更文件 > 3 个 且 `codex-change-analyzer` Agent 可用。不满足条件时跳过本阶段。
+
+#### 启动时机
+
+**推荐**：在阶段 3 开始前，与阶段 3 并行启动 `codex-change-analyzer` Agent（通过 Task 工具），使 Codex 分析与主分析同时进行，不增加总耗时。
+
+```
+# 在单条消息中同时发出两个 Task：
+Task(subagent_type="codex-change-analyzer", description="Codex 独立分析代码变更",
+     prompt="分析以下代码变更的风险...\n\n=== DIFF START ===\n{完整 diff}\n=== DIFF END ===")
+```
+
+将完整 diff 内容嵌入 Task prompt（子 Agent 无法访问主 Agent 上下文）。
+
+#### 结果合并
+
+阶段 3 完成后，读取 `codex_change_findings.json`，按 [AGENT_PROTOCOL 交叉验证协议](../_shared/AGENT_PROTOCOL.md#交叉验证协议) 合并：
+
+1. 按 file + 行号区域（±5 行）匹配主分析与 Codex 的发现
+2. **双方独立发现的相同问题** → confidence += 20，标记 `[Claude+Codex confirmed]`
+3. **仅 Codex 发现** → 补充到 `code_change_analysis.md`，标记 `[Codex]`，人工确认
+4. **仅主分析发现** → 保留，标记 `[Claude]`
+5. 在 `code_change_analysis.md` 末尾追加「交叉验证摘要」节
+
+如果 `codex_change_findings.json` 不存在（Agent 未启动或执行失败），跳过合并，继续阶段 4。
+
 ### 阶段 4: impact — 影响面评估
 
 **前提**：回读 `code_change_analysis.md` 获取所有变更点。

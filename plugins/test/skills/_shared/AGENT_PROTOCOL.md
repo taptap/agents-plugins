@@ -22,9 +22,11 @@ agents/
 ├── test-case-generation/              # 测试用例生成评审冗余对
 │   ├── review-agent-1.md
 │   └── review-agent-2.md
-└── requirement-traceability/         # 需求追溯 Agent（反向追溯 + 正向降级回退）
-    ├── forward-tracer.md
-    └── reverse-tracer.md
+├── requirement-traceability/         # 需求追溯 Agent（反向追溯 + 正向降级回退）
+│   ├── forward-tracer.md
+│   └── reverse-tracer.md
+└── change-analysis/                  # 变更分析交叉验证 Agent
+    └── codex-change-analyzer.md      # Codex CLI 独立分析（与主 Agent 交叉验证）
 ```
 
 ### 模板结构
