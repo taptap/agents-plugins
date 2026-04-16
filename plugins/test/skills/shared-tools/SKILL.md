@@ -22,6 +22,7 @@ description: >
 | `github_helper.py` | GitHub PR diff/详情/文件内容 | `GITHUB_TOKEN` | `GITHUB_URL`（默认 `https://api.github.com`） |
 | `search_mrs.py` | 搜索 Story/Bug 关联的 GitLab MR | `GITLAB_URL`, `GITLAB_TOKEN`, `GITLAB_PROJECT_MAPPING` | `GITLAB_SSL_VERIFY` |
 | `search_prs.py` | 搜索 Story/Bug 关联的 GitHub PR | `GITHUB_TOKEN`, `GITHUB_REPO_MAPPING` | `GITHUB_URL` |
+| `codex_agent.py` | OpenAI Codex Agent — 代码分析交叉验证 | `OPENAI_API_KEY` | `OPENAI_BASE_URL`, `CODEX_MODEL`（默认 `gpt-5.4-mini`） |
 
 ## 飞书文档获取
 
@@ -205,6 +206,24 @@ function collectLayout(node, depth) {
 const target = figma.currentPage.findOne(n => n.id === 'TARGET_NODE_ID');
 return JSON.stringify(collectLayout(target, 0));
 ```
+
+## Codex Agent（代码分析交叉验证）
+
+```bash
+CODEX=$SKILLS_ROOT/shared-tools/scripts/codex_agent.py
+
+# 分析代码变更风险
+python3 $CODEX --prompt "Analyze this diff for risks..." --work-dir "$(pwd)"
+
+# 指定模型和超时
+python3 $CODEX --prompt "..." --model gpt-5.4-mini --timeout 300 --max-turns 20
+```
+
+**输出**: stdout JSON，格式 `{"findings": [...], "summary": "...", "engine": "codex", "model": "..."}`。stderr 输出进度日志。
+
+**工具能力**: Codex agent 内部可自主调用 bash（白名单命令）、read_file、grep_search 进行多步分析。
+
+**降级**: `OPENAI_API_KEY` 未设置时输出 `{"error": "...", "findings": []}` — 调用方应降级为独立 Claude 分析。
 
 ## 通用约定
 
