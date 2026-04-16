@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.1.35 — Major test plugin refactor: skill ecosystem optimization, exploratory testing, and review fixes
+
+### Test Plugin (0.0.5)
+
+- Added exploratory testing method as the 7th test method in test-case-generation, CONVENTIONS.md, and test-case-writer agent
+- Added `_shared/TEST_QUALITY_GUIDELINES.md` to deduplicate rules across unit-test-design and integration-test-design
+- Added `_shared/LARGE_FILE_HANDLING.md` to prevent JSON truncation in Write tool
+- Added Closing Checklists to metersphere-sync, qa-workflow, requirement-review, and other skills
+- Added negative trigger boundaries to reduce AI mis-triggering across skills
+- Added requirement-review skill with 12-dimension evaluation framework
+- Added change-analysis, test-case-review, and api-contract-validation skills
+- Added smoke-test mode with defect extraction and P0 gate to requirement-traceability
+- Added Android third-party interaction impact assessment to change-analysis
+- Added data sufficiency gate for conditional report sections
+- Changed feedback skill: split 800+ line monolith into SKILL.md + PHASES.md + TEMPLATES.md + TEAM_ASSIGNMENTS.md + contract.yaml
+- Changed SKILL.md boilerplate: slimmed docs, split METHODS, improved triggers
+- Changed intermediate file naming for disambiguation and shared content extraction
+- Fixed feedback TEAM_ASSIGNMENTS.md: unified TapPlay dev owner to 陆航 (was contradicting across 3 locations)
+- Fixed feishu_api.py `_request` method: corrected X-PLUGIN-TOKEN headers indentation into else block
+- Fixed test case JSON format contract: eliminated Format A/B ambiguity
+- Fixed confidence scoring contradictions in requirement-traceability
+- Fixed large file write guard to prevent JSON truncation in test-case-generation
+- Cleaned up deprecated bug-fix-review skill (merged into change-analysis)
+- Cleaned up committed __pycache__ and added gitignore rule
+- Untracked ai-workflow-panorama.html from version control
+
+### Marketplace
+
+- Bumped version from 0.1.34 to 0.1.35
+- Updated test plugin to version 0.0.5
+
 ## 0.1.33 — Add metersphere-sync, feedback skill, and Urhox binary analysis to test plugin
 
 ### Test Plugin (0.0.3)

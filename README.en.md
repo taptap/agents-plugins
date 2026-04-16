@@ -85,7 +85,7 @@ One-click configuration for MCP, auto-update, and development environment templa
 | spec    | 0.1.6   | Spec-Driven Development workflow plugin                                                              |
 | git     | 0.1.15  | Git workflow automation plugin (commit/push/MR + dual-mode code review + remote platform ops)        |
 | sync    | 0.1.27  | Dev environment config sync plugin (MCP + LSP + Hooks + Claude Skills)                               |
-| test    | 0.0.3   | QA workflow plugin (requirement clarification/test case generation/change analysis/traceability/code-level test generation) |
+| test    | 0.0.5   | QA workflow plugin (requirement clarification/test case generation/change analysis/traceability/code-level test generation) |
 
 
 See the README.md in each plugin directory for detailed documentation.
