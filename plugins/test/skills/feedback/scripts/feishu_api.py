@@ -216,11 +216,11 @@ class FeishuProjectAPI:
         else:
             # 飞书项目 Open API
             url = f"https://project.feishu.cn{path}"
-        headers = {
-            "X-PLUGIN-TOKEN": token,
-            "X-USER-KEY": self.user_key,
-            "Content-Type": "application/json"
-        }
+            headers = {
+                "X-PLUGIN-TOKEN": token,
+                "X-USER-KEY": self.user_key,
+                "Content-Type": "application/json"
+            }
         
         connector = aiohttp.TCPConnector(ssl=self.ssl_context)
         async with aiohttp.ClientSession(connector=connector) as session:
