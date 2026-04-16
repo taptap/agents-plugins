@@ -408,6 +408,7 @@ requirement-clarification → clarified_requirements.json (functional_point.conf
 - 所有文本使用中文
 - 用例文本中禁止出现 ASCII 双引号，使用中文引号「」
 - `test_method` 为「探索性测试法」时，`steps[].action` 填探索要点/操作方向（非精确步骤），`steps[].expected` 填判定标准/Oracle（非精确预期），`preconditions` 须包含章程（Charter）描述
+- 禁止在用例 JSON 中包含 `tags` 字段，标签由后端根据工作流类型自动赋值
 
 ### 严格校验
 

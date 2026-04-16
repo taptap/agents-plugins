@@ -303,12 +303,15 @@ def _validate_case_schema(raw: Any, idx: int) -> list[str]:
     return errors
 
 
-def _convert_case(raw: dict) -> dict:
+def _convert_case(raw: dict, *, tags: list[str] | None = None) -> dict:
     """将 schema 校验通过的用例转为 MS API 格式。
 
     输入只接受两种格式（AI 写入的旧格式已被 _validate_case_schema 拦截）：
     - 标准配对格式：steps[{action, expected}]
     - MS 内部格式（回流）：steps[{num, desc, result}]
+
+    tags 由调用方按工作流类型指定（变更分析 'AI 变更分析' / 用例评审 'AI 用例评审'），
+    AI 输出中的 tags 字段已被 _validate_case_schema 拦截。
     """
     steps_raw = raw['steps']
     if isinstance(steps_raw[0], dict) and 'desc' in steps_raw[0]:
@@ -338,7 +341,7 @@ def _convert_case(raw: dict) -> dict:
         'priority': raw['priority'],
         'prerequisite': _sanitize_quotes(precond),
         'steps': ms_steps,
-        'tags': ['AI 用例生成'],
+        'tags': tags or ['AI 用例生成'],
     }
 
 
@@ -652,8 +655,13 @@ def cmd_ensure_module(parent_id: str, name: str):
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
-def cmd_import_cases(parent_module_id: str, cases_file: str, requirement_name: str = ''):
-    """按 module 字段分组导入用例，可选按需求名创建父模块"""
+def cmd_import_cases(parent_module_id: str, cases_file: str,
+                     requirement_name: str = '', tags: list[str] | None = None):
+    """按 module 字段分组导入用例，可选按需求名创建父模块。
+
+    tags: 用例标签列表，默认 ['AI 用例生成']。
+          变更分析使用 ['AI 变更分析']，用例评审使用 ['AI 用例评审']。
+    """
     if not parent_module_id:
         parent_module_id = _cfg('MS_DEFAULT_NODE_ID')
 
@@ -697,11 +705,11 @@ def cmd_import_cases(parent_module_id: str, cases_file: str, requirement_name: s
         print(f"\n请按 {CONVENTIONS_DOC} 修正后重试。", file=sys.stderr)
         sys.exit(2)
 
-    # 转换并按 module 分组（schema 已通过，转换不再失败）
+    # 转换并按 module 分组（schema 已通过，转换不再失败）；tags 由调用方按工作流类型传入
     by_module: dict[str, list[dict]] = {}
     skipped = 0
     for raw in raw_cases:
-        converted = _convert_case(raw)
+        converted = _convert_case(raw, tags=tags)
         module_name = raw.get('module', '未分类')
         by_module.setdefault(module_name, []).append(converted)
 
@@ -913,13 +921,17 @@ def main():
             cmd_ensure_module(args[0], args[1])
         elif cmd == 'import-cases':
             if len(args) < 2:
-                print("用法: import-cases <parent_module_id> <cases.json> [--requirement <需求名>]", file=sys.stderr)
+                print("用法: import-cases <parent_module_id> <cases.json> [--requirement <需求名>] [--tags 'AI 变更分析']", file=sys.stderr)
                 sys.exit(1)
             req_name = ''
             if '--requirement' in args:
                 idx = args.index('--requirement')
                 req_name = args[idx + 1]
-            cmd_import_cases(args[0], args[1], requirement_name=req_name)
+            import_tags = None
+            if '--tags' in args:
+                idx = args.index('--tags')
+                import_tags = [t.strip() for t in args[idx + 1].split(',') if t.strip()]
+            cmd_import_cases(args[0], args[1], requirement_name=req_name, tags=import_tags)
         elif cmd == 'list-stages':
             cmd_list_stages()
         elif cmd == 'find-or-create-plan':
