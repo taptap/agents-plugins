@@ -1,7 +1,7 @@
 ---
 name: shared-tools
 description: >
-  数据获取与飞书文档共享脚本集合：飞书文档获取与创建、GitLab MR/文件、GitHub PR/文件、MR/PR 搜索。
+  数据获取共享脚本集合：飞书文档获取、GitLab MR/文件、GitHub PR/文件、MR/PR 搜索。
   触发：默认由其他 skill 间接引用，不直接触发。
 ---
 
@@ -22,7 +22,6 @@ description: >
 | `github_helper.py` | GitHub PR diff/详情/文件内容 | `GITHUB_TOKEN` | `GITHUB_URL`（默认 `https://api.github.com`） |
 | `search_mrs.py` | 搜索 Story/Bug 关联的 GitLab MR | `GITLAB_URL`, `GITLAB_TOKEN`, `GITLAB_PROJECT_MAPPING` | `GITLAB_SSL_VERIFY` |
 | `search_prs.py` | 搜索 Story/Bug 关联的 GitHub PR | `GITHUB_TOKEN`, `GITHUB_REPO_MAPPING` | `GITHUB_URL` |
-| `create_feishu_doc.py` | 将 Markdown 报告创建为飞书云文档 | `FEISHU_APP_ID`, `FEISHU_APP_SECRET` | `FEISHU_WIKI_SPACE_ID`, `FEISHU_WIKI_PARENT_TOKEN` |
 
 ## 飞书文档获取
 
@@ -91,23 +90,6 @@ python3 $SKILLS_ROOT/shared-tools/scripts/search_prs.py <work_item_id>
 
 - `GITLAB_PROJECT_MAPPING`：JSON 格式，key 为平台名，value 为 GitLab 项目 ID（int）或 ID 列表。示例：`{"server": 2103, "android": 4252, "mini_game": [4191, 4218]}`
 - `GITHUB_REPO_MAPPING`：JSON 格式，key 为平台名，value 为 GitHub repo（`owner/repo`）或列表。示例：`{"server": ["org/repo-a"], "web": "org/repo-b"}`
-
-## 飞书文档创建
-
-```bash
-CREATE=$SKILLS_ROOT/shared-tools/scripts/create_feishu_doc.py
-
-# 从文件创建文档并移动到 Wiki
-python3 $CREATE create --title "报告标题" --file report.md 2>&1
-
-# 指定 Wiki 父节点
-python3 $CREATE create --title "报告标题" --file report.md --wiki-parent <node_token> 2>&1
-
-# 不移动到 Wiki
-python3 $CREATE create --title "报告标题" --file report.md --no-wiki 2>&1
-```
-
-**输出**：stdout JSON 格式 `{"url": "...", "title": "...", "wiki_url": "..."}`，stderr 日志/进度信息。
 
 ## Figma 设计稿获取
 

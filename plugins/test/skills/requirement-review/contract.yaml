@@ -30,7 +30,6 @@ output:
 dependencies:
   scripts:
     - shared-tools/scripts/fetch_feishu_doc.py
-    - shared-tools/scripts/create_feishu_doc.py
     - shared-tools/scripts/gitlab_helper.py  # 条件触发
   agents:
     - requirement-understanding/functional-perspective  # 多视角模式
