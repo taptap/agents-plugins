@@ -141,6 +141,8 @@
 
 为覆盖缺口生成补充用例，使用 [CONVENTIONS.md 用例 JSON 格式](../../CONVENTIONS.md#用例-json-格式)。**顶层必须是 JSON 数组**，禁止用对象包裹（如 `{modules:[...]}` 或 `{cases:[...]}`）。
 
+**强制配对格式**：`steps` 必须是 `[{"action": "...", "expected": "..."}]`。禁止使用 `steps: string[]` + 顶层 `expected` 的旧格式（详见 [CONVENTIONS.md 禁止的旧格式](../../CONVENTIONS.md#禁止的旧格式)）。
+
 写入 `supplementary_cases.json`。如果没有需要补充的用例，不创建此文件。
 
 ### 5.4 输出

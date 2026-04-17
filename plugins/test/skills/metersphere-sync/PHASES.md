@@ -71,7 +71,13 @@ python3 $SKILLS_ROOT/shared-tools/scripts/metersphere_helper.py \
 }
 ```
 
-如有失败用例，在 stderr 中输出详情，但不中断流程。
+**错误处理**：
+
+- **schema 校验失败**（用例文件不符合 CONVENTIONS）→ 脚本以 `exit code 2` 终止，详细错误指引输出到 stderr。AI 必须按指引修正用例文件后重新执行 `import-cases`，**不可跳过**。
+- **MS API 调用失败**（网络/重名等）→ 单条跳过，详情写 stderr，不中断剩余用例导入。
+- **顶层不是 JSON 数组**（如 `{cases:[...]}` 包裹）→ 同 schema 失败，`exit code 2` 终止。
+
+常见 schema 错误及修复方式见 [CONVENTIONS.md#用例-json-格式](../../CONVENTIONS.md#用例-json-格式)。
 
 ---
 

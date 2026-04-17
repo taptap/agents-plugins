@@ -409,6 +409,24 @@ requirement-clarification → clarified_requirements.json (functional_point.conf
 - 用例文本中禁止出现 ASCII 双引号，使用中文引号「」
 - `test_method` 为「探索性测试法」时，`steps[].action` 填探索要点/操作方向（非精确步骤），`steps[].expected` 填判定标准/Oracle（非精确预期），`preconditions` 须包含章程（Charter）描述
 
+### 严格校验
+
+后端 `case_schema.TestCase` 在 PreToolUse hook 对所有 `*_cases.json` 强制校验，**任何不符合上表字段定义的写入都会被即时拒收并要求重写**。完整示例：
+
+```json
+{
+  "title": "用户未登录",
+  "priority": "P0",
+  "preconditions": ["未登录"],
+  "steps": [
+    {"action": "调用 X", "expected": ""},
+    {"action": "等待回调", "expected": "回调 error.code=2"}
+  ]
+}
+```
+
+`expected` 只能是 `steps[i]` 的子字段，不能出现在用例顶层。`steps` 必须是对象数组，不能是字符串数组。
+
 ## 双通道追溯模式
 
 详见 [skills/_shared/TRACEABILITY_PROTOCOL.md](skills/_shared/TRACEABILITY_PROTOCOL.md)。

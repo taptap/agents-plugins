@@ -306,6 +306,7 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 ### 5.2 快速自审
 
 > 格式校验（priority 合规、steps/expected 对齐）由后端 `post_complete` 自动完成，AI 只需关注内容质量。
+> 但**禁止依赖后端兜底**：`steps` 必须始终是 `[{"action": "...", "expected": "..."}]` 配对格式，禁止使用 `steps: string[]` + 顶层 `expected` 的旧格式（详见 [CONVENTIONS.md 禁止的旧格式](../../CONVENTIONS.md#禁止的旧格式)）。
 
 **跨模块去重**（两步法）：
 1. **字面去重**（快速）：使用 Grep 搜索 `test_cases.json` 中的 `"title"` 字段，标记完全相同或高度相似的标题对
