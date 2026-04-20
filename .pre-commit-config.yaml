@@ -27,3 +27,23 @@ repos:
         language: system
         pass_filenames: false
         files: ^plugins/.+/contract\.yaml$
+
+      - id: testcase-schema-sanity
+        name: testcase.schema.json sanity (load + accept/reject samples)
+        description: 校验 testcase.schema.json 自身合法且能正确接受/拒绝样本数据
+        entry: bash -c '
+          python3 -c "
+          import json, jsonschema
+          schema = json.load(open(\"plugins/test/contracts/testcase.schema.json\"))
+          ok = [{\"title\":\"x\",\"priority\":\"P0\",\"preconditions\":[],\"steps\":[{\"action\":\"a\"}]}]
+          jsonschema.validate(ok, schema)
+          for bad in (
+              [{\"title\":\"\",\"priority\":\"P0\",\"preconditions\":[],\"steps\":[{\"action\":\"a\"}]}],
+              [{\"title\":\"t\",\"priority\":\"P9\",\"preconditions\":[],\"steps\":[{\"action\":\"a\"}]}],
+          ):
+              try: jsonschema.validate(bad, schema); raise SystemExit(\"未拒绝非法\")
+              except jsonschema.ValidationError: pass
+          "'
+        language: system
+        pass_filenames: false
+        files: ^plugins/test/contracts/testcase\.schema\.json$

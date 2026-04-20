@@ -551,6 +551,52 @@ else
 fi
 
 # ============================================================
+# N+1. testcase.schema.json 校验（schema 自身可用 + 接受/拒绝样本数据）
+# ============================================================
+echo "=== Check N+1: testcase.schema.json ==="
+
+TESTCASE_SCHEMA="${REPO_ROOT}/plugins/test/contracts/testcase.schema.json"
+if [[ ! -f "$TESTCASE_SCHEMA" ]]; then
+  fail "testcase.schema.json not found at ${TESTCASE_SCHEMA}"
+elif ! command -v python3 >/dev/null 2>&1; then
+  echo "  SKIP: python3 not installed"
+elif ! python3 -c 'import jsonschema' >/dev/null 2>&1; then
+  echo "  SKIP: jsonschema not installed (pip install jsonschema)"
+else
+  if python3 - <<PYEOF >/tmp/schema-check.log 2>&1
+import json, sys, jsonschema
+schema = json.load(open("${TESTCASE_SCHEMA}"))
+ok = [{"title": "登录成功", "priority": "P0",
+       "preconditions": ["账号已注册"],
+       "steps": [{"action": "输入凭证", "expected": "校验通过"}]}]
+jsonschema.validate(ok, schema)
+bad_samples = [
+    ("priority enum", [{"title": "t", "priority": "P9", "preconditions": [],
+                        "steps": [{"action": "a"}]}]),
+    ("title 非空",    [{"title": "", "priority": "P0", "preconditions": [],
+                        "steps": [{"action": "a"}]}]),
+    ("禁止额外字段",  [{"title": "t", "priority": "P0", "preconditions": [],
+                        "steps": [{"action": "a"}], "name": "x"}]),
+    ("steps 非空",    [{"title": "t", "priority": "P0", "preconditions": [],
+                        "steps": []}]),
+]
+for label, data in bad_samples:
+    try:
+        jsonschema.validate(data, schema)
+        sys.exit(f"非法数据未被拒绝: {label}")
+    except jsonschema.ValidationError:
+        pass
+print("ok")
+PYEOF
+  then
+    pass "testcase.schema.json valid + rejects 4 invalid patterns"
+  else
+    fail "testcase.schema.json validation"
+    sed 's/^/    /' /tmp/schema-check.log
+  fi
+fi
+
+# ============================================================
 # Summary
 # ============================================================
 echo ""

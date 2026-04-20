@@ -27,7 +27,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install Python deps
-        run: pip install pyyaml
+        run: pip install pyyaml jsonschema
 
       - name: Run validation
         run: bash tests/validate.sh

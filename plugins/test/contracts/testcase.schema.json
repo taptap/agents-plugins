@@ -1,0 +1,158 @@
+{
+  "$defs": {
+    "Step": {
+      "additionalProperties": false,
+      "description": "用例步骤 — 严格的 action/expected 配对。",
+      "properties": {
+        "action": {
+          "description": "操作步骤（不可为空）",
+          "minLength": 1,
+          "title": "Action",
+          "type": "string"
+        },
+        "expected": {
+          "default": "",
+          "description": "预期结果（可为空字符串，但字段必须存在）",
+          "title": "Expected",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action"
+      ],
+      "title": "Step",
+      "type": "object"
+    },
+    "TestCase": {
+      "additionalProperties": false,
+      "description": "单条测试用例 — CONVENTIONS.md 标准结构，严格契约（extra=forbid）。",
+      "properties": {
+        "title": {
+          "maxLength": 250,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "priority": {
+          "enum": [
+            "P0",
+            "P1",
+            "P2",
+            "P3"
+          ],
+          "title": "Priority",
+          "type": "string"
+        },
+        "preconditions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Preconditions",
+          "type": "array"
+        },
+        "steps": {
+          "description": "至少 1 步",
+          "items": {
+            "$ref": "#/$defs/Step"
+          },
+          "minItems": 1,
+          "title": "Steps",
+          "type": "array"
+        },
+        "case_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Case Id"
+        },
+        "module": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Module"
+        },
+        "test_method": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Test Method"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "review_confidence": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Review Confidence"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source"
+        }
+      },
+      "required": [
+        "title",
+        "priority",
+        "preconditions",
+        "steps"
+      ],
+      "title": "TestCase",
+      "type": "object"
+    }
+  },
+  "items": {
+    "$ref": "#/$defs/TestCase"
+  },
+  "type": "array",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TestCaseList",
+  "description": "测试用例文件顶层 schema（list[TestCase]）。从 ai-case backend/apps/code_analysis/services/case_schema.py 自动生成，请通过 scripts/export-testcase-schema.py 重新生成，不要手动编辑。"
+}
