@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ChangeAnalysisSummary",
+  "description": "变更分析结构化摘要 (ca_summary.json)。change-analysis skill 在 output 阶段产出。被 ai-case change_analysis workflow 的 extract_story_output 消费，注入下游 TC 生成 prompt — 让 TC 知道哪些是变更新增的功能点 / 受影响模块 / 风险点，避免漏覆盖。设计取舍：value 必须短小 — 注入 prompt 时整体被截断到 2000 字符 / 单 value 200 字符 (见 ai_assistant_service._build_upstream_context)。",
+  "type": "object",
+  "required": ["changed_modules", "risk_count"],
+  "additionalProperties": true,
+  "not": {
+    "anyOf": [
+      {"required": ["modules"]},
+      {"required": ["risks_count"]},
+      {"required": ["features"]}
+    ]
+  },
+  "properties": {
+    "changed_modules": {
+      "type": "array",
+      "description": "变更涉及的模块清单。每项 <= 60 字。注入下游 prompt 时会被截断。",
+      "items": {"type": "string", "minLength": 1, "maxLength": 120}
+    },
+    "risk_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "识别到的风险项总数 (high + medium + low)"
+    },
+    "new_features": {
+      "type": "array",
+      "description": "变更新增的功能点清单 (供 TC 生成补覆盖)。每项 <= 80 字。",
+      "items": {
+        "type": "object",
+        "required": ["title"],
+        "additionalProperties": true,
+        "properties": {
+          "title": {"type": "string", "minLength": 1, "maxLength": 200},
+          "module": {"type": "string"},
+          "evidence": {"type": "string", "description": "代码证据，文件路径或 MR 链接"}
+        }
+      }
+    },
+    "risk_breakdown": {
+      "type": "object",
+      "description": "按等级统计的风险数",
+      "additionalProperties": {"type": "integer", "minimum": 0}
+    },
+    "scenario": {
+      "enum": ["story", "bug"],
+      "description": "变更分析的场景模式"
+    }
+  }
+}

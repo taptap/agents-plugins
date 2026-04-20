@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RequirementReviewSummary",
+  "description": "需求评审结构化摘要 (rr_summary.json)。requirement-review skill 在 output 阶段产出。被 ai-case requirement_review workflow 的 post_complete (回灌前端 output_data) 和 extract_story_output (注入下游 TC 生成 prompt) 同时消费。设计取舍：value 必须短小 — 注入 prompt 时整体被截断到 2000 字符 / 单 value 200 字符 (见 ai_assistant_service._build_upstream_context)。",
+  "type": "object",
+  "required": ["verdict", "issue_count"],
+  "additionalProperties": true,
+  "not": {
+    "anyOf": [
+      {"required": ["result"]},
+      {"required": ["conclusion"]},
+      {"required": ["issues_count"]},
+      {"required": ["blockers"]}
+    ]
+  },
+  "properties": {
+    "verdict": {
+      "enum": ["ready", "ready_with_conditions", "not_ready"],
+      "description": "需求就绪度判定，对齐 skill TEMPLATES 中的 Go-No-Go 三档"
+    },
+    "issue_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "评审发现的问题总数 (阻断 + 关注 + 待确认)"
+    },
+    "blocking_issues": {
+      "type": "array",
+      "description": "阻断级问题简要清单。注入下游 prompt 时会被截断，建议每项 <= 80 字。",
+      "items": {
+        "type": "object",
+        "required": ["title", "category"],
+        "additionalProperties": true,
+        "properties": {
+          "title": {"type": "string", "minLength": 1, "maxLength": 200},
+          "category": {"type": "string", "description": "评审维度名"},
+          "owner": {"type": "string", "description": "PM / Dev / QA / Design"}
+        }
+      }
+    },
+    "role_breakdown": {
+      "type": "object",
+      "description": "按职能分类的待确认问题数量",
+      "additionalProperties": {"type": "integer", "minimum": 0}
+    },
+    "review_mode": {
+      "enum": ["multi_perspective", "single_agent"],
+      "description": "实际采用的评审模式"
+    }
+  }
+}

@@ -92,11 +92,29 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 #### 消费上游信号
 
-当工作目录中存在 `clarified_requirements.json`（上游 requirement-clarification 产出）时，额外检查：
+**信号来源 1：工作目录中的 `clarified_requirements.json`**（上游 requirement-clarification 产出）
 
 - `confidence_level == "low"` → 等同于存在 none 维度，触发暂停
 - `open_question_count > 3` → 触发暂停，提示用户先解决未澄清问题
 - 存在 `clarification_status == "unconfirmed"` 的功能点 → 在充分性报告中标注，不单独触发暂停
+
+**信号来源 2：prompt 末尾平台注入的「同 Story 已完成的分析（上游参考信息）」块**
+
+平台后端会把同一 Story 下已完成的 `requirement_review` / `change_analysis` 结构化摘要注入到 prompt 末尾。当存在该块时，按以下规则消费：
+
+- **`requirement_review` 块**（来自 RR workflow `extract_story_output`）：
+  - `verdict == "not_ready"` → **强制暂停**：直接调用 AskUserQuestion 提示用户「需求评审判定 not_ready，建议先解决阻断项后再生成用例」，3 个选项（修复需求 / 继续生成并标注风险 confidence_ceiling=50 / 终止）
+  - `verdict == "ready_with_conditions"` → 不暂停，但在 `context_summary.md` 中标注"基于 RR 条件就绪状态生成"，受影响的功能点 confidence 上限设为 80
+  - `blocking_issues` 列表非空 → 在阶段 4 多视角分析时，**优先把每条 blocking_issue 转化为待覆盖的异常场景**，不能漏
+
+- **`change_analysis` 块**（来自 CA workflow `extract_story_output`）：
+  - `new_features` 列表非空 → **必须为每条 new_feature 至少生成 1 条用例**，在用例 metadata 标注 `source: ca_new_feature`，避免漏覆盖变更新增功能点
+  - `changed_modules` → 拆解模块时（阶段 3）优先按这个清单对齐，模块名命中的优先级高
+  - `risk_count > 0` 或 `risk_breakdown.high > 0` → 在阶段 4 加入"风险点专项验证"维度，每个 high 风险至少 1 条针对性用例
+
+- **冲突处理**：若 RR `verdict == "not_ready"` 同时 CA 有 `new_features`，**仍以 RR 暂停为准**，CA 信息留待用户决策后消费
+
+- **缺失即跳过**：上游块本身不存在或字段缺失 → 不阻断、不暂停，按其他信号正常推进
 
 #### 决策逻辑
 
@@ -147,7 +165,11 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
     "has_clarified_requirements": false,
     "confidence_level": null,
     "open_question_count": 0,
-    "unconfirmed_points": []
+    "unconfirmed_points": [],
+    "rr_verdict": null,
+    "rr_blocking_count": 0,
+    "ca_new_feature_count": 0,
+    "ca_high_risk_count": 0
   },
   "user_decision": "proceed_with_risk | supplemented | aborted | null",
   "confidence_ceiling": 100,
