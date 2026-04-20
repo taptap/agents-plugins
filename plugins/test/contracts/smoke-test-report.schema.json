@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SmokeTestReport",
+  "description": "冒烟测试报告 (smoke_test_report.json)。requirement-traceability 在 smoke-test 模式产出，被 ai-case smoke_test workflow post_complete 直接读取写入 session.output_data。源真实样本：session 239。新字段允许（additionalProperties: true）但已知字段名固定，避免拼错让 ai-case 拿不到 verdict / 统计信息。",
+  "type": "object",
+  "required": ["verdict", "verification_summary", "defect_summary"],
+  "additionalProperties": true,
+  "not": {
+    "anyOf": [
+      {"required": ["result"]},
+      {"required": ["verdicts"]},
+      {"required": ["defects_summary"]},
+      {"required": ["verify_summary"]}
+    ]
+  },
+  "properties": {
+    "verdict": {
+      "enum": ["pass", "fail"],
+      "description": "冒烟测试判定，ai-case 写入 output_data.smoke_test_verdict 给前端展示"
+    },
+    "fail_reason": {
+      "type": ["string", "null"],
+      "description": "verdict=fail 时的原因说明"
+    },
+    "verification_summary": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "用例验证统计，ai-case 整体写入 output_data.smoke_test_verification_summary",
+      "properties": {
+        "total_points": {"type": "integer", "minimum": 0},
+        "passed": {"type": "integer", "minimum": 0},
+        "failed": {"type": "integer", "minimum": 0},
+        "inconclusive": {"type": "integer", "minimum": 0},
+        "verification_rate": {"type": "string"}
+      }
+    },
+    "defect_summary": {
+      "type": "object",
+      "required": ["total"],
+      "additionalProperties": true,
+      "description": "缺陷统计，ai-case 整体写入 output_data.smoke_test_defect_summary",
+      "not": {
+        "anyOf": [
+          {"required": ["priority_distribution"]},
+          {"required": ["category_distribution"]}
+        ]
+      },
+      "properties": {
+        "total": {"type": "integer", "minimum": 0},
+        "by_priority": {
+          "type": "object",
+          "additionalProperties": {"type": "integer", "minimum": 0}
+        },
+        "by_category": {
+          "type": "object",
+          "additionalProperties": {"type": "integer", "minimum": 0}
+        }
+      }
+    },
+    "traceability_summary": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "defects": {
+      "type": "array",
+      "description": "smoke_test_report.defects 是简化版（含 id/name/priority/code_location 等）。完整缺陷信息在 defect_list.json，由 defect-list.schema.json 守护。",
+      "items": {
+        "type": "object",
+        "required": ["name", "priority"],
+        "additionalProperties": true,
+        "not": {
+          "anyOf": [
+            {"required": ["actual"]},
+            {"required": ["expected"]},
+            {"required": ["desc"]},
+            {"required": ["title"]}
+          ]
+        },
+        "properties": {
+          "id": {"type": "string"},
+          "name": {"type": "string", "minLength": 1},
+          "priority": {"enum": ["P0", "P1", "P2", "P3"]},
+          "confidence": {"type": "number", "minimum": 0, "maximum": 100},
+          "related_test_case": {"type": "string"},
+          "code_location": {"type": "string"}
+        }
+      }
+    },
+    "low_confidence_items": {"type": "array"},
+    "excluded_items": {"type": "array"},
+    "key_verified_scenarios": {"type": "array"},
+    "scope": {"type": "string"},
+    "mr_details": {"type": "array"}
+  }
+}
