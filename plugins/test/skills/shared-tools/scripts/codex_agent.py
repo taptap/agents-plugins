@@ -367,7 +367,8 @@ def run_agent(prompt: str, work_dir: str, model: str,
                 model=model,
                 messages=messages,
                 tools=TOOLS,
-                timeout=min(120, timeout - elapsed + 5),
+                # max(5, ...) 兜底：elapsed 接近 timeout 时避免传 0/负值给 SDK
+                timeout=max(5, min(120, timeout - elapsed + 5)),
             )
         except Exception as e:
             _log(f"API error: {e}")
