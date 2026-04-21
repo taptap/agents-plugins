@@ -1,26 +1,15 @@
 # Changelog
 
-## 0.1.37 — Merge verification-test-generation into requirement-traceability
-
-### Test Plugin (0.0.7)
-
-- **Removed `verification-test-generation` skill** (and `agents/verification-test-writer.md`): the skill turned out to be unused in production (ai-case backend has no workflow registered for it; it was only referenced from qa-workflow CLI orchestration which is rarely run standalone). Its core capability — generating structured input/expected pairs for AI to reason against code — has been merged into requirement-traceability's forward channel as embedded `3.2.0 traceability assessment` + `3.2.1 tracing flow` steps. The intermediate `verification_cases.json` artifact is retired entirely.
-- **`requirement-traceability` forward channel now consumes `final_cases.json` directly** (priority 1) → `requirement_points.json` acceptance_criteria (priority 2 fallback) → traceability_checklist.md descriptions (weakest fallback). Eliminates the redundant "regenerate verification cases" step — AI can read natural-language test case steps and trace them through code just as well as it could read structured JSON.
-- **`metersphere-sync` execute mode** rewired to consume `forward_verification.json` (from requirement-traceability) instead of the retired `verification_cases.json`. Case-level matching upgraded: traceability now writes the upstream `final_cases.json` `case_id` (e.g. `M1-TC-01`) directly into `forward_verification.json`, so MS plan case status writeback can happen at test-case granularity instead of FP-aggregated granularity. Falls back to FP-level aggregation only when traceability ran in degraded forward-tracer mode.
-- **`qa-workflow` orchestration** updated: removed `verification-test-generation` node from qa-full / qa-lite / verify-only templates; renumbered downstream step IDs accordingly.
-- **`CONVENTIONS.md` numbering prefix table** removed `VC-`. Added migration note under prefix table.
-- **`_shared/TRACEABILITY_PROTOCOL.md`** retitled artifact spec from "verification cases JSON format" to "forward_verification.json format" with updated field schema (case_id sourced from final_cases or `FORWARD-TRACER-FP-N` for degraded mode).
-- **PIPELINES.md / README.md** updated to reflect the new pipeline shape (no separate verification-test-generation node, traceability consumes final_cases directly).
-- **Numbering frozen**: ai-case backend submodule pointer updated; ai-case `SmokeTestWorkflow` continues to consume the `forward_verification.json` artifact name (no backend code change needed).
-
-### Known follow-up (separate PR)
-
-- ai-case `SmokeTestWorkflow` still doesn't trigger `metersphere-sync mode=execute` after traceability completes — MS plan cases stay in `Prepare` even though `forward_verification.json` is produced. Tracked separately; requires backend `should_auto_trigger_metersphere_execute` hook + Celery task implementation.
-
-## 0.1.35 — Test plugin major refactor + cross-repo contract bridge with ai-case backend
+## 0.1.35 — Test plugin major refactor: traceability auto-writeback, handoff pilot, cross-repo contract bridge
 
 ### Test Plugin (0.0.5)
 
+- Added requirement-clarification handoff pilot: frontmatter declares `handoffs[]` (recommended next skill, when, prompt hint); Closing step now emits a structured "Next Steps" block with copyable Skill() invocation and explicit confirm-to-relay prompt (spec-kit-style pattern, validated on a single skill before broader rollout)
+- Added Phase 6 writeback in requirement-traceability: standard mode now invokes metersphere-sync execute internally to write back MS test plan case status, so running traceability standalone (outside qa-workflow) no longer leaves MS plans empty; smoke-test mode still skips MS write
+- Changed qa-workflow to drop the standalone metersphere-sync execute step (#9 removed) since write-back is now handled by traceability; qa-full step IDs renumbered (#10/#11/#12 → #9/#10/#11); qa-lite/verify-only template skip lists updated; PHASES.md cross-references and earlier numbering inconsistencies fixed
+- Removed `verification-test-generation` skill (and `agents/verification-test-writer.md`); merged its core capability into requirement-traceability's forward channel as embedded 3.2.0 traceability assessment + 3.2.1 tracing flow steps; retired the `verification_cases.json` intermediate artifact
+- Changed requirement-traceability forward channel: now consumes `final_cases.json` directly (priority 1) → `requirement_points.json` acceptance_criteria (priority 2) → traceability_checklist.md descriptions (weakest); writes upstream `case_id` directly into `forward_verification.json` so MS write-back can match at test-case granularity (FP-level aggregation only in degraded mode)
+- Changed `_shared/TRACEABILITY_PROTOCOL.md` artifact spec from "verification cases JSON format" to "forward_verification.json format" with updated field schema; CONVENTIONS.md numbering prefix table removed `VC-`
 - Added cross-repo contract bridge with ai-case backend: `scripts/contract-bridge-check.py` validates skill contract.yaml output declarations against backend consumer references; rr_summary.json / ca_summary.json now declared in producer contracts
 - Added 4 JSON schemas under `contracts/`: testcase.schema.json (auto-derived from ai-case Pydantic), defect-list.schema.json (catches field name drift), smoke-test-report.schema.json (catches verdict/summary drift), rr-summary.schema.json, ca-summary.schema.json
 - Added codex_agent.py (`shared-tools/scripts/`): standalone OpenAI Chat Completions + Tool Use agent loop for Codex cross-validation when codex CLI unavailable; supports bash/read_file/grep tools with sandboxed work_dir
