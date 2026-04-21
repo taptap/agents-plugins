@@ -562,3 +562,54 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
   }
 }
 ```
+
+## 阶段 6: writeback - MS 测试计划回写
+
+> **触发条件**：`mode != "smoke-test"`。冒烟测试模式不写 MS（冒烟只输出 P0 门控判定，不污染测试计划状态），整段跳过。
+>
+> **执行时机**：标准模式下，4. output 完成后立即进入；如果触发了 5. loop，等 loop 收敛退出后再进。
+
+### 6.1 前置校验
+
+1. 确认 `$TEST_WORKSPACE/forward_verification.json` 存在且非空。如不存在 → 跳过本阶段并在最终摘要中标注"无验证结果可回写"。
+2. 解析 `plan_name`：
+   - 优先用 init/fetch 阶段已确定的 `plan_name` 参数
+   - 未提供时，回读 `$TEST_WORKSPACE/clarified_requirements.json` 提取 story 标题
+   - 都没有 → 提示用户提供 `plan_name`，停止本阶段
+3. 检查工作目录是否存在 `ms_plan_info.json`（来自上游 metersphere-sync sync 模式）：
+   - 存在 → 复用其中的 `plan_id`，避免 metersphere-sync 重新查找
+   - 不存在 → metersphere-sync 内部会按 `plan_name` 查找或创建
+
+### 6.2 调用 metersphere-sync execute
+
+用 Skill 工具调用：
+
+```
+Skill(skill: "test:metersphere-sync", args: "mode=execute plan_name=<plan_name> forward_verification=$TEST_WORKSPACE/forward_verification.json")
+```
+
+metersphere-sync execute 内部会：
+
+1. 读取 `forward_verification.json` 中每条记录
+2. 按 [metersphere-sync 的置信度判定规则](../metersphere-sync/SKILL.md#置信度判定规则) 决定 MS 状态（Pass / Failure / Prepare）
+3. 调用 MS API 更新对应用例状态
+4. 写出 `ms_sync_report.json`
+
+### 6.3 完成校验
+
+1. 确认 `$TEST_WORKSPACE/ms_sync_report.json` 已生成且非空
+2. 从报告中提取 `auto_passed` / `auto_failed` / `manual_required` 计数
+3. Chat 输出回写摘要：
+
+```
+MS 测试计划回写完成：
+- 自动 Pass：N 条（高置信度验证通过）
+- 自动 Failure：M 条（高置信度验证失败）
+- 待人工验证：K 条（置信度不足或 inconclusive）
+- 测试计划：<plan_url>
+```
+
+### 6.4 失败处理
+
+- metersphere-sync execute 报 MS 连通失败 / 鉴权失败 → 不重试，把错误信息透传给用户，标记本阶段 `failed`，但不影响 traceability 主产出（traceability_matrix / coverage_report / risk_assessment 已经在 Phase 4 落地）
+- forward_verification.json 全为 `inconclusive` → metersphere-sync 会全部标记 Prepare 并附评论；本阶段视为成功

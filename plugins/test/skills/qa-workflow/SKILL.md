@@ -40,17 +40,16 @@ Phase 2: 代码验证（用户回来后自动执行）
   #5  change-analysis ──────────┐
   #6  [条件] ui-fidelity-check ─┘ 有设计稿时（与 #5 并行）
   #7  [条件] api-contract-validation  前后端协调时
-  #8  requirement-traceability → 需求还原度（内嵌正向用例中介验证）
-  #9  metersphere-sync(execute) → 回写执行结果
-  #10 [等待] 人工验证低置信度用例
+  #8  requirement-traceability → 需求还原度（内嵌正向用例中介验证 + Phase 6 自动回写 MS 测试计划）
+  #9  [等待] 人工验证低置信度用例
 
 Phase 3: 收尾（人工验证后）
-  #11 git:code-reviewing → 代码审查
-  #12 git:commit-push-pr → 提 PR（可选）
+  #10 git:code-reviewing → 代码审查
+  #11 git:commit-push-pr → 提 PR（可选）
   → 生成 qa_summary.md
 ```
 
-> 步骤编号与 [WORKFLOW_DEFS.md](WORKFLOW_DEFS.md) 的 qa-full 模板 ID 一致。#4 和 #10 为用户交互等待点。
+> 步骤编号与 [WORKFLOW_DEFS.md](WORKFLOW_DEFS.md) 的 qa-full 模板 ID 一致。#4 和 #9 为用户交互等待点。MS 测试计划回写已下沉到 #8 requirement-traceability 的 Phase 6 writeback，编排不再单独列 metersphere-sync execute 步骤。
 
 ## 条件分支判定
 
@@ -76,8 +75,8 @@ Phase 2 的入口支持三种方式：
 | 模板 | 说明 | 跳过的步骤 |
 |------|------|-----------|
 | `qa-full` | 完整流程（默认） | 无 |
-| `qa-lite` | 跳过 MS 同步和 MS 执行回写 | #3, #9, #10（无 MS 则无需人工验证 gate） |
-| `verify-only` | 仅验证已有代码 | #1, #2, #3, #9（直接从 Phase 2 开始，无 MS） |
+| `qa-lite` | 跳过 MS 同步（MS 执行回写已下沉到 #8 内部，由 traceability 自行处理） | #3, #9（无 MS 则无需人工验证 gate） |
+| `verify-only` | 仅验证已有代码 | #1, #2, #3, #9（直接从 Phase 2 开始，无 MS、无人工验证 gate） |
 
 ## 参数自动推导
 

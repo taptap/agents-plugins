@@ -56,11 +56,11 @@ Skill(skill: "test:requirement-clarification", args: "story_link=<story_link> de
    - `platform_scope` ← `platform_scope.platforms`
    - `has_design_link` ← `design_link` 是否非空
 3. 根据条件更新步骤状态：
-   - `has_design_link == true` → 步骤 ⑥ (ui-fidelity-check) 保持 `pending`
-   - `has_design_link == false` → 步骤 ⑥ 设为 `skipped`
-   - `coordination_needed == true` → 步骤 ⑦ (api-contract-validation) 保持 `pending`
-   - `coordination_needed == false` → 步骤 ⑦ 设为 `skipped`
-4. 更新 `workflow_state.json`：步骤 ① 标记 `completed`
+   - `has_design_link == true` → 步骤 #6 (ui-fidelity-check) 保持 `pending`
+   - `has_design_link == false` → 步骤 #6 设为 `skipped`
+   - `coordination_needed == true` → 步骤 #7 (api-contract-validation) 保持 `pending`
+   - `coordination_needed == false` → 步骤 #7 设为 `skipped`
+4. 更新 `workflow_state.json`：步骤 #1 标记 `completed`
 
 ### 1.2 测试用例生成
 
@@ -74,7 +74,7 @@ Skill(skill: "test:test-case-generation", args: "confirm_policy=accept_all")
 
 完成后：
 1. 确认 `$TEST_WORKSPACE/final_cases.json` 存在
-2. 更新 `workflow_state.json`：步骤 ② 标记 `completed`
+2. 更新 `workflow_state.json`：步骤 #2 标记 `completed`
 
 ### 1.3 MeterSphere 同步（qa-lite 模板跳过此步）
 
@@ -85,7 +85,7 @@ Skill(skill: "test:metersphere-sync", args: "mode=sync plan_name=<derived_params
 
 完成后：
 1. Read `$TEST_WORKSPACE/ms_plan_info.json` 获取 `plan_url`
-2. 更新 `workflow_state.json`：步骤 ③ 标记 `completed`
+2. 更新 `workflow_state.json`：步骤 #3 标记 `completed`
 
 ### 1.4 暂停 — 等待编码
 
@@ -133,7 +133,7 @@ Skill(skill: "test:metersphere-sync", args: "mode=sync plan_name=<derived_params
 
 3. **用户说"帮我 review 并提 MR"**：
    - 同方式 2 生成 local.diff
-   - 额外标记：Phase 3 步骤 #11、#12 自动执行（不在人工验证 gate #10 暂停）
+   - 额外标记：Phase 3 步骤 #10、#11 自动执行（不在人工验证 gate #9 暂停）
 
 更新 `workflow_state.json`：步骤 #4 标记 `completed`
 
@@ -162,25 +162,22 @@ Skill(skill: "test:ui-fidelity-check", args: "design_link=<...>")
 Skill(skill: "test:api-contract-validation", args: "...")
 ```
 
-### 2.3 需求回溯
+### 2.3 需求回溯（含 MS 测试计划回写）
 
 ```
-Skill(skill: "test:requirement-traceability", args: "code_changes=<...> story_link=<...> final_cases=$TEST_WORKSPACE/final_cases.json")
+Skill(skill: "test:requirement-traceability", args: "code_changes=<...> story_link=<...> final_cases=$TEST_WORKSPACE/final_cases.json plan_name=<derived_params.plan_name>")
 ```
 
-此步骤内嵌正向用例中介验证：消费上游 `final_cases.json`（来自步骤 #2 test-case-generation），对每条用例执行代码路径追踪，输出 `forward_verification.json`。
+此步骤包含两部分（详见 requirement-traceability/PHASES.md）：
 
-### 2.4 MS 执行回写（qa-lite 模板跳过此步）
-
-```
-Skill(skill: "test:metersphere-sync", args: "mode=execute plan_name=<derived_params.plan_name>")
-```
+1. **正向用例中介验证**：消费上游 `final_cases.json`（来自步骤 #2 test-case-generation），对每条用例执行代码路径追踪，输出 `forward_verification.json`
+2. **Phase 6 writeback**：标准模式下自动调用 metersphere-sync execute，把 `forward_verification.json` 落到 MS 用例状态，输出 `ms_sync_report.json`
 
 完成后：
 1. Read `$TEST_WORKSPACE/ms_sync_report.json`
-2. 提取 `auto_passed`、`manual_required`
+2. 提取 `auto_passed`、`manual_required` 用于 2.4 摘要
 
-### 2.5 暂停 — 等待人工验证
+### 2.4 暂停 — 等待人工验证
 
 输出摘要给用户：
 
@@ -203,7 +200,7 @@ Skill(skill: "test:metersphere-sync", args: "mode=execute plan_name=<derived_par
 
 更新 `workflow_state.json`：
 - `current_phase = 3`
-- 步骤 #11 (user_gate) 设为 `waiting`
+- 步骤 #9 (user_gate) 设为 `waiting`
 
 > 如果 2.0 中用户选择了"帮我 review 并提 MR"，则跳过此暂停，直接进入 Phase 3。
 

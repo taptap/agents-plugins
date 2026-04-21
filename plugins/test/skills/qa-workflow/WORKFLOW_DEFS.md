@@ -4,7 +4,7 @@
 
 ## qa-full（默认）
 
-完整 QA 流程，所有步骤均包含。
+完整 QA 流程，所有步骤均包含。MS 测试计划回写由 #8 requirement-traceability 的 Phase 6 writeback 内部完成，编排不再单独列 metersphere-sync execute 步骤。
 
 ```json
 [
@@ -16,10 +16,9 @@
   {"id": 6, "skill": "ui-fidelity-check", "phase": 2, "condition": "has_design_link", "parallel_group": "verify"},
   {"id": 7, "skill": "api-contract-validation", "phase": 2, "condition": "coordination_needed"},
   {"id": 8, "skill": "requirement-traceability", "phase": 2},
-  {"id": 9, "skill": "metersphere-sync", "phase": 2, "params": {"mode": "execute", "plan_name": "auto"}},
-  {"id": 10, "type": "user_gate", "phase": 2, "prompt": "请在 MS 中验证低置信度用例，完成后回来", "transitions_to": 3},
-  {"id": 11, "skill": "git:code-reviewing", "phase": 3},
-  {"id": 12, "skill": "git:commit-push-pr", "phase": 3, "optional": true}
+  {"id": 9, "type": "user_gate", "phase": 2, "prompt": "请在 MS 中验证低置信度用例，完成后回来", "transitions_to": 3},
+  {"id": 10, "skill": "git:code-reviewing", "phase": 3},
+  {"id": 11, "skill": "git:commit-push-pr", "phase": 3, "optional": true}
 ]
 ```
 
@@ -40,6 +39,8 @@
   {"id": 9, "skill": "git:commit-push-pr", "phase": 3, "optional": true}
 ]
 ```
+
+> qa-lite 下 requirement-traceability 仍会尝试 Phase 6 writeback。如果 MS 不可用，writeback 阶段会失败但不影响主产出（traceability_matrix / coverage_report / risk_assessment 已在 Phase 4 落地，见 requirement-traceability/PHASES.md 6.4）。
 
 ## verify-only
 
