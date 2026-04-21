@@ -47,11 +47,12 @@
 [requirement-traceability] 完成后可追加 execute 模式回写验证结果：
 
 ```
-[requirement-traceability / verification-test-generation]
-    └─→ verification_cases.json
+[requirement-traceability]
+    │  正向通道内嵌用例中介验证（消费上游 final_cases.json）
+    └─→ forward_verification.json
         ▼
 [metersphere-sync]    (mode=execute)
-    │  消费: final_cases.json, verification_cases.json, ms_case_mapping.json
+    │  消费: final_cases.json, forward_verification.json, ms_case_mapping.json
     └─→ ms_sync_report.json (含执行回写统计)
 ```
 
@@ -63,8 +64,9 @@
 | requirement-clarification | `requirement_points.json` | test-case-generation | `requirement_points` |
 | requirement-clarification | `clarified_requirements.json` | requirement-traceability | `clarified_requirements` |
 | requirement-clarification | `requirement_points.json` | requirement-traceability | `requirement_points` |
+| test-case-generation | `final_cases.json` | requirement-traceability | `final_cases` |
 | test-case-generation | `final_cases.json` | metersphere-sync | `final_cases` |
-| verification-test-generation | `verification_cases.json` | metersphere-sync | `verification_cases` |
+| requirement-traceability | `forward_verification.json` | metersphere-sync | `forward_verification` |
 | requirement-clarification | `requirement_points.json` | metersphere-sync | `requirement_points` |
 
 ---
@@ -89,20 +91,17 @@
 ## 链路 D — 需求回溯增强
 
 ```
-[verification-test-generation]
-    │  消费: requirement_points.json (from 链路 A)
-    │
-    └─→ verification_cases.json
-        │
-        ▼
 [ui-fidelity-check]  (条件：有 Figma 设计稿)
     │
     └─→ ui_fidelity_report.json
         │
         ▼
 [requirement-traceability]
-    │  消费: verification_cases.json, ui_fidelity_report.json
+    │  消费: final_cases.json (链路 A 产出，正向通道用例输入)
+    │       ui_fidelity_report.json (UI 还原度合并)
+    │       api_contract_report.json (条件：上游 api-contract-validation 产出)
     │
+    ├─→ forward_verification.json（内嵌正向用例中介验证结果）
     └─→ traceability_coverage_report.json（含正向验证率 + UI 还原度）
 ```
 
@@ -110,7 +109,7 @@
 
 | 上游 Skill | 输出文件 | 下游 Skill | 输入参数 |
 |---|---|---|---|
-| verification-test-generation | `verification_cases.json` | requirement-traceability | `verification_cases` |
+| test-case-generation | `final_cases.json` | requirement-traceability | `final_cases`（正向通道用例输入，优先消费） |
 | ui-fidelity-check | `ui_fidelity_report.json` | requirement-traceability | `ui_fidelity_report` |
 | api-contract-validation | `api_contract_report.json` | requirement-traceability | `api_contract_report` |
 
@@ -215,12 +214,12 @@ Phase 1: 需求分析
     → 暂停等编码
 
 Phase 2: 代码验证（用户回来后）
-[change-analysis] ─────────────┐
-[verification-test-generation] ┤ 并行
-[ui-fidelity-check]  ──────────┘ 条件：有设计稿
-[api-contract-validation]         条件：前后端协调
+[change-analysis] ──────────┐
+[ui-fidelity-check]  ───────┘ 条件：有设计稿（与 change-analysis 并行）
+[api-contract-validation]     条件：前后端协调
     ↓
-[requirement-traceability] → [metersphere-sync mode=execute]
+[requirement-traceability]（内嵌正向用例中介验证，消费上游 final_cases.json）
+    → [metersphere-sync mode=execute]
     → 暂停等人工验证
 
 Phase 3: 收尾
@@ -244,8 +243,6 @@ work_dir/
 ├── test_cases.json                (test-case-generation)
 ├── tc_gen_review.md               (test-case-generation)
 ├── review_summary.json            (test-case-generation)
-├── verification_cases.json        (verification-test-generation)
-├── verification_report.json       (verification-test-generation)
 ├── traceability_matrix.json       (requirement-traceability)
 ├── traceability_coverage_report.json  (requirement-traceability)
 ├── forward_verification.json      (requirement-traceability)

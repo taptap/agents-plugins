@@ -23,7 +23,7 @@
 
 ### 1.2 确定执行模式
 
-- 用户指定 `mode=execute` 且工作目录中存在 `verification_cases.json` → execute 模式
+- 用户指定 `mode=execute` 且工作目录中存在 `forward_verification.json` → execute 模式
 - 否则 → sync 模式
 
 ### 1.3 确定参数
@@ -120,7 +120,9 @@ python3 $SKILLS_ROOT/shared-tools/scripts/metersphere_helper.py \
 
 ## 阶段 4: execute - 验证结果回写（仅 mode=execute）
 
-此阶段仅在 `mode=execute` 时执行，需要 `verification_cases.json` 输入。
+此阶段仅在 `mode=execute` 时执行，需要 `forward_verification.json` 输入（来自 requirement-traceability，正向用例中介验证结果）。
+
+> v0.0.7 起改接 `forward_verification.json` 替代旧 `verification_cases.json`——traceability 已经把"用例执行结果"作为自身产物输出，不再需要独立的 verification-test-generation 中间产物。
 
 ### 4.0 冒烟测试报告前置检查
 
@@ -138,11 +140,11 @@ python3 $HELPER update-case-result <plan_case_id> Prepare \
 
 ### 4.1 加载验证数据
 
-读取 `verification_cases.json`，提取每条 VC 的：
-- `case_id`（VC-N 格式）
+读取 `forward_verification.json`，提取每条记录的：
+- `case_id`（来自 final_cases，形如 `M1-TC-01`；降级模式下形如 `FORWARD-TRACER-FP-1`）
 - `requirement_id`（FP-N 格式）
-- `verification.result`（pass / fail / inconclusive）
-- `verification.confidence`（0-100）
+- `result`（pass / fail / inconclusive）
+- `confidence`（0-100）
 
 ### 4.2 获取计划用例
 
@@ -151,31 +153,36 @@ python3 $SKILLS_ROOT/shared-tools/scripts/metersphere_helper.py \
   list-plan-cases <plan_id>
 ```
 
-### 4.3 匹配 VC 到计划用例
+### 4.3 匹配 case_id 到计划用例
 
-通过 `requirement_points.json`（如存在）桥接：
-1. VC 的 `requirement_id`（FP-N）→ `requirement_points` 的 `name`
-2. `requirement_points` 的 `name` → `final_cases` 的 `module` → MS 计划用例的 `node_path`
+`final_cases.json` 的 `case_id` 已经是 MS 用例的天然主键（test-case-generation 直接产出 `M{N}-TC-NN` 格式）。匹配链路：
 
-匹配粒度为**需求点（FP）级别**，同一 FP 下聚合所有 VC 的验证结果。
+1. `forward_verification.json` 的 `case_id`（如 `M1-TC-01`）→ MS 计划用例的 `case_id`（直接相等）
+2. 降级路径（case_id 形如 `FORWARD-TRACER-FP-1`）：通过 `requirement_id` (FP-N) → `requirement_points` 的 `name` → MS 计划用例的 `node_path` 模糊匹配，粒度退化到需求点级别
 
 ### 4.4 判定与回写
 
-对每个需求点（FP），聚合关联 VC 的结果后判定：
+**优先用例级精确判定**（case_id 直接匹配 MS 用例）：
 
-**Pass 判定**：该 FP 下所有 VC 的 `confidence >= threshold` 且 `result == "pass"`
+- `result == "pass"` 且 `confidence >= threshold` → MS 用例标 `Pass`
+- `result == "fail"` 且 `confidence >= 70` → MS 用例标 `Failure`
+- 其余 → 保持 `Prepare`，添加评论说明
+
 ```bash
 python3 $HELPER update-case-result <plan_case_id> Pass \
-  --actual-result "AI 验证通过，平均置信度 95%" \
-  --comment "AI 自动验证：所有关联验证用例均通过"
+  --actual-result "AI 验证通过，置信度 95%" \
+  --comment "AI 自动验证：用例 M1-TC-01 通过"
 ```
 
-**Failure 判定**：该 FP 下任一 VC 的 `confidence >= 70` 且 `result == "fail"`
 ```bash
 python3 $HELPER update-case-result <plan_case_id> Failure \
-  --actual-result "AI 验证失败，VC-3 未通过" \
-  --comment "AI 自动验证：验证用例 VC-3 未通过（置信度 80%）"
+  --actual-result "AI 验证失败：<trace 字段中的实际行为摘要>" \
+  --comment "AI 自动验证：用例 M1-TC-01 未通过（置信度 80%）"
 ```
+
+**降级粒度判定**（case_id 是 `FORWARD-TRACER-FP-N` 时）：
+
+需求点级别聚合——同一 FP 下所有 traceability 输出的判定走"全 pass 才标 Pass、任一 fail 即标 Failure"的旧逻辑，并在评论中注明"降级判定（无用例级粒度）"。
 
 **Manual 判定**：其余情况
 - 保持 `Prepare` 状态
@@ -224,7 +231,7 @@ python3 $HELPER update-case-result <plan_case_id> Prepare \
     "confidence_threshold": 90,
     "details": [
       {"requirement_id": "FP-1", "verdict": "pass", "avg_confidence": 95, "tc_count": 5},
-      {"requirement_id": "FP-2", "verdict": "fail", "failed_vcs": ["VC-3"], "tc_count": 3},
+      {"requirement_id": "FP-2", "verdict": "fail", "failed_cases": ["M2-TC-03"], "tc_count": 3},
       {"requirement_id": "FP-3", "verdict": "manual", "reason": "置信度不足(avg 65)", "tc_count": 2}
     ]
   }

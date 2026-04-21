@@ -64,7 +64,6 @@ dependencies:
     - test-case-generation
     - metersphere-sync
     - change-analysis
-    - verification-test-generation
     - requirement-traceability
     - ui-fidelity-check
     - api-contract-validation

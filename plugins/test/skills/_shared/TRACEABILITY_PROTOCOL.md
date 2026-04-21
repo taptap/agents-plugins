@@ -1,21 +1,23 @@
 # 追溯与验证协议
 
-本文件定义 requirement-traceability、verification-test-generation、test-failure-analyzer 等 skill 共享的追溯和验证相关协议。
+本文件定义 requirement-traceability、test-failure-analyzer 等 skill 共享的追溯和验证相关协议。
 
 ## 双通道追溯模式
 
-v0.0.10 起，requirement-traceability 采用双通道追溯：
+requirement-traceability 采用双通道追溯：
 
 | 通道 | 方向 | 方法 | 回答的问题 |
 | --- | --- | --- | --- |
 | 正向通道 | 需求 → 代码 | 用例中介验证 | 需求是否被正确实现？ |
 | 反向通道 | 代码 → 需求 | 直接代码追溯 | 代码有没有做需求之外的事？ |
 
-**正向通道**将需求拆解为结构化验证用例（具体输入→预期输出），AI 逐条对照代码推理。消费上游 `verification-test-generation` 的 `verification_cases.json`，或内置简化版用例生成。
+**正向通道**用具体的测试用例作为中介——AI 拿用例的"操作步骤 + 预期结果"逐条对照代码推理"代码是否真能实现这条用例"。按优先级消费：① 上游 `final_cases.json`（test-case-generation 产出）→ ② `requirement_points.json` 的 `acceptance_criteria` → ③ 兜底从需求描述提取。详见 [requirement-traceability/PHASES.md](../requirement-traceability/PHASES.md) 3.1-3.2 节。
 
 **反向通道**保持 reverse-tracer Agent 模式，从代码变更出发寻找需求对应。
 
 两个通道并行启动，结果在 output 阶段合并。
+
+> v0.0.7 起合并 verification-test-generation 能力到 traceability 内嵌步骤，不再独立生成中间验证用例文件。
 
 ## 影响范围分析约定
 
@@ -111,46 +113,32 @@ AI 分类标准：
 
 **降级**：页面不可访问时 → structural-only 模式（仅对比设计数据 vs 代码样式定义，跳过截图对比）。
 
-## 验证用例 JSON 格式
+## forward_verification.json 格式
 
-verification-test-generation 生成的验证用例使用以下格式：
+requirement-traceability 正向通道（用例中介验证）的产出。每条记录对应一条用例的代码追踪结果：
 
 ```json
 [
   {
-    "case_id": "VC-1",
+    "case_id": "M1-TC-01",
     "requirement_id": "FP-1",
-    "requirement_name": "功能名称",
-    "case_type": "functional | boundary | error | state",
-    "input": {
-      "description": "输入描述",
-      "params": {}
-    },
-    "expected": {
-      "description": "预期结果描述",
-      "assertion": "具体断言表达式"
-    },
-    "verification": {
-      "method": "ai_reasoning | executable",
-      "result": "pass | fail | inconclusive",
-      "trace": "代码追踪路径",
-      "confidence": 85
-    }
+    "result": "pass | fail | inconclusive",
+    "confidence": 85,
+    "trace": "applyCoupon(100, 50) -> min(coupon, order) -> 50 == expected 50 ✓",
+    "expected": "<用例 expected 原文摘录>",
+    "actual": "<代码追踪推断的实际行为>",
+    "inconclusive_reason": "call_depth_exceeded | dynamic_dispatch | external_dependency | insufficient_context | complex_logic | null"
   }
 ]
 ```
 
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `case_id` | string | 是 | VC- 前缀 + 序号 |
+| `case_id` | string | 是 | 用例编号。来自上游 `final_cases.json`（如 `M1-TC-01`）；降级路径（forward-tracer 模式）形如 `FORWARD-TRACER-FP-1` |
 | `requirement_id` | string | 是 | 对应的需求功能点编号（FP- 前缀） |
-| `requirement_name` | string | 是 | 功能点名称 |
-| `case_type` | string | 是 | functional / boundary / error / state |
-| `input.description` | string | 是 | 输入场景的文字描述 |
-| `input.params` | object | 是 | 具体的输入参数键值对 |
-| `expected.description` | string | 是 | 预期结果的文字描述 |
-| `expected.assertion` | string | 是 | 可验证的断言表达式 |
-| `verification.method` | string | 是 | 验证方式：ai_reasoning（AI 推理）/ executable（可执行测试） |
-| `verification.result` | string | 是 | pass / fail / inconclusive |
-| `verification.trace` | string | 否 | 代码追踪路径（AI 推理验证时的推理链） |
-| `verification.confidence` | number \| null | 是 | 0-100 置信度；降级模式（无代码可验证）时为 `null`，含义见「量化置信度评分」|
+| `result` | string | 是 | pass / fail / inconclusive |
+| `confidence` | number \| null | 是 | 0-100 置信度；降级模式（无代码可验证）时为 `null`，含义见「量化置信度评分」 |
+| `trace` | string | 否 | 代码追踪路径（调用链格式） |
+| `expected` | string | 否 | 用例 expected 原文摘录 |
+| `actual` | string | 否 | 代码追踪推断的实际行为（fail 时必填） |
+| `inconclusive_reason` | string \| null | 否 | inconclusive 时必填，取值见 traceability/PHASES.md 3.2.0 节 |

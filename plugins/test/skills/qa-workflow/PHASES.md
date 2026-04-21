@@ -133,7 +133,7 @@ Skill(skill: "test:metersphere-sync", args: "mode=sync plan_name=<derived_params
 
 3. **用户说"帮我 review 并提 MR"**：
    - 同方式 2 生成 local.diff
-   - 额外标记：Phase 3 步骤 #12、#13 自动执行（不在人工验证 gate #11 暂停）
+   - 额外标记：Phase 3 步骤 #11、#12 自动执行（不在人工验证 gate #10 暂停）
 
 更新 `workflow_state.json`：步骤 #4 标记 `completed`
 
@@ -143,10 +143,6 @@ Skill(skill: "test:metersphere-sync", args: "mode=sync plan_name=<derived_params
 
 ```
 Skill(skill: "test:change-analysis", args: "code_changes=<...> story_link=<...>")
-```
-
-```
-Skill(skill: "test:verification-test-generation", args: "...")
 ```
 
 如 `has_design_link == true`：
@@ -169,10 +165,10 @@ Skill(skill: "test:api-contract-validation", args: "...")
 ### 2.3 需求回溯
 
 ```
-Skill(skill: "test:requirement-traceability", args: "code_changes=<...> story_link=<...>")
+Skill(skill: "test:requirement-traceability", args: "code_changes=<...> story_link=<...> final_cases=$TEST_WORKSPACE/final_cases.json")
 ```
 
-此步骤会自动消费上游产出的 `verification_cases.json`（来自步骤 ⑤）。
+此步骤内嵌正向用例中介验证：消费上游 `final_cases.json`（来自步骤 #2 test-case-generation），对每条用例执行代码路径追踪，输出 `forward_verification.json`。
 
 ### 2.4 MS 执行回写（qa-lite 模板跳过此步）
 

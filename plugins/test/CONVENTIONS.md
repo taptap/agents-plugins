@@ -465,13 +465,13 @@ requirement-clarification → clarified_requirements.json (functional_point.conf
 | requirement-clarification | `FP-1` / `FP-2` ... | 功能点编号 |
 | test-case-generation (review 阶段) | `RP-1` / `RP-2` ... | 需求验证点编号 |
 | requirement-traceability | `R-1` / `R-2` ... | 需求点编号（对照代码变更） |
-| verification-test-generation | `VC-1` / `VC-2` ... | 验证用例编号 |
 
 三套编号是同一批需求在不同 skill 作用域下的**独立编号**，不要求一一对应。它们描述的是同一份需求的不同视角：
 - `FP-` 是澄清阶段识别的功能点（可能粒度较粗）
 - `RP-` 是评审阶段从需求文档中提炼的验证点（可能更细）
 - `R-` 是追溯阶段从需求中提取的映射锚点（有上游 FP- 时直接继承作为主键，R- 作为别名）
-- `VC-` 是验证用例编号（verification-test-generation 产出，保留上游 `FP-` 作为 `requirement_id` 外键）
+
+> v0.0.7 起合并 verification-test-generation：traceability 直接消费 `final_cases.json`（`case_id` 形如 `M1-TC-01`），不再独立生成 `VC-` 编号的中间用例。
 
 下游 skill 消费上游的 `requirement_points.json` 时，按内容重新编号，不继承上游前缀。
 

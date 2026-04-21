@@ -17,13 +17,16 @@ input:
       description: 补充用例文件（change-analysis 或 test-case-review 产出）
       from_upstream: [change-analysis, test-case-review]
   optional:
-    verification_cases:
+    forward_verification:
       type: file
-      description: 验证用例文件（verification-test-generation 产出，含 confidence 和 result）
-      from_upstream: verification-test-generation
+      description: >
+        正向验证结果（requirement-traceability 产出）。每条记录含 case_id、
+        requirement_id、result（pass/fail/inconclusive）、confidence。
+        execute 模式下用于自动标记 MS 用例执行状态。
+      from_upstream: requirement-traceability
     requirement_points:
       type: file
-      description: 需求功能点清单（requirement-clarification 产出，用于 VC→TC 桥接匹配）
+      description: 需求功能点清单（requirement-clarification 产出，用于 FP→TC 桥接匹配）
       from_upstream: requirement-clarification
     smoke_test_report:
       type: file

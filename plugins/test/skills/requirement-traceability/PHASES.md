@@ -82,22 +82,29 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 
 文本模式 / 文件模式：diff 内容已就绪。
 
-### 3.1 检查上游验证用例与 ID 映射
+### 3.1 输入路由：定位用例输入与 ID 映射
 
-检查工作目录中是否存在 `verification_cases.json`（上游 verification-test-generation 产出）：
+正向通道需要"用例"作为中介。按以下优先级在工作目录查找：
 
-1. 如果存在 → Read 该文件，用于正向通道的用例中介验证
-2. 如果不存在 → 在 3.2 中使用内置简化版用例生成
+| 优先级 | 文件 | 来源 | 处理 |
+| --- | --- | --- | --- |
+| 1 | `final_cases.json` | 上游 test-case-generation | 直接消费，`steps[].action` 当 input、`steps[].expected` 当 expected，`case_id` 形如 `M1-TC-01` |
+| 2 | `requirement_points.json` | 上游 requirement-clarification 或 test-case-generation 中间产物 | 每条 `acceptance_criteria` 转 1-2 条简化用例（兜底用） |
+| 3 | 都不存在 | — | 从 `traceability_checklist.md` 需求描述自行提取（最弱降级，覆盖面差，应在报告中标注） |
 
-**ID 映射**：上游 verification_cases.json 中 `requirement_id` 使用 `FP-` 前缀（来自 requirement-clarification），采用**编号直接继承**策略：
+> v0.0.7 起合并原 verification-test-generation 能力。不再消费 `verification_cases.json` 这一层中间产物——直接复用上游测试用例避免重复建模。
+
+**ID 映射**（采用编号直接继承策略）：
 
 1. 回读 `traceability_checklist.md` 中的需求点列表
-2. 回读 `verification_cases.json` 中的 requirement_id（FP-1, FP-2...）
+2. 用例文件中：
+   - `final_cases.json` 通过 `module` 字段关联需求点（test-case-generation 的模块名继承自 requirement-clarification 的 FP-N name）
+   - `requirement_points.json` 已直接含 `id` (FP-N)
 3. **直接使用上游 FP- 编号作为主键关联**，同时记录本地 R- 编号作为别名（如 `FP-1 = R-1 (用户注册)`）
 4. 将映射表追加写入 `traceability_checklist.md` 的末尾
-5. 后续正向通道消费 verification_cases 时，通过 FP- 主键直接关联，无需语义匹配
+5. 后续正向通道通过 FP- 主键直接关联，无需语义匹配
 
-> 仅当无上游 FP- 编号（独立使用模式）时，才使用 R- 独立编号，无需建立映射。
+> 仅当无上游 FP- 编号（独立使用模式）时，才使用 R- 独立编号。
 
 同时检查 `ui_fidelity_report.json` 是否存在（上游 UI 还原度检查产出）：
 1. 如果存在 → 在 4.4 中直接合并到 traceability_coverage_report.json
@@ -109,34 +116,86 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 
 ### 3.2 正向通道：用例中介验证
 
-**有上游 verification_cases.json 时**：
+#### 3.2.0 可追踪性评估（前置硬规则）
 
-直接消费上游验证用例，对每条用例执行代码路径追踪：
+对每条用例，在追踪前先评估代码路径的**静态可追踪性**。命中以下任一条件 → 直接标记 `inconclusive`，不进入下方追踪流程：
 
-1. 回读 `verification_cases.json`
-2. **可追踪性评估**（前置）：对每条用例先评估代码路径的静态可追踪性——调用链超过 3 层、包含动态分派、调用目标跨服务 → 直接标记 `inconclusive`；diff-only 模式下 confidence 上限 70。详细规则参照 [verification-test-generation/PHASES.md](../verification-test-generation/PHASES.md) 4.2.0 节
-3. 对每条通过可追踪性评估的 verification case：
-   - 读取用例的 input 和 expected
-   - 在代码中找到对应的入口函数/API
-   - 追踪 input 在代码中的执行路径
-   - 判断执行结果是否符合 expected
-   - 标记 pass/fail/inconclusive + confidence
-4. 将验证结果写入 `forward_verification.json`
+| 条件 | 处理方式 | inconclusive 原因 |
+| --- | --- | --- |
+| 调用链超过 3 层 | 强制 `inconclusive` | `call_depth_exceeded` |
+| 包含动态分派（接口多态、泛型、反射） | 强制 `inconclusive` | `dynamic_dispatch` |
+| 调用目标跨服务或外部依赖 | 强制 `inconclusive` | `external_dependency` |
+| diff-only 模式（无完整源码） | 不阻断，但 confidence 上限 70 | — |
+| 条件分支嵌套过深或涉及事务/并发 | 强制 `inconclusive` | `complex_logic` |
 
-**无上游 verification_cases.json 时（内置简化版）**：
+为什么前置：避免 AI 在不可靠的代码路径上"硬编"出一个 pass/fail 结论。inconclusive 比错误结论更有价值。
 
-1. 从 `traceability_checklist.md` 的需求点中提取验收标准
-2. 为每条验收标准生成 1-2 条简化验证用例（输入→预期）
-3. 对每条用例执行上述代码路径追踪
-4. 注意：内置版的用例覆盖面不如上游 verification-test-generation 完整
+#### 3.2.1 追踪流程
 
-**降级**：如果代码不可读或 diff 信息不足 → 降级为传统 forward-tracer 模式。降级时 forward-tracer 输出 `{agent, requirement_to_code}` 格式（`status: covered/partial/missing`），需适配为 `forward_verification.json` 格式后写入：
+对每条通过可追踪性评估的用例：
+
+1. **定位入口**：
+   - 来自 `final_cases.json`：用 `module` + `steps[0].action` 推断入口函数（如 "调用登录接口" → 在 `auth/login.go` 找 handler）
+   - 来自 `requirement_points.json` 简化版：用 `acceptance_criteria` 中的关键动词推断入口
+2. **追踪路径**：沿调用链追踪输入如何被处理，记录关键节点
+3. **判定结果**：比对实际执行路径的输出与用例 expected
+   - 输出匹配预期 → `pass`
+   - 输出不匹配预期 → `fail`，记录实际输出
+   - 无法确定 → `inconclusive`
+4. **反证检查**（仅 `pass` 结论）：构造一个使该断言失败的代码变体场景。如果能轻易构造（如删除一行条件判断即可导致失败）→ 降低 confidence 10 分并在 trace 中追加 `risk_note`
+5. **评估置信度**：
+   - 90-100：代码路径清晰，断言可直接验证，反证检查未发现风险
+   - 70-89：代码路径可追踪但存在间接调用或条件分支
+   - 50-69：基于 diff 推断，无法看到完整上下文
+   - <50：纯推测，代码路径不可达
+
+#### 3.2.2 追踪记录格式
+
+`forward_verification.json` 中每条记录的 `trace` 字段采用调用链格式：
+
+```
+入口函数() -> 中间调用() -> 关键逻辑(参数) -> 结果 == 预期值
+```
+
+示例：
+- pass: `applyCoupon(100, 50) -> min(coupon, order) -> min(100, 50) -> 50 == expected 50 ✓`
+- fail: `applyCoupon(100, 50) -> coupon - order -> 100 - 50 -> 50, 但实际返回 100 ≠ expected 50 ✗`
+- inconclusive（外部依赖）: `applyCoupon() 存在但内部调用 externalService.calculate()，外部服务逻辑不可见`
+- inconclusive（调用链过深）: `handleOrder() -> processPayment() -> validateCoupon() -> applyCoupon() -> calculateDiscount()，超过 3 层调用链`
+- inconclusive（动态分派）: `processor.Execute() 为接口方法，实际实现取决于运行时注入`
+
+`inconclusive` 原因分类必须填入 `verification.inconclusive_reason` 字段，取值见 3.2.0 表格。
+
+#### 3.2.3 写入结果
+
+将所有用例的验证结果写入 `forward_verification.json`，格式：
+
+```json
+[
+  {
+    "case_id": "M1-TC-01",
+    "requirement_id": "FP-1",
+    "result": "pass | fail | inconclusive",
+    "confidence": 85,
+    "trace": "applyCoupon(100, 50) -> ...",
+    "expected": "<用例 expected 原文摘录>",
+    "actual": "<代码追踪推断的实际行为>",
+    "inconclusive_reason": "call_depth_exceeded | null"
+  }
+]
+```
+
+#### 3.2.4 降级回退
+
+如果代码不可读、diff 信息严重不足（如 fetch 阶段只拿到文件名清单）→ 降级为传统 forward-tracer Agent 模式（不做用例中介，直接需求 → 代码模糊映射）。降级时 forward-tracer 输出 `{agent, requirement_to_code}` 格式（`status: covered/partial/missing`），需适配为 `forward_verification.json` 格式后写入：
 
 | forward-tracer status | 映射后 result | confidence 处理 |
 | --- | --- | --- |
 | `covered` | `pass` | 保留 forward-tracer 的 confidence |
-| `partial` | `inconclusive` | confidence 取 forward-tracer 值的 80%（部分实现无法判定 pass） |
+| `partial` | `inconclusive` | confidence 取 forward-tracer 值的 80% |
 | `missing` | `fail` | 保留 forward-tracer 的 confidence |
+
+降级时 `case_id` 字段填 `"FORWARD-TRACER-{requirement_id}"`，标记数据来源。
 
 ### 3.2.5 API 契约感知检查（条件触发）
 
@@ -303,7 +362,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 5. `state_coverage_rate` ← `ui_fidelity_report.json` 的 `states_coverage.coverage_rate`
 6. `source` ← `"ui-fidelity-check"`（上游产出）或 `"inline"`（本 skill 内置检查）
 7. 如无 `ui_fidelity_report.json` 且未执行 UI 检查 → `ui_fidelity` 字段不写入
-8. 当 `ui_fidelity.by_severity.high > 0` 时，对相关需求点的 `forward_verification.json` 结果追加 `ui_risk_flag: true` 标记。4.6 缺陷提取时，来源 1 中 `result == "pass"` 但 `ui_risk_flag == true` 的条目，在 `smoke_test_report.json` 的 `notes` 中提示"代码验证通过但存在 UI 还原度高风险差异，建议人工验证"
+8. 当 `ui_fidelity.by_severity.high > 0` 时，对相关需求点的 `forward_verification.json` 结果追加 `ui_risk_flag: true` 标记。4S.1 缺陷提取时，来源 1 中 `result == "pass"` 但 `ui_risk_flag == true` 的条目，在 `smoke_test_report.json` 的 `notes` 中提示"代码验证通过但存在 UI 还原度高风险差异，建议人工验证"
 
 - `api_contract`: 如果有 `api_contract_report.json`（上游产出）或 3.2.5 内置检查结果，按以下字段映射合并 API 契约数据：
 
@@ -347,9 +406,9 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 - API 契约存在 high 级别不一致（前后端字段/类型/路径不匹配）→ 高风险
 - API 契约存在 medium 级别不一致（命名风格差异、可选字段遗漏等）→ 中风险
 
-### 4.6 缺陷提取与优先级判定（smoke-test 模式）
+### 4S.1 缺陷提取与优先级判定（仅 smoke-test 模式）
 
-仅当 `mode == "smoke-test"` 时执行，否则跳过。
+> 编号 `4S.x` 表示 smoke-test 模式专用步骤，跟前述 4.x（标准模式产出）属于不同分支，不是顺序子节。`mode != "smoke-test"` 时整段跳过，直接进入 Phase 5 自循环判定。
 
 回读 `forward_verification.json`、`traceability_coverage_report.json`、`traceability_matrix.json`，从以下来源提取缺陷：
 
@@ -404,13 +463,13 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 
 **confidence 过滤**：来源 1 中 confidence < 70 的 fail 项不提取为缺陷，仅在 `smoke_test_report.json` 的 `low_confidence_items` 中记录供参考。
 
-将提取结果暂存，供 4.7 写入文件。
+将提取结果暂存，供 4S.2 写入文件。
 
-### 4.7 生成冒烟测试报告（smoke-test 模式）
+### 4S.2 生成冒烟测试报告（仅 smoke-test 模式）
 
-仅当 `mode == "smoke-test"` 时执行，否则跳过。
+承接 4S.1 的缺陷列表。`mode != "smoke-test"` 时跳过。
 
-1. **写入 `defect_list.json`**：将 4.6 提取的缺陷按优先级排序（P0 在前），格式见 [TEMPLATES.md](TEMPLATES.md#defect_listjson)
+1. **写入 `defect_list.json`**：将 4S.1 提取的缺陷按优先级排序（P0 在前），格式见 [TEMPLATES.md](TEMPLATES.md#defect_listjson)
 2. **写入 `smoke_test_report.json`**：汇总验证统计和缺陷统计，格式见 [TEMPLATES.md](TEMPLATES.md#smoke_test_reportjson)
 3. **P0 门控判定**：
    - `defect_list.json` 中 `priority == "P0"` 的缺陷数 > 0 → `verdict: "fail"`，`fail_reason` 列出 P0 缺陷摘要
@@ -427,7 +486,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 
 ## 阶段 5: loop - 回溯自循环（条件触发）
 
-> **smoke-test 模式行为**：当 `mode == "smoke-test"` 时，跳过 Phase 5 整个自循环阶段。冒烟测试场景不做交互式缺口修复，4.7 产出即为最终结果。
+> **smoke-test 模式行为**：当 `mode == "smoke-test"` 时，跳过 Phase 5 整个自循环阶段。冒烟测试场景不做交互式缺口修复，4S.2 产出即为最终结果。
 
 当 traceability_coverage_report.json 存在 `missing` 或 `partial` 状态的需求点时，自动进入缺口修复循环。
 
@@ -478,7 +537,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 
 1. 仅对**用户确认需要重新追溯的需求点**执行增量分析（不重跑全量）
 2. 重新获取相关代码变更的最新 diff（代码可能已更新）
-3. 使用与 Phase 3.2 一致的验证方式（有 verification_cases 时用用例中介验证，否则用内置简化版），仅对修复的需求点对应的验证用例增量执行。forward-tracer 仅在与首次全量验证相同的降级条件触发时才使用
+3. 使用与 Phase 3.2 一致的验证方式（按 3.1 输入路由优先级消费 `final_cases.json` / `requirement_points.json`），仅对修复的需求点对应的用例增量执行。forward-tracer agent 仅在与首次全量验证相同的降级条件触发时才使用
 4. 合并增量结果到 `traceability_matrix.json` 和 `traceability_coverage_report.json`
 5. 回到 5.0 重新判定缺口
 

@@ -12,7 +12,6 @@
 agents/
 ├── AGENT_TEMPLATE.md                 # 统一模板
 ├── test-case-writer.md               # 测试用例生成 Agent
-├── verification-test-writer.md       # 验证用例生成 Agent
 ├── failure-classifier.md             # 测试失败分类 Agent (预留)
 ├── ui-fidelity-checker.md            # UI 还原度检查 Agent
 ├── requirement-understanding/        # 需求理解多视角 Agent

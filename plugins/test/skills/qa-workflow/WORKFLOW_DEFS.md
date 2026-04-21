@@ -13,14 +13,13 @@
   {"id": 3, "skill": "metersphere-sync", "phase": 1, "params": {"mode": "sync", "plan_name": "auto"}},
   {"id": 4, "type": "user_gate", "phase": 1, "prompt": "编码完成后回来，提供 MR 链接或说'代码写完了'", "transitions_to": 2},
   {"id": 5, "skill": "change-analysis", "phase": 2, "parallel_group": "verify"},
-  {"id": 6, "skill": "verification-test-generation", "phase": 2, "parallel_group": "verify"},
-  {"id": 7, "skill": "ui-fidelity-check", "phase": 2, "condition": "has_design_link", "parallel_group": "verify"},
-  {"id": 8, "skill": "api-contract-validation", "phase": 2, "condition": "coordination_needed"},
-  {"id": 9, "skill": "requirement-traceability", "phase": 2},
-  {"id": 10, "skill": "metersphere-sync", "phase": 2, "params": {"mode": "execute", "plan_name": "auto"}},
-  {"id": 11, "type": "user_gate", "phase": 2, "prompt": "请在 MS 中验证低置信度用例，完成后回来", "transitions_to": 3},
-  {"id": 12, "skill": "git:code-reviewing", "phase": 3},
-  {"id": 13, "skill": "git:commit-push-pr", "phase": 3, "optional": true}
+  {"id": 6, "skill": "ui-fidelity-check", "phase": 2, "condition": "has_design_link", "parallel_group": "verify"},
+  {"id": 7, "skill": "api-contract-validation", "phase": 2, "condition": "coordination_needed"},
+  {"id": 8, "skill": "requirement-traceability", "phase": 2},
+  {"id": 9, "skill": "metersphere-sync", "phase": 2, "params": {"mode": "execute", "plan_name": "auto"}},
+  {"id": 10, "type": "user_gate", "phase": 2, "prompt": "请在 MS 中验证低置信度用例，完成后回来", "transitions_to": 3},
+  {"id": 11, "skill": "git:code-reviewing", "phase": 3},
+  {"id": 12, "skill": "git:commit-push-pr", "phase": 3, "optional": true}
 ]
 ```
 
@@ -34,12 +33,11 @@
   {"id": 2, "skill": "test-case-generation", "phase": 1, "params": {"confirm_policy": "accept_all"}},
   {"id": 3, "type": "user_gate", "phase": 1, "prompt": "编码完成后回来，提供 MR 链接或说'代码写完了'", "transitions_to": 2},
   {"id": 4, "skill": "change-analysis", "phase": 2, "parallel_group": "verify"},
-  {"id": 5, "skill": "verification-test-generation", "phase": 2, "parallel_group": "verify"},
-  {"id": 6, "skill": "ui-fidelity-check", "phase": 2, "condition": "has_design_link", "parallel_group": "verify"},
-  {"id": 7, "skill": "api-contract-validation", "phase": 2, "condition": "coordination_needed"},
-  {"id": 8, "skill": "requirement-traceability", "phase": 2},
-  {"id": 9, "skill": "git:code-reviewing", "phase": 3},
-  {"id": 10, "skill": "git:commit-push-pr", "phase": 3, "optional": true}
+  {"id": 5, "skill": "ui-fidelity-check", "phase": 2, "condition": "has_design_link", "parallel_group": "verify"},
+  {"id": 6, "skill": "api-contract-validation", "phase": 2, "condition": "coordination_needed"},
+  {"id": 7, "skill": "requirement-traceability", "phase": 2},
+  {"id": 8, "skill": "git:code-reviewing", "phase": 3},
+  {"id": 9, "skill": "git:commit-push-pr", "phase": 3, "optional": true}
 ]
 ```
 
@@ -53,11 +51,10 @@
 [
   {"id": 1, "type": "user_gate", "phase": 1, "prompt": "请提供 MR 链接或说'代码写完了'", "transitions_to": 2},
   {"id": 2, "skill": "change-analysis", "phase": 2, "parallel_group": "verify"},
-  {"id": 3, "skill": "verification-test-generation", "phase": 2, "parallel_group": "verify"},
-  {"id": 4, "skill": "ui-fidelity-check", "phase": 2, "condition": "has_design_link", "parallel_group": "verify"},
-  {"id": 5, "skill": "api-contract-validation", "phase": 2, "condition": "coordination_needed"},
-  {"id": 6, "skill": "requirement-traceability", "phase": 2},
-  {"id": 7, "skill": "git:code-reviewing", "phase": 3},
-  {"id": 8, "skill": "git:commit-push-pr", "phase": 3, "optional": true}
+  {"id": 3, "skill": "ui-fidelity-check", "phase": 2, "condition": "has_design_link", "parallel_group": "verify"},
+  {"id": 4, "skill": "api-contract-validation", "phase": 2, "condition": "coordination_needed"},
+  {"id": 5, "skill": "requirement-traceability", "phase": 2},
+  {"id": 6, "skill": "git:code-reviewing", "phase": 3},
+  {"id": 7, "skill": "git:commit-push-pr", "phase": 3, "optional": true}
 ]
 ```

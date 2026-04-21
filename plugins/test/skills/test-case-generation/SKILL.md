@@ -3,7 +3,7 @@ name: test-case-generation
 description: >
   根据需求文档和澄清结果拆解功能模块，生成结构化测试用例，并通过冗余对评审确保质量。
   输入需求链接、本地需求文档或上游澄清结果，输出 final_cases.json。
-  不适用于：冒烟验证（使用 verification-test-generation）。
+  不适用于：冒烟验证（使用 requirement-traceability 的 smoke-test 模式）。
   触发：生成测试用例、写用例、测试设计、用例生成、帮我生成用例。
 ---
 

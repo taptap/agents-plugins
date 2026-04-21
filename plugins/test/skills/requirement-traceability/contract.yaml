@@ -31,10 +31,12 @@ input:
       type: file
       description: 上游功能点清单
       from_upstream: requirement-clarification
-    verification_cases:
+    final_cases:
       type: file
-      description: 上游验证用例（verification-test-generation 产出）
-      from_upstream: verification-test-generation
+      description: >
+        上游测试用例集，正向用例中介验证的优先输入。每条用例的
+        steps[].action / steps[].expected 直接作为追踪输入和断言。
+      from_upstream: test-case-generation
     design_link:
       type: string
       description: Figma 设计稿链接（UI 还原度检查时使用）
