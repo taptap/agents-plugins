@@ -306,7 +306,7 @@ shared-tools 脚本依赖以下环境变量（按需配置）：
 
 ## 版本历史
 
-- **v0.0.5** - feedback skill 拆分为多文件架构；测试质量规则共享化（`_shared/`）；新增探索性测试法；统一用例 JSON 格式契约；修复启动器负责人矛盾和 headers 缩进 bug；删除废弃 bug-fix-review；补充 Closing Checklist 和触发词负向界定
+- **v0.0.5** - 新增跨仓库契约桥（`contract-bridge-check.py`）+ 5 个 JSON schema（testcase/defect-list/smoke-test-report/rr-summary/ca-summary）；新增 `codex_agent.py` 独立 Codex 代理 + change-analysis Phase 3.5 cross-validation agent；契约驱动的 RR/CA 结构化摘要输出供 ai-case 消费；MS 导入 tag 字段后端统一（`--tags` CLI）；修复 codex_agent 路径校验 sibling-prefix 漏洞和 OpenAI timeout 边界；feedback skill 拆分为多文件架构；测试质量规则共享化（`_shared/`）；新增探索性测试法；统一用例 JSON 格式契约；修复启动器负责人矛盾和 headers 缩进 bug；删除废弃 bug-fix-review；补充 Closing Checklist 和触发词负向界定
 - **v0.0.3** - 新增 `qa-workflow` 编排器和 `metersphere-sync` skill；新增 feedback skill（Slack 反馈分析 + 飞书 Bug 创建）；change-analysis 新增 Urhox 二进制影响分析；统一 .env 配置；`ask_question` 迁移至原生 AskUserQuestion 工具调用
 - **v0.0.2** - 新增 `.codex-plugin/` manifest，支持 Codex CLI 兼容
 - **v0.0.1** - 首次发布；完整 QA 工作流插件，包含需求澄清、测试用例生成（含冗余对评审）、用例评审、变更分析、需求回溯（含冒烟测试模式）、代码级测试生成（单元/集成）、API 契约校验、UI 还原度检查等全流程 Skill；共享工具集（飞书文档获取、MR/PR 分析脚本）；阶段执行保障和输出验证机制

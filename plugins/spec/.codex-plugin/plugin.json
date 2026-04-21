@@ -1,6 +1,6 @@
 {
   "name": "spec",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Spec-Driven Development 插件，自动执行完整开发流程",
   "author": {
     "name": "TapTap AI Team"
