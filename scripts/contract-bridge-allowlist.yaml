@@ -17,6 +17,9 @@ framework:
   - marketplace.json
   - README.md
   - EXTERNAL-IMPACT.md
+  # plugin 配套规范文档，被 ai-case ai_assistant_service.py 链到 work_dir/.claude/CONVENTIONS.md
+  # 不是 skill 产物，应归入 framework 类
+  - CONVENTIONS.md
 
 backend_written:
   # ai-case story_prefetch.py 写入工作目录的文件

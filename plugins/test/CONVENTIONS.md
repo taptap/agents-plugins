@@ -525,7 +525,14 @@ requirement-clarification → clarified_requirements.json (functional_point.conf
 
 ### 严格校验
 
-后端 `case_schema.TestCase` 在 PreToolUse hook 对所有 `*_cases.json` 强制校验，**任何不符合上表字段定义的写入都会被即时拒收并要求重写**。完整示例：
+所有 `*_cases.json` 必须通过 in-process MCP tool **`mcp__cases__save_test_cases(file_path, cases)`** 写入，禁止用 Write 工具直接写。该 tool 的 `input_schema` 由后端 `case_schema.TestCase`（Pydantic v2，`extra=forbid`）通过 `TypeAdapter` 生成，**字段约束在 LLM 生成 tool input 的阶段就被 Anthropic API 强制**——违反字段定义、缺必填字段、用错枚举值都会在生成层直接拒绝，根本不会落盘。
+
+防御层级（从前到后）：
+1. **生成层**（最强）：tool input_schema → Anthropic API 拒绝不符合 schema 的 tool 调用
+2. **tool 内二次校验**：tool 实现内部再调一次 `case_schema.validate_cases()`，捕获 `model_validator` 才能识别的语义错（顶层 `expected`/`tags`、`name→title` 等拼写漂移）
+3. **Hook 引导**：PreToolUse hook 检测到 Write `*_cases.json` 时直接 `deny`，引导 AI 改用 MCP tool
+
+完整示例（这就是 tool `cases` 参数中每条用例的形态）：
 
 ```json
 {

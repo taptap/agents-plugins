@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.38
+
+### Test Plugin (0.0.7)
+
+- Added `mcp__cases__save_test_cases` in-process MCP tool path for all `*_cases.json` writes: schema is built from backend `case_schema.TestCase` (Pydantic v2) via `TypeAdapter`, enforced at the Anthropic API generation layer so field-name typos and structural drift are rejected before the tool call lands; `Write *_cases.json` now denied by hook and redirected to the new tool
+- Changed change-analysis, test-case-generation, test-case-review PHASES.md to instruct the model to call `mcp__cases__save_test_cases` instead of `Write`; Bash-merge escape retained for >50-case files (`test_cases.json`, `final_cases.json`) where pure LLM output paths risk token truncation
+- Changed test-case-writer agent: removed `Write` from `tools`, added `mcp__cases__save_test_cases`; removed self-check section since schema is now enforced at generation
+- Changed CONVENTIONS.md "严格校验" section to reflect the new layered defense (input_schema → tool-side `validate_cases` → hook redirect) instead of the obsolete PreToolUse hook narrative
+- Changed test-case-generation PHASES.md to drop "post_complete 自动修正/兜底" framing in favor of "schema enforced at generation"
+- Changed `_shared/LARGE_FILE_HANDLING.md` to clarify that MCP tool input is subject to the same LLM token limit as Write
+- Fixed requirement-review degraded mode: allow review to proceed when requirement doc is missing instead of hard-blocking
+
+### Marketplace
+
+- Bumped version from 0.1.37 to 0.1.38
+- Updated test plugin to version 0.0.7
+
 ## 0.1.37 — Codex plugins: zero-touch auto-install for team distribution
 
 ### Sync Plugin (0.1.29)

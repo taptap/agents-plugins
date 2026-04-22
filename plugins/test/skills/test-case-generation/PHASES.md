@@ -297,13 +297,13 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 1. Task 返回后用 Glob 确认 `module_{index}_cases.json` 是否存在
 2. 文件不存在或为空：重试 1 次
-3. JSON 格式错误：严重问题才修复，轻微格式问题由后端 `post_complete` 自动修正
+3. JSON 格式错误：MCP tool `mcp__cases__save_test_cases` 已在生成阶段强约束字段，理论上不会出现格式错；如确实失败说明逻辑错（如 cases 数组为空、文件路径越权），按错误信息修正后重试
 4. 重试仍失败：在主 Agent 中直接生成
 5. 所有模块处理完后再进入 review 阶段
 
 ### 4.2 直接生成（模块 < 3 个，或简单需求快速路径）
 
-在主 Agent 中按模块顺序生成所有用例，写入对应的 `module_{N}_cases.json`（N 从 1 开始，如 `module_1_cases.json`）。简单需求快速路径（阶段 3.0）视为单模块，写入 `module_1_cases.json`。
+在主 Agent 中按模块顺序生成所有用例，调用 `mcp__cases__save_test_cases(file_path='<workdir>/module_{N}_cases.json', cases=[...])` 写入对应模块文件（N 从 1 开始）。简单需求快速路径（阶段 3.0）视为单模块，写入 `module_1_cases.json`。**禁止用 Write 工具直接写 *_cases.json**。
 
 生成前回读 `sufficiency_assessment.json` 获取 `confidence_ceiling`，所有用例的 `confidence` 不得超过此值。
 
@@ -326,10 +326,13 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 将所有 `module_{N}_cases.json` 合并为单个 `test_cases.json`（顶层 JSON 数组）。每条用例的 `module` 字段标识归属模块，`confidence` 字段保留。
 
+**实现方式**：用 Bash 脚本（jq 或 Python）做纯数据合并 —— 读取所有 `module_*_cases.json`、concat 成数组、写入 `test_cases.json`。Bash 脚本不经过 LLM 输出层，避免 token 截断；数据已是 MCP tool 校验过的合法用例，无需再走 schema 校验。
+
+> 模型有强烈偏好走 `mcp__cases__save_test_cases` 时也允许，但用例数 > 50 条会触发 token 截断风险，优先用 Bash。
+
 ### 5.2 快速自审
 
-> 格式校验（priority 合规、steps/expected 对齐）由后端 `post_complete` 自动完成，AI 只需关注内容质量。
-> 但**禁止依赖后端兜底**：`steps` 必须始终是 `[{"action": "...", "expected": "..."}]` 配对格式，禁止使用 `steps: string[]` + 顶层 `expected` 的旧格式（详见 [CONVENTIONS.md 禁止的旧格式](../../CONVENTIONS.md#禁止的旧格式)）。
+> 格式校验（priority 合规、steps/expected 配对、字段名拼写）由 `mcp__cases__save_test_cases` 的 input_schema 在生成阶段强制，违反直接被 API 拒绝。本节只关注内容质量（去重、覆盖度、置信度），不必再操心字段格式。
 
 **跨模块去重**（两步法）：
 1. **字面去重**（快速）：使用 Grep 搜索 `test_cases.json` 中的 `"title"` 字段，标记完全相同或高度相似的标题对
@@ -346,7 +349,7 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 - 50 ≤ confidence < 70 → 标记为「需人工确认」（保留但标注）
 - confidence ≥ 70 → 正常保留
 
-自审完成后将修改后的结果写回 `test_cases.json`。
+自审完成后将修改后的结果写回 `test_cases.json`：少量改动（如删除几条、补充少量用例）调用 `mcp__cases__save_test_cases`；大批量改动建议先 Read + Bash 脚本处理后写回。**禁止用 Write 直接写 *_cases.json**。
 
 ### 5.3 提炼需求功能点清单（供评审使用）
 
@@ -533,7 +536,7 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 ]
 ```
 
-如有补充用例写入 `supplementary_cases.json`。如无覆盖缺口则跳过。
+如有补充用例，调用 `mcp__cases__save_test_cases(file_path='<workdir>/supplementary_cases.json', cases=[...])` 写入。如无覆盖缺口则跳过、不调用 tool。**禁止用 Write 直接写 *_cases.json**。
 
 ### 7.2 生成 final_cases.json
 
@@ -544,7 +547,9 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 3. 为每条用例标记 `source` 字段（`generated` 或 `supplementary`）
 4. 写入 `final_cases.json`
 
-> **防截断规则**：当用例总数超过 50 条时，禁止用 Write 工具一次性写入 `final_cases.json`。改用 Bash 执行 Python 脚本合并：读取 `test_cases.json` + `supplementary_cases.json`（如有），添加 `source` 字段后写入 `final_cases.json`。这样避免 LLM 输出 token 限制导致 JSON 截断。
+**实现方式（强制 Bash 路径）**：用 Bash 执行 Python/jq 脚本合并 —— 读取 `test_cases.json` + `supplementary_cases.json`、添加 `source` 字段、写入 `final_cases.json`。Bash 路径不经过 LLM 输出层，避免 token 截断；输入数据已是 MCP tool 校验过的合法用例，无需再走 schema 校验。
+
+> 禁止用 Write 直接写 `final_cases.json`（会被 hook 拒绝）；也不建议用 `mcp__cases__save_test_cases` —— 用例总数通常超过 50 条，纯 LLM 输出路径会触发 token 截断。
 
 ### 7.3 生成评审摘要
 

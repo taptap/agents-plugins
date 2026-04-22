@@ -37,7 +37,7 @@ Sonnet
 
 ## 输出格式
 
-将用例以 JSON 数组写入 `module_{index}_cases.json`，`module` 字段填写模块名称，全部使用中文。
+调用 MCP tool `mcp__cases__save_test_cases(file_path='<workdir>/module_{index}_cases.json', cases=[...])` 写入用例。**禁止用 Write 工具直接写 *_cases.json**，会被 hook 拒绝。tool input_schema 已强约束字段（title/priority/preconditions/steps），违反字段定义会被 API 在生成阶段直接拒绝，无需手写 JSON 字符串。`module` 字段填写模块名称，全部使用中文。
 
 ```json
 [

@@ -139,11 +139,11 @@
 
 ### 5.3 补充用例生成
 
-为覆盖缺口生成补充用例，使用 [CONVENTIONS.md 用例 JSON 格式](../../CONVENTIONS.md#用例-json-格式)。**顶层必须是 JSON 数组**，禁止用对象包裹（如 `{modules:[...]}` 或 `{cases:[...]}`）。
+为覆盖缺口生成补充用例。
 
-**强制配对格式**：`steps` 必须是 `[{"action": "...", "expected": "..."}]`。禁止使用 `steps: string[]` + 顶层 `expected` 的旧格式（详见 [CONVENTIONS.md 禁止的旧格式](../../CONVENTIONS.md#禁止的旧格式)）。
+**写入方式（强制）**：调用 MCP tool `mcp__cases__save_test_cases(file_path='<workdir>/supplementary_cases.json', cases=[...])`。**禁止用 Write 工具直接写 *_cases.json**，会被 hook 拒绝。tool input_schema 已强约束字段（title/priority/preconditions/steps），违反字段定义会被 API 在生成阶段直接拒绝。详见 [CONVENTIONS.md 用例 JSON 格式](../../CONVENTIONS.md#用例-json-格式)。
 
-写入 `supplementary_cases.json`。如果没有需要补充的用例，不创建此文件。
+如果没有需要补充的用例，跳过本步骤、不调用 tool。
 
 ### 5.4 输出
 
