@@ -594,7 +594,13 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 3. 手动确认映射（修正 AI 追溯结果）
 ```
 
-**用户无响应 → 停止自循环**，输出当前状态即为最终结果。
+**该提问必须通过 AskUserQuestion 工具发出**（不能仅在 chat 输出后续等待），option 提供上述 3 个动作 + 第 4 个元操作「停止自循环（输出当前状态）」。
+
+**「用户终止」判定标准**（替代旧的"无响应"模糊措辞）：
+- 用户在 AskUserQuestion 选择第 4 项「停止自循环」→ 立即退出，`exit_reason: "user_terminated"`
+- 用户回复中明确包含"停止 / 取消 / 不修了 / 算了 / 就这样"等终止意图 → 同上
+- 用户回复无法解析（如返回非选项内容且无明确意图）→ **不要静默退出**，再次发起 AskUserQuestion 澄清意图（最多 1 次）；澄清后仍不可解析才退出，`exit_reason: "user_terminated"` + 在 loop_metadata 标 `last_response_unparseable: true`
+- **不存在"超时无响应"概念** — Skill 内不做计时；上层会话框架决定何时打断
 
 ### 5.3 增量重跑
 
@@ -611,7 +617,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 自循环的退出条件（满足任一即退出）：
 
 1. **全部覆盖**：所有需求点状态为 `covered` 或 `deferred` → 输出最终报告
-2. **达到最大轮次**：默认最大 3 轮（可通过 `max_loop_iterations` 参数调整），超过后强制退出并在报告中标注未收敛的缺口
+2. **达到最大轮次**：默认最大 3 轮（通过 contract.yaml 已声明的 `max_loop_iterations` 输入参数调整），超过后强制退出并在报告中标注未收敛的缺口
 3. **无进展**：本轮与上轮的缺口列表完全一致（无新覆盖的需求点）→ 强制退出，标注为"需人工介入"
 4. **用户主动终止**：用户在 5.2 步骤选择停止
 
@@ -649,15 +655,18 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 
 ### 6.2 调用 metersphere-sync execute
 
-用 Skill 工具调用：
+通过 Skill 工具调用 `test:metersphere-sync`，传入 `mode=execute` 与已解析的 `plan_name`。`forward_verification.json` 不需要作为参数显式传递 — 它已在 `$TEST_WORKSPACE/` 工作目录中，metersphere-sync 自行从约定路径读取。
 
-```
-Skill(skill: "test:metersphere-sync", args: "mode=execute plan_name=<plan_name> forward_verification=$TEST_WORKSPACE/forward_verification.json")
-```
+调用示意（实际由模型运行 Skill 工具时填写参数）：
+
+- **skill**：`test:metersphere-sync`
+- **args**：自然语言指令，必须包含两个关键信息 — 模式（`mode=execute`）和测试计划名（`plan_name=<6.1 解析得到的真实 plan_name>`）。如 `ms_plan_info.json` 已存在，可补一句"复用其中的 plan_id"提示 metersphere-sync 跳过查找
+
+> **避免误用**：不要把 `forward_verification.json` 路径作为 args 字面拼接（旧文档曾用过 shell 变量插值如 `$TEST_WORKSPACE/...`，Skill 工具不会做 shell 展开）。下游 skill 已知道从工作目录约定路径读取该文件。
 
 metersphere-sync execute 内部会：
 
-1. 读取 `forward_verification.json` 中每条记录
+1. 从工作目录约定路径读取 `forward_verification.json` 每条记录
 2. 按 [metersphere-sync 的置信度判定规则](../metersphere-sync/SKILL.md#置信度判定规则) 决定 MS 状态（Pass / Failure / Prepare）
 3. 调用 MS API 更新对应用例状态
 4. 写出 `ms_sync_report.json`

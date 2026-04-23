@@ -62,6 +62,11 @@ input:
     test_cases:
       type: file
       description: 已有测试用例文件（辅助冒烟验证点生成和优先级判定）
+    max_loop_iterations:
+      type: number
+      description: >
+        Phase 5 自循环最大轮次（标准模式下条件触发）。默认 3。
+        达到上限后强制退出并在 loop_metadata.exit_reason 标记 max_iterations。
 
 output:
   files:

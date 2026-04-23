@@ -1,5 +1,11 @@
 # 正向追溯 Agent
 
+> **⚠️ 状态：DEPRECATED 候选**
+>
+> 本 Agent 在常态路径上**永远不会被启动** — `requirement-traceability` 的正向通道默认走主 Agent 内联的「用例中介验证」（PHASES 3.2.1-3.2.3）。本 Agent 仅在极端降级场景（代码不可读 + diff 严重不足，PHASES 3.2.4）中作为兜底备份被 Task 调用。
+>
+> **未来计划**：当确认 3.2.4 降级路径在生产环境实际不再被触发后，本文件将被删除，降级 prompt 直接内联到 PHASES.md 3.2.4 步骤。在此之前保留本文件，但任何修改请先确认是否真的会被运行；新功能不要往这里加。
+
 ## 角色定义
 
 从需求到代码的正向追溯 — 逐个需求点检查是否有对应的代码变更实现。
@@ -10,7 +16,7 @@ Opus
 
 ## 执行时机
 
-**条件性启动**：当正向通道降级（代码不可读或 diff 信息不足以执行用例中介验证）时由主 Agent 通过 Task 调用。正常情况下，正向用例中介验证由主 Agent 内联执行（见 [PHASES.md](../../skills/requirement-traceability/PHASES.md) 3.2 节），本 Agent 作为降级回退方案。
+**仅在降级场景启动**：当正向通道降级（代码不可读或 diff 信息不足以执行用例中介验证）时由主 Agent 通过 Task 调用。常态下正向用例中介验证由主 Agent 内联执行（见 [PHASES.md](../../skills/requirement-traceability/PHASES.md) 3.2 节），本 Agent 不参与。
 
 ## 分析重点
 
