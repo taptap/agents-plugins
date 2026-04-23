@@ -406,6 +406,41 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 - API 契约存在 high 级别不一致（前后端字段/类型/路径不匹配）→ 高风险
 - API 契约存在 medium 级别不一致（命名风格差异、可选字段遗漏等）→ 中风险
 
+### 4.6 forward_verification.json 兜底落盘（CRITICAL，必须执行）
+
+> **目的**：保证 Phase 6 测试计划回写永远有燃料，无论 Phase 3.2 是否被执行偏离。
+
+无论 Phase 3.2 是否产出 `forward_verification.json`，本步骤都要执行一次校验：
+
+1. 检查 `$TEST_WORKSPACE/forward_verification.json` 是否存在且非空。
+2. **如已存在且非空** → 跳过本步骤（Phase 3.2 已正确产出，无需兜底）。
+3. **如不存在或为空** → 必须从 `traceability_coverage_report.json` 的 per-FP `verdict` + `confidence` 合成一份兜底版本，每个需求点 1 条记录：
+
+合成规则：
+
+| coverage_report 中的 verdict | confidence | 合成 result | 合成 confidence | case_id 命名 |
+| --- | --- | --- | --- | --- |
+| `implemented` / `covered` | ≥ 90 | `pass` | 同源 confidence | `FORWARD-TRACER-FP-{N}` |
+| `implemented` / `covered` | 70-89 | `pass` | 同源 confidence | `FORWARD-TRACER-FP-{N}` |
+| `partial` | any | `inconclusive` | min(60, 同源 confidence) | `FORWARD-TRACER-FP-{N}` |
+| `unimplemented` / `missing` | any | `fail` | max(70, 同源 confidence) | `FORWARD-TRACER-FP-{N}` |
+
+每条记录写入字段（与正常 Phase 3.2 产出格式一致）：
+
+```json
+{
+  "case_id": "FORWARD-TRACER-FP-1",
+  "requirement_id": "FP-1",
+  "requirement_name": "...",
+  "result": "pass | fail | inconclusive",
+  "confidence": 85,
+  "trace": "兜底合成：源自 traceability_coverage_report.json 的 per-FP verdict，未做用例级代码路径追踪",
+  "source": "synthesized_from_coverage_report"
+}
+```
+
+**`source: "synthesized_from_coverage_report"` 字段是兜底版的标记**，下游 metersphere-sync 在 Phase 4.4 看到该字段时，回写评论中追加"AI 回溯（降级判定，无用例级粒度）"以提示人工后续复核。
+
 ### 4S.1 缺陷提取与优先级判定（仅 smoke-test 模式）
 
 > 编号 `4S.x` 表示 smoke-test 模式专用步骤，跟前述 4.x（标准模式产出）属于不同分支，不是顺序子节。`mode != "smoke-test"` 时整段跳过，直接进入 Phase 5 自循环判定。
@@ -571,7 +606,9 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 
 ### 6.1 前置校验
 
-1. 确认 `$TEST_WORKSPACE/forward_verification.json` 存在且非空。如不存在 → 跳过本阶段并在最终摘要中标注"无验证结果可回写"。
+1. 确认 `$TEST_WORKSPACE/forward_verification.json` 存在且非空。
+   - **如缺失**：说明 4.6 兜底落盘也没执行（异常状态）。**不要静默跳过**，立即回到 4.6 步骤执行兜底合成；合成成功后继续 6.1 后续步骤。
+   - **如本步骤无法补救**（例如 `traceability_coverage_report.json` 也缺失）：在最终摘要中明确告警"无验证结果可回写，MS 测试计划状态未更新"，并提示用户检查 Phase 4 是否被异常终止，但**不要静默跳过**。
 2. 解析 `plan_name`：
    - 优先用 init/fetch 阶段已确定的 `plan_name` 参数
    - 未提供时，回读 `$TEST_WORKSPACE/clarified_requirements.json` 提取 story 标题

@@ -323,6 +323,38 @@ python3 $SKILLS_ROOT/shared-tools/scripts/fetch_feishu_doc.py \
 - 每次调用 AskUserQuestion 工具控制在 1-4 个问题
 - 每个问题必须提供选项或默认值
 
+**条件触发：多变体一致性追问**（CRITICAL — 类继承 / 父组件级联防御）
+
+进入「交互与 UI 规则」维度提问前，先检查需求是否满足以下任一条件：
+
+1. 在 cell / 列表项 / tab / 子页面 上**新增 UI 元素**（按钮、icon、menu、徽章等）
+2. **修改某个组件的行为**（响应、文案、状态切换、显隐）
+3. 涉及多 tab / 多子页面 / 多列表变体的页面（如「点赞收藏 / 回复转发-收到的/发出的/提到我的」）
+
+满足任一条件 → 必须发起一次专项追问（即使用户没主动提及子 tab 差异）：
+
+```json
+{
+  "questions": [{
+    "question": "{页面/列表名} 的所有 tab / 子页面 / 列表变体是否都需要 {新增的 UI 元素 / 行为}？是否有特定 tab 不应展示？",
+    "header": "多变体一致性",
+    "options": [
+      {"label": "全部适用", "description": "所有 tab / 变体都需要该改动"},
+      {"label": "部分适用", "description": "某些 tab 不该展示，请在回复中列出例外"},
+      {"label": "不确定", "description": "需 PM 与开发对齐每个变体的预期"}
+    ],
+    "multiSelect": false
+  }]
+}
+```
+
+**为什么必跑**：PRD 通常只描述「在 X 列表加 Y 按钮」，不会枚举该列表下所有 tab/变体的差异化行为。开发用类继承实现时，UI 元素往往会**隐式扩散到所有兄弟组件**，造成「发出的 tab 错误展示了不再通知按钮」这类需求-实现错配。澄清阶段主动询问比开发后修复成本低 10 倍。
+
+**回答处理**：
+- 「全部适用」→ 在 functional_points 的 `interaction_rules` 标注「所有变体一致」
+- 「部分适用」→ 在 `interaction_rules` 列出例外清单；下游 test-case-generation 自动为每个例外生成 negative case
+- 「不确定」→ 标记 unconfirmed，进入 `open_questions`，并在 implementation_brief 的对应 task 加 `prerequisite: "PM 拍板各变体差异"` 阻断开发
+
 **末轮（查缺补漏）**：
 - 汇总已知信息让用户确认全貌
 - 列出剩余 unconfirmed 项，询问用户是否需要继续澄清
