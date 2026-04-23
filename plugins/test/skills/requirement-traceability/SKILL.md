@@ -1,10 +1,19 @@
 ---
 name: requirement-traceability
 description: >
-  双向追溯需求与代码变更的映射关系。输入需求描述 + 代码变更（MR/PR 或本地 diff），
-  输出 traceability_matrix.json + traceability_coverage_report.json + risk_assessment.json。
-  支持 smoke-test 模式：在回溯基础上提取缺陷列表并执行 P0 门控判定。
-  触发：需求回溯、需求还原度、追溯矩阵、代码覆盖、实现验证、traceability。
+  双向追溯需求与代码变更的映射关系，回答"代码到底有没有把需求做完、做对、不多做"。
+  输入需求描述 + 代码变更（MR/PR 链接、本地 diff 文件、或粘贴的 diff 文本），
+  输出 traceability_matrix.json + traceability_coverage_report.json + risk_assessment.json
+  + forward_verification.json；smoke-test 模式额外产出 defect_list.json + smoke_test_report.json
+  并对 P0 缺陷做硬门控。
+  当用户想验证某个 MR/PR 是否真把需求实现了、做合并/上线前的最后核对、跑冒烟、做回归核查、
+  或质疑"这次改的代码和 PRD 对得上吗"时，就该用本 skill — 即使用户没明说"追溯"或
+  "traceability"，只要场景是"代码 ↔ 需求双向核对"就触发。
+  典型触发表述：「这个 MR 做完了吗」「上线前再核一遍」「冒烟一下」「跑下回归」
+  「PRD 和实现对得上吗」「这次改动有没有漏」「需求回溯」「追溯矩阵」「需求还原度」
+  「代码覆盖（指代码是否覆盖需求，非测试代码覆盖率）」「实现验证」「traceability」。
+  不适用于：纯代码层影响面分析（用 change-analysis）、用例质量评审（用 test-case-review）、
+  生成新用例（用 test-case-generation）。
 ---
 
 # 需求回溯
