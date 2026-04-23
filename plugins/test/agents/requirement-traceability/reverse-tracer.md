@@ -31,7 +31,7 @@ Opus
 
 ## 输入
 
-1. **需求点清单**：`change_checklist.md` 中的需求点列表（R-1, R-2...）
+1. **需求点清单**：`traceability_checklist.md` 中的需求点列表（R-1, R-2...）
 2. **代码变更数据**：git diff 内容或 MR/PR diff
 3. **需求文档**（如有）：`clarified_requirements.json` 或需求文档
 

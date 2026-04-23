@@ -362,7 +362,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 5. `state_coverage_rate` ← `ui_fidelity_report.json` 的 `states_coverage.coverage_rate`
 6. `source` ← `"ui-fidelity-check"`（上游产出）或 `"inline"`（本 skill 内置检查）
 7. 如无 `ui_fidelity_report.json` 且未执行 UI 检查 → `ui_fidelity` 字段不写入
-8. 当 `ui_fidelity.by_severity.high > 0` 时，对相关需求点的 `forward_verification.json` 结果追加 `ui_risk_flag: true` 标记。4S.1 缺陷提取时，来源 1 中 `result == "pass"` 但 `ui_risk_flag == true` 的条目，在 `smoke_test_report.json` 的 `notes` 中提示"代码验证通过但存在 UI 还原度高风险差异，建议人工验证"
+8. 当 `ui_fidelity.by_severity.high > 0` 时，对相关需求点的 `forward_verification.json` 结果追加 `ui_risk_flag: true` 标记。5S.1 缺陷提取时，来源 1 中 `result == "pass"` 但 `ui_risk_flag == true` 的条目，在 `smoke_test_report.json` 的 `notes` 中提示"代码验证通过但存在 UI 还原度高风险差异，建议人工验证"
 
 - `api_contract`: 如果有 `api_contract_report.json`（上游产出）或 3.2.5 内置检查结果，按以下字段映射合并 API 契约数据：
 
@@ -441,9 +441,9 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 
 **`source: "synthesized_from_coverage_report"` 字段是兜底版的标记**，下游 metersphere-sync 在 Phase 4.4 看到该字段时，回写评论中追加"AI 回溯（降级判定，无用例级粒度）"以提示人工后续复核。
 
-### 4S.1 缺陷提取与优先级判定（仅 smoke-test 模式）
+### 5S.1 缺陷提取与优先级判定（仅 smoke-test 模式）
 
-> 编号 `4S.x` 表示 smoke-test 模式专用步骤，跟前述 4.x（标准模式产出）属于不同分支，不是顺序子节。`mode != "smoke-test"` 时整段跳过，直接进入 Phase 5 自循环判定。
+> Mode 触发条件以 [SKILL.md mode dispatch 表](SKILL.md#mode-dispatch单一权威表其余-phases-段落只引用本表) 为准，本节不重复列条件。
 
 回读 `forward_verification.json`、`traceability_coverage_report.json`、`traceability_matrix.json`，从以下来源提取缺陷：
 
@@ -498,13 +498,13 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 
 **confidence 过滤**：来源 1 中 confidence < 70 的 fail 项不提取为缺陷，仅在 `smoke_test_report.json` 的 `low_confidence_items` 中记录供参考。
 
-将提取结果暂存，供 4S.2 写入文件。
+将提取结果暂存，供 5S.2 写入文件。
 
-### 4S.2 生成冒烟测试报告（仅 smoke-test 模式）
+### 5S.2 生成冒烟测试报告（仅 smoke-test 模式）
 
-承接 4S.1 的缺陷列表。`mode != "smoke-test"` 时跳过。
+承接 5S.1 的缺陷列表。Mode 触发条件以 [SKILL.md mode dispatch 表](SKILL.md#mode-dispatch单一权威表其余-phases-段落只引用本表) 为准。
 
-1. **写入 `defect_list.json`**：将 4S.1 提取的缺陷按优先级排序（P0 在前），格式见 [TEMPLATES.md](TEMPLATES.md#defect_listjson)
+1. **写入 `defect_list.json`**：将 5S.1 提取的缺陷按优先级排序（P0 在前），格式见 [TEMPLATES.md](TEMPLATES.md#defect_listjson)
 2. **写入 `smoke_test_report.json`**：汇总验证统计和缺陷统计，格式见 [TEMPLATES.md](TEMPLATES.md#smoke_test_reportjson)
 3. **P0 门控判定**：
    - `defect_list.json` 中 `priority == "P0"` 的缺陷数 > 0 → `verdict: "fail"`，`fail_reason` 列出 P0 缺陷摘要
@@ -521,9 +521,9 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 
 ## 阶段 5: loop - 回溯自循环（条件触发）
 
-> **smoke-test 模式行为**：当 `mode == "smoke-test"` 时，跳过 Phase 5 整个自循环阶段。冒烟测试场景不做交互式缺口修复，4S.2 产出即为最终结果。
+> Mode 触发条件以 [SKILL.md mode dispatch 表](SKILL.md#mode-dispatch单一权威表其余-phases-段落只引用本表) 为准（标准模式且存在 missing/partial 时进入；smoke-test 模式不进）。
 
-当 traceability_coverage_report.json 存在 `missing` 或 `partial` 状态的需求点时，自动进入缺口修复循环。
+标准模式下，当 traceability_coverage_report.json 存在 `missing` 或 `partial` 状态的需求点时，自动进入缺口修复循环。
 
 ### 5.0 触发判定
 
@@ -600,7 +600,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 
 ## 阶段 6: writeback - MS 测试计划回写
 
-> **触发条件**：`mode != "smoke-test"`。冒烟测试模式不写 MS（冒烟只输出 P0 门控判定，不污染测试计划状态），整段跳过。
+> Mode 触发条件以 [SKILL.md mode dispatch 表](SKILL.md#mode-dispatch单一权威表其余-phases-段落只引用本表) 为准（标准模式且 `ms_plan_info.json` 存在时执行；smoke-test 模式不写 MS，避免污染测试计划状态）。
 >
 > **执行时机**：标准模式下，4. output 完成后立即进入；如果触发了 5. loop，等 loop 收敛退出后再进。
 

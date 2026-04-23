@@ -16,7 +16,7 @@ description: >
 - 必要输入：代码变更（MR/PR 链接、本地 diff 文件、或直接提供 diff 文本）必须非空；需求描述推荐提供，缺失时基于代码变更做单边追溯（降级模式）
 - 输出产物：`traceability_matrix.json`、`traceability_coverage_report.json`、`risk_assessment.json`、`forward_verification.json`（正向用例中介验证结果）；标准模式额外输出 `ms_sync_report.json`（writeback 阶段产出）；smoke-test 模式额外输出 `defect_list.json`、`smoke_test_report.json`
 - 失败门控：代码变更为空时停止；无法确认的映射标记为 `[推测]`；smoke-test 模式下 P0 缺陷 > 0 则 verdict = fail
-- 执行步骤：`init → fetch → map → output → writeback`（smoke-test 模式 output 后走 4S.1/4S.2 冒烟报告并跳过 writeback；标准模式有未覆盖需求时在 output 后追加 Phase 5 自循环，收敛后再进 writeback）
+- 执行步骤：`init → fetch → map → output → writeback`（smoke-test 模式 output 后走 5S.1/5S.2 冒烟报告并跳过 writeback；标准模式有未覆盖需求时在 output 后追加 Phase 5 自循环，收敛后再进 writeback）
 
 ## 核心能力
 
@@ -102,7 +102,7 @@ description: >
 
 ## 冒烟测试模式（mode=smoke-test）
 
-当 `mode` 参数为 `smoke-test` 时，在标准回溯流程（init → fetch → map → output）完成后，追加执行缺陷提取和冒烟测试判定（详见 PHASES.md 的 4S.1 和 4S.2 步骤）：
+当 `mode` 参数为 `smoke-test` 时，在标准回溯流程（init → fetch → map → output）完成后，追加执行缺陷提取和冒烟测试判定（详见 PHASES.md 的 5S.1 和 5S.2 步骤）：
 
 - 从 `forward_verification.json` 的 fail 项、`traceability_coverage_report.json` 的 gaps、`api_contract.issues` 中提取缺陷
 - 基于置信度和风险等级判定优先级（P0/P1/P2）
@@ -125,10 +125,42 @@ description: >
 | 2. fetch | 获取需求文档和代码 diff | `traceability_checklist.md` |
 | 3. map | 双通道并行：正向用例验证 + 反向代码追溯 | `code_analysis.md`、`forward_verification.json` |
 | 4. output | 覆盖验证、风险评估和最终产出 | `traceability_matrix.json`、`traceability_coverage_report.json`、`risk_assessment.json` |
-| 4S.1 | 缺陷提取与优先级判定（**仅 smoke-test 模式**） | — |
-| 4S.2 | 冒烟测试报告生成 + P0 门控（**仅 smoke-test 模式**） | `defect_list.json`、`smoke_test_report.json` |
-| 5. loop | 回溯自循环：缺口分类 + 用户确认 + 增量重跑（**条件触发**：标准模式且 coverage_report 存在 missing/partial） | 更新 `traceability_coverage_report.json` 的 `loop_metadata` |
-| 6. writeback | MS 测试计划回写：调用 metersphere-sync execute 把 `forward_verification.json` 落到 MS 用例状态（**条件触发**：`mode != "smoke-test"`） | `ms_sync_report.json` |
+| 4.6 | `forward_verification.json` 兜底落盘（**始终执行**：3.2 已产出则跳过，否则从 coverage_report 合成） | `forward_verification.json`（兜底版） |
+| 5S.1 | 缺陷提取与优先级判定（**仅 smoke-test 模式**） | — |
+| 5S.2 | 冒烟测试报告生成 + P0 门控（**仅 smoke-test 模式**） | `defect_list.json`、`smoke_test_report.json` |
+| 5. loop | 回溯自循环：缺口分类 + 用户确认 + 增量重跑（**仅标准模式且存在 missing/partial**） | 更新 `traceability_coverage_report.json` 的 `loop_metadata` |
+| 6. writeback | MS 测试计划回写（**仅标准模式**） | `ms_sync_report.json` |
+
+> 编号说明：`5S.x` 是 smoke-test 专用步骤（与 `5. loop` 并列、与 `4.x` 标准产出无嵌套关系），早期版本曾命名为 `4S.x` 已统一改为 `5S.x` 避免视觉混淆。
+
+### Mode dispatch（单一权威表，其余 PHASES 段落只引用本表）
+
+| 步骤 | `mode == "traceability"`（默认） | `mode == "smoke-test"` |
+| --- | --- | --- |
+| 1 init | ✓ | ✓ |
+| 2 fetch | ✓ | ✓ |
+| 3 map | ✓ | ✓ |
+| 4 output（4.1–4.5） | ✓ | ✓ |
+| 4.6 兜底落盘 | ✓ | ✓ |
+| 5S.1 缺陷提取 | ✗ 跳过 | ✓ |
+| 5S.2 冒烟报告 + P0 门控 | ✗ 跳过 | ✓ |
+| 5 loop 自循环 | ✓（仅当存在 missing/partial） | ✗ 跳过（冒烟不做交互式修复） |
+| 6 writeback MS 计划 | ✓（仅当 `ms_plan_info.json` 存在） | ✗ 跳过（冒烟不污染 MS 状态） |
+
+PHASES.md 内涉及 mode 分支的段落（5S.1 / 5S.2 / 5.0 / 6.0）仅以一句"见 SKILL.md mode dispatch 表"引用本表，**不重复列条件**，避免散落不一致。
+
+## ID 体系（单一权威表，TEMPLATES / PHASES 中的所有示例须遵守）
+
+| 字段 | 取值规范 | 备注 |
+| --- | --- | --- |
+| `requirement_id` | 优先使用上游 FP-N（来自 `clarified_requirements.json` / `requirement_points.json`）；独立使用本 skill（无上游）时才用本地 R-N | 主键，跨 skill 关联用 |
+| `case_id`（常态） | 直接复用上游 `final_cases.json` 的 `case_id`（如 `M1-TC-01`） | 用例中介验证产物 |
+| `case_id`（降级用例） | `R-{requirement_id}-AC{N}`（acceptance_criteria 转出的简化用例） | 仅当无 final_cases.json 但有 requirement_points.json |
+| `case_id`（forward-tracer 降级） | `FORWARD-TRACER-{requirement_id}` | PHASES 3.2.4 |
+| `case_id`（4.6 兜底合成） | `FORWARD-TRACER-FP-{N}` | PHASES 4.6 |
+| `defect.id` | `DEFECT-{N}`（5S.1 顺序生成） | smoke-test 模式 |
+
+> 旧版本曾用 `VC-N`（独立 verification cases）作为 case_id —— v0.0.7 起合并 verification-test-generation 能力后已废弃，新代码不再写。
 
 ## 中间文件
 
@@ -136,6 +168,11 @@ description: >
 | --- | --- | --- |
 | `traceability_checklist.md` | fetch | 需求点和代码变更清单 |
 | `code_analysis.md` | map | 逐代码变更的分析记录 |
+| `requirement_doc.md` | fetch（条件） | 在线获取的需求文档原文 |
+| `ui_fidelity_report.json` | map 3.4（条件）/ 上游产出 | UI 还原度检查结果 |
+| `api_contract_report.json` | map 3.2.5（条件）/ 上游产出 | API 契约一致性检查 |
+| `ms_plan_info.json` | 上游 metersphere-sync sync 模式产出 | MS 测试计划信息（writeback 复用避免重查） |
+| `diff.txt` | 3.0（条件） | 大 diff 落盘后供 Agent Read
 
 ## 与其他 skill 的关系
 

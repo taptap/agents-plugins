@@ -172,34 +172,53 @@
 
 ## forward_verification.json
 
-正向用例中介验证结果。
+正向用例中介验证结果。**顶层是平铺 JSON 数组**（不再是带 `results` 包裹的对象，与 PHASES.md 3.2.3 / 4.6 对齐）。每条记录的字段集随产出路径不同：
 
-### 完整结构
+| 路径 | 来源 PHASES 步骤 | `case_id` 命名 | 必有字段 |
+| --- | --- | --- | --- |
+| 用例中介验证（常态） | 3.2.3 | 上游 `final_cases.json` 的 `case_id`（如 `M1-TC-01`），降级用例时 `R-{requirement_id}-AC{N}` | `case_id` / `requirement_id` / `result` / `confidence` / `trace` / `expected` / `actual` / `inconclusive_reason` |
+| forward-tracer 降级 | 3.2.4 | `FORWARD-TRACER-{requirement_id}` | 同上（`actual` 可填 forward-tracer 的 evidence 摘录） |
+| coverage-report 兜底合成 | 4.6 | `FORWARD-TRACER-FP-{N}` | `case_id` / `requirement_id` / `requirement_name` / `result` / `confidence` / `trace` / `source: "synthesized_from_coverage_report"` |
+
+`inconclusive_reason` 仅在 `result == "inconclusive"` 时填，取值见 PHASES.md 3.2.0 表格（`call_depth_exceeded` / `dynamic_dispatch` / `external_dependency` / `complex_logic`）。
+
+### 示例
 
 ```json
-{
-  "source": "upstream | inline",
-  "total_cases": 15,
-  "results": [
-    {
-      "case_id": "VC-1",
-      "requirement_id": "R1",
-      "input": {"coupon_amount": 100, "order_amount": 50},
-      "expected": "actual_discount == 50",
-      "result": "pass | fail | inconclusive",
-      "confidence": 90,
-      "trace": "applyCoupon() -> min(coupon, order) -> min(100, 50) -> 50 == expected 50",
-      "code_location": "coupon-service/apply.go:42"
-    }
-  ],
-  "summary": {
-    "passed": 12,
-    "failed": 2,
-    "inconclusive": 1,
-    "pass_rate": "80%"
+[
+  {
+    "case_id": "M1-TC-01",
+    "requirement_id": "FP-1",
+    "result": "pass",
+    "confidence": 90,
+    "trace": "applyCoupon(100, 50) -> min(coupon, order) -> min(100, 50) -> 50 == expected 50 ✓",
+    "expected": "actual_discount == 50",
+    "actual": "返回 50，与预期一致",
+    "inconclusive_reason": null
+  },
+  {
+    "case_id": "M2-TC-03",
+    "requirement_id": "FP-2",
+    "result": "inconclusive",
+    "confidence": 50,
+    "trace": "processor.Execute() 为接口方法，实际实现取决于运行时注入",
+    "expected": "Review 类通知不展示『不再通知』",
+    "actual": "无法在 diff 中确定具体 processor 实现",
+    "inconclusive_reason": "dynamic_dispatch"
+  },
+  {
+    "case_id": "FORWARD-TRACER-FP-3",
+    "requirement_id": "FP-3",
+    "requirement_name": "用户注销",
+    "result": "fail",
+    "confidence": 70,
+    "trace": "兜底合成：源自 traceability_coverage_report.json 的 per-FP verdict，未做用例级代码路径追踪",
+    "source": "synthesized_from_coverage_report"
   }
-}
+]
 ```
+
+> 旧版本曾用 `{ source, total_cases, results: [...], summary: {...} }` 包装结构 + `case_id: "VC-1"` + `input` / `code_location` 字段。已废弃，下游消费方（metersphere-sync / 4S.1 缺陷提取）只读上述平铺数组格式。
 
 ## api_contract（traceability_coverage_report.json 内嵌字段）
 
