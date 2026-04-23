@@ -118,7 +118,7 @@ handoffs:
 2. **consolidate 是最终阶段**：clarify 阶段的退出条件满足后，MUST 立即进入 consolidate 阶段，禁止在 consolidate 完成前执行任何下游操作（如创建实施计划、开始编码、调用其他 skill）。
 3. **输出文件校验**：skill 执行完毕前，必须验证以下 4 个文件均已生成：
    - [ ] `clarification_log.md`
-   - [ ] `clarified_requirements.json`（包含 `doc_quality_issues` 字段，无发现时为 `[]`，禁止省略）
+   - [ ] `clarified_requirements.json`（包含 `doc_quality_issues` 与 `functional_points[].enum_factors` 字段，无发现时均为 `[]`，禁止省略；`business_rules` / `state_transitions[].rules` / `interaction_rules` 文本中**禁止**出现「X 不…」「非 X」「除 X 外」等否定句式，命中视为 3.2.6 未走完）
    - [ ] `requirement_points.json`
    - [ ] `implementation_brief.json`
 4. **完成标志与 Next Steps 输出**：所有输出文件生成后，**必须**按以下格式输出（这是 skill 的唯一合法终止点，不允许只输出一行总结）：
@@ -223,6 +223,17 @@ handoffs:
       "clarification_status": "confirmed | partial | unconfirmed",
       "qa_pairs": [
         { "question": "...", "answer": "...", "source": "human | document | assumption", "dimension": "功能边界" }
+      ],
+      "enum_factors": [
+        {
+          "id": "EF-1",
+          "name": "通知类型",
+          "values": ["点赞", "收藏", "回复", "转发", "评论", "Review"],
+          "open_set": false,
+          "default_behavior": null,
+          "source": "PRD §3.2 列举",
+          "covered_by_rules": ["business_rules[2]"]
+        }
       ]
     }
   ],
