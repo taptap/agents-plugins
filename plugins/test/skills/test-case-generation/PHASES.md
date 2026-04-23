@@ -279,6 +279,18 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 ## 阶段 4: generate - 并行生成
 
+### 4.0 枚举值覆盖要求（必做前置）
+
+进入 4.1/4.2 生成之前，回读上游 `clarified_requirements.json` 的 `functional_points[].enum_factors[]`：
+
+1. **存在且非空** → 提取每个功能点的 `(FP-N, enum_factor.name, values[])` 三元组列表，作为生成阶段的**硬覆盖要求**：每个枚举值至少必须有 1 条用例覆盖。`open_set: true` 的枚举额外要求覆盖 `default_behavior` 描述的默认分支
+2. **存在但为 `[]`**（RC 显式声明无枚举）→ 跳过本步骤
+3. **字段缺失**（独立使用本 skill 或上游版本不支持）→ 跳过本步骤，但在 review 阶段（5.1）的覆盖度评分中扣分
+
+把上述三元组列表传递给 test-case-writer 子 Agent（4.1 路径）或主 Agent 内联生成（4.2 路径）。Agent 的 Task prompt 中需明确："本模块涉及枚举变量 `{name}`，取值 `[v1, v2, ...]`，每个取值至少生成 1 条覆盖用例（用例标题或 steps 中显式提及该取值名）"。
+
+**为什么前置**：上游 RC 走完 3.2.6 后，`enum_factors` 是已经过用户/PRD 确认的完整枚举集合。如果 TCG 漏覆盖某个枚举值，下游 traceability 会判 `enum_coverage_gap`，整条 FP 最多 inconclusive — 等于本 skill 失败。前置消费成本极低（多生成几条用例），收益是把 "Review 类型菜单遗漏" 这种隐性 bug 在用例阶段就堵住。
+
 ### 4.1 使用子 Agent 生成（模块 >= 3 个）
 
 对每个功能模块，通过 Task 工具调用 test-case-writer 子 Agent。Agent 的完整行为定义见 [agents/test-case-writer.md](../../agents/test-case-writer.md)。
@@ -315,6 +327,7 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 2. **缺失处理**：文件不存在 → 重试子 Agent 1 次；重试仍失败 → 在主 Agent 中直接生成该模块用例（fallback）
 3. **非空校验**：文件存在但 Read 后内容为空或非合法 JSON 数组 → 删除后按缺失处理
 4. **停止条件**：fallback 生成后文件仍为空 → **停止整个 skill**，输出错误「模块 {N} 用例生成失败，无法继续」
+5. **枚举值覆盖校验**（仅当 4.0 收集了 enum_factors 三元组时执行）：对每个 `(FP-N, factor.name, value)`，在所有 `module_*_cases.json` 中扫描 `title` / `steps[].action` / `steps[].expected` / `preconditions` 是否至少有一条用例文本包含该 `value` 字面量。缺的组合 → 在 chat 输出 `enum_coverage_warning` 列表，自动追加一轮针对性补充生成（仅生成缺的用例，写入 `module_{N}_supplementary.json` 由 5.1 一并合并）；补充后再次校验，仍缺则记录到 `tc_gen_review.md` 的"枚举覆盖缺口"段，由 review 阶段评分扣分
 
 全部模块文件校验通过后，方可进入阶段 5。
 

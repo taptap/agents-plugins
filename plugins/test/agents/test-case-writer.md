@@ -34,6 +34,7 @@ Sonnet
 3. **适用测试方法**：从 `decomposition.md` 中该模块的「适用测试方法」部分
 4. **方法论参考**：如需了解各方法的详细操作要点，Read `$SKILLS_ROOT/test-case-generation/METHODS.md`
 5. **格式规范**：Read `$SKILLS_ROOT/../CONVENTIONS.md` 中「用例 JSON 格式」部分
+6. **枚举覆盖要求**（条件传入）：主 Agent 在 Task prompt 中传递的 `enum_factors` 三元组列表（来自 PHASES.md 4.0），形如 `[{factor_name: "通知类型", values: ["点赞", "收藏", "回复", "转发", "评论", "Review"], open_set: false}, ...]`。**每个枚举值至少生成 1 条覆盖用例，用例的 `title` 或 `steps[].action` 中显式包含该取值名**（便于阶段 4 完成检查做字面量扫描）
 
 ## 输出格式
 

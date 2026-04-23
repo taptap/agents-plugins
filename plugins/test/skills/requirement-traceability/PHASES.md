@@ -114,6 +114,24 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 1. 如果存在 → 在 4.4 中直接合并到 traceability_coverage_report.json，跳过 3.2.5 的内置检查
 2. 如果不存在且代码变更涉及 API 相关文件 → 在 3.2.5 中触发内置契约感知检查
 
+### 3.1.5 枚举值覆盖前置检查（条件触发）
+
+回读上游 `clarified_requirements.json` 的 `functional_points[].enum_factors[]`：
+
+1. **字段不存在**（独立使用本 skill / 上游版本不支持 / RC 跳过 3.2.6）→ 跳过本步骤，在最终 `traceability_coverage_report.json` 标记 `enum_coverage_check: "skipped"` 并注明原因
+2. **存在且非空** → 对每个功能点的每个枚举值，扫描 `final_cases.json` 中该 FP 关联用例的 `title` / `steps[].action` / `steps[].expected` / `preconditions` 是否含该取值字面量
+   - 至少 1 条用例覆盖 → 该枚举值标记 `covered`
+   - 0 条用例覆盖 → 该枚举值标记 `enum_coverage_gap`，记入该 FP 的 gap 列表
+3. **存在且为 `[]`**（RC 显式声明无枚举）→ 跳过扫描，标记 `enum_coverage_check: "no_factors"`
+
+**对 forward verification 的影响**（强约束）：
+
+- 任何 FP 存在 `enum_coverage_gap` 时，该 FP 的所有 forward verification 结果**最多 inconclusive**（即使代码追踪显示 pass，也降级为 inconclusive，`inconclusive_reason: "enum_coverage_gap"`）
+- 4.6 兜底合成时同样适用：该 FP 的兜底记录 result 不得为 `pass`
+- 5S.1 缺陷提取时，`enum_coverage_gap` 作为独立来源（来源 5）写入 defect_list，priority = P1（用例缺漏不直接是阻断，但需在冒烟报告中显式列出）
+
+**为什么前置**：上游 RC 走完 3.2.6 后 `enum_factors` 是已确认的完整枚举集合。如果上游 TCG 漏覆盖某个枚举值（如 `通知类型 = Review` 没有对应用例），traceability 即使代码追踪 pass 也只能保证"该用例覆盖的代码路径正确"，无法保证"未覆盖枚举值的代码路径正确" — 把它强制降级为 inconclusive 是诚实的判定。真实案例：iOS Review 类型菜单 bug，根因之一是 `通知类型 = Review` 这个枚举值在 final_cases.json 里没有任何用例覆盖，traceability 不应给该 FP 判 pass。
+
 ### 3.2 正向通道：用例中介验证
 
 #### 3.2.0 可追踪性评估（前置硬规则）
@@ -483,6 +501,18 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 
 - 优先级：统一为 P1（UI 差异通常不构成 P0 阻断）
 - `evidence.source` = `"ui_fidelity"`
+
+**来源 5：枚举值覆盖缺口（条件触发）**
+
+从 `traceability_coverage_report.json` 的 `gaps[]` 中提取 `type == "enum_coverage_gap"` 的条目（来自 3.1.5 步骤）：
+
+- 缺陷名称 = 需求点名称 + " - 枚举值 `{factor.name}.{value}` 无用例覆盖"
+- 预期结果 = "用例集应覆盖该枚举值对应的代码路径"
+- 实际结果 = "final_cases.json 中无用例提及该枚举值，代码路径未被验证"
+- 优先级判定：统一 P1（用例缺漏不直接阻断功能，但代码层面该路径未验证 = 上线风险）
+- `evidence.source` = `"enum_coverage_gap"`，`evidence.factor` = `factor.name`，`evidence.value` = `value`
+
+> 真实案例对应：iOS Review 通知 bug，源自 `通知类型 = Review` 枚举值无对应用例 → traceability 应在此处生成一条 P1 缺陷提示"Review 类型代码路径未被任何用例验证，建议补充用例后重跑"。
 
 **排除规则（MR 流程状态）**：
 
