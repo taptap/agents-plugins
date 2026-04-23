@@ -104,11 +104,17 @@ cp "${SOURCE_SCRIPTS_DIR}/ensure-tool-search.sh" .claude/hooks/scripts/
 cp "${SOURCE_SCRIPTS_DIR}/statusline.sh" .claude/hooks/scripts/
 ```
 
+这些复制是**覆盖式刷新**，不是“只在文件不存在时才复制”。
+如果项目里已经有旧脚本，也必须用当前 `SOURCE_SCRIPTS_DIR` 的版本覆盖，避免下游仓库继续保留过期 hook 逻辑。
+
 **步骤 2.3：复制 Codex 脚本**：
 ```bash
 mkdir -p .codex/hooks/scripts
 cp "${SOURCE_SCRIPTS_DIR}/ensure-codex-plugins.sh" .codex/hooks/scripts/
 ```
+
+这里也必须覆盖已存在的 `.codex/hooks/scripts/ensure-codex-plugins.sh`。
+不要因为目标文件存在就跳过；该脚本承担 marketplace 自愈，热修复需要靠重新同步脚本传播到项目。
 
 ### 第三步：设置脚本可执行权限（macOS/Linux）
 
@@ -183,7 +189,7 @@ test -f .claude/hooks/hooks.json && echo "存在" || echo "不存在"
 
 ### 第六步：同步 Codex hooks 配置
 
-为 Codex-only 用户提供插件自动拉取能力。创建/更新 `.codex/hooks.json`。
+为 Codex-only 用户提供 remote marketplace 自愈和插件自动补齐能力。创建/更新 `.codex/hooks.json`。
 
 **检查是否存在**：
 ```bash
@@ -201,7 +207,7 @@ test -f .codex/hooks.json && echo "存在" || echo "不存在"
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -f .codex/hooks/scripts/ensure-codex-plugins.sh ]; then bash .codex/hooks/scripts/ensure-codex-plugins.sh >/dev/null 2>&1 & fi",
+            "command": "ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd); SCRIPT=\"$ROOT/.codex/hooks/scripts/ensure-codex-plugins.sh\"; if [ -f \"$SCRIPT\" ]; then bash \"$SCRIPT\"; fi",
             "statusMessage": "Setting up taptap-plugins"
           }
         ]
@@ -238,10 +244,11 @@ test -f .codex/hooks.json && echo "存在" || echo "不存在"
 生效方式：
   重启 Claude Code / Codex 会话后，SessionStart hook 会自动执行
   Hook 2-4 后台执行，不阻塞 session 启动，配置在下次 session 生效
+  Codex startup hook 同步执行，保证首轮对话前插件已可用
 
 效果：
   ✅ Claude Code 用户：启用 autoUpdate → 后续插件更新自动生效
-  ✅ Codex-only 用户：自动维护 ~/.agents/plugins/taptap-plugins clone + 合并 ~/.agents/plugins/marketplace.json
+  ✅ Codex-only 用户：自动自愈 ~/.codex/.tmp/marketplaces/taptap-plugins 远端 clone，并镜像项目 .codex/config.toml 到 ~/.codex/config.toml
   ✅ 团队成员：git pull → 重启会话 → 自动获取最新版本
   ✅ 新成员：clone 仓库后启动会话即可，自动配置一切
 

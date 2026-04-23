@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.39
+
+### Sync Plugin (0.1.30)
+
+- Changed `hooks-config` agent: hooks scripts now sync to the project directory (`{PROJECT_ROOT}/.claude/hooks/`, `{PROJECT_ROOT}/.codex/hooks/`) instead of `~/.claude/hooks/`; copying is always force-refreshed so downstream repos pick up the latest scripts on every `/sync:hooks` or `/sync:basic` run
+- Changed `ensure-codex-plugins.sh` to perform three steps: (1) self-heal the remote marketplace — detects stale local-clone sources, wrong origins, and broken clones, then re-registers via `codex plugin marketplace add taptap/agents-plugins` (compatible with both old `codex marketplace add` syntax and new); (2) mirror project-level enabled plugins to `~/.codex/config.toml`, preserving explicit user `enabled = false`; (3) auto-install cache for enabled plugins from the marketplace clone, with `INSTALLED_BY_DEFAULT` plugins auto-enabled when the user has not explicitly opted out
+- Updated `codex-plugins-config` agent to document the force-refresh requirement for script copying (target file existence must not skip the copy)
+- Updated `commands/basic.md` and `commands/hooks.md` to reflect project-level hooks sync and mandatory `ensure-codex-plugins.sh` refresh
+- Updated sync plugin README: design-constraints section now describes the remote-marketplace self-healing architecture; removed obsolete local skills-mirror references
+- Changed `tests/validate.sh`: significantly expanded `ensure-codex-plugins.sh` test coverage — added `create_fake_codex_plugin` / `create_fake_codex_marketplace_clone` helpers; added test cases for old-local-source self-heal, wrong-origin self-heal, Step 3 cache installation, and `INSTALLED_BY_DEFAULT` auto-enable logic
+
+### Marketplace
+
+- Bumped version from 0.1.38 to 0.1.39
+- Updated sync plugin to version 0.1.30
+
 ## 0.1.38
 
 ### Test Plugin (0.0.7)

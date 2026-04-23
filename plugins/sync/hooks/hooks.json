@@ -30,7 +30,7 @@
           },
           {
             "type": "command",
-            "command": "if [ -f ~/.claude/hooks/scripts/ensure-codex-plugins.sh ]; then bash ~/.claude/hooks/scripts/ensure-codex-plugins.sh >/dev/null 2>&1 & fi"
+            "command": "if [ -f ~/.claude/hooks/scripts/ensure-codex-plugins.sh ]; then bash ~/.claude/hooks/scripts/ensure-codex-plugins.sh; fi"
           }
         ]
       }

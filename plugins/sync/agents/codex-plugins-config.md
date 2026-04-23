@@ -55,6 +55,11 @@ tools: Read, Write, Edit, Bash
 
 如果 `SCRIPTS_DIR` 为 `"无"` 或 `{SCRIPTS_DIR}/ensure-codex-plugins.sh` 不存在，返回 failed。
 
+复制必须是**覆盖式刷新**：
+- 即使 `{PROJECT_ROOT}/.codex/hooks/scripts/ensure-codex-plugins.sh` 已存在，也必须用当前 `SCRIPTS_DIR` 的版本覆盖
+- 不允许因为目标文件存在而跳过
+- 目标是让 `/sync:basic` / `/sync:hooks` 能把最新 marketplace 自愈逻辑同步到下游项目
+
 ```bash
 mkdir -p "{PROJECT_ROOT}/.codex/hooks/scripts"
 cp "{SCRIPTS_DIR}/ensure-codex-plugins.sh" "{PROJECT_ROOT}/.codex/hooks/scripts/ensure-codex-plugins.sh"
@@ -147,10 +152,11 @@ PY
 ## 说明（脚本运行时行为，写在结果提示里）
 
 - `[features] codex_hooks = true` 是 Codex CLI 的实验 feature flag。**未开启则任何 `.codex/hooks.json` 都不会被触发**。这就是为什么任务 3 要保证它存在
-- ensure-codex-plugins.sh 在 Codex SessionStart 时**同步执行**（hook command 不带 `&`），只做两件事：
-  1. 检查 `~/.codex/config.toml` 是否已含 `[marketplaces.taptap-plugins]`。缺失则调用 `codex marketplace add taptap/agents-plugins`（GitHub 远程）让 Codex 自己注册。失败（比如 codex CLI 不在 PATH，或对 GitHub repo 无访问权限）就 log warning + exit 0
-  2. 把项目 `.codex/config.toml` 中 enabled = true 的 `*@taptap-plugins` 镜像到 `~/.codex/config.toml`
-- 之后的 cache 安装、`~/.codex/plugins/cache/taptap-plugins/<plugin>/<version>/`、`~/.codex/plugins/installed_plugins.json` 维护**全部由 Codex 自己负责**，本脚本不再插手
+- ensure-codex-plugins.sh 在 Codex SessionStart 时**同步执行**（hook command 不带 `&`），会做三件事：
+  1. 以 `~/.codex/.tmp/marketplaces/taptap-plugins/.codex-marketplace-install.json`、clone 下 `.agents/plugins/marketplace.json` 与 git origin 为准判断 marketplace 是否已是远端 GitHub 源；缺失、旧本地源、错误源、坏 clone 都会尝试自愈为 `codex plugin marketplace add taptap/agents-plugins`（兼容旧版 `codex marketplace add`）
+  2. 把项目 `.codex/config.toml` 中 enabled = true 的 `*@taptap-plugins` 镜像到 `~/.codex/config.toml`，但保留用户显式 `enabled = false`
+  3. 从远端 marketplace clone 为 enabled 插件补齐 `~/.codex/plugins/cache/taptap-plugins/<plugin>/<version>/`；`git` / `sync` 这类 `INSTALLED_BY_DEFAULT` 插件会在用户未显式表态时自动 enabled
+- 遇到 marketplace add 失败时，脚本会记录日志并继续完成 Step 2/3；只有 remote marketplace 仍未恢复时才标记为部分完成
 - Codex CLI 自身不读 `<repo>/.codex/config.toml`；该文件仅作为团队的"声明式清单"，由 SessionStart 脚本镜像到 `~/.codex/config.toml` 生效
 - `~/.codex/...` 下任何文件都不应提交到项目仓库
 - Codex marketplace 发现依赖 `<repo-root>/.agents/plugins/marketplace.json`（Codex 格式，已存在于 `taptap/agents-plugins` 仓库）；plugin 元信息依赖 `plugins/*/.codex-plugin/plugin.json`（必须含 `interface` 段，否则 Codex 不会在 picker 里展示）
@@ -163,5 +169,5 @@ PY
   - .codex/hooks.json: [已生成/已是最新]
   - .codex/hooks/scripts/ensure-codex-plugins.sh: [已复制/已是最新]
   - .codex/config.toml: [已生成/已合并/已是最新]
-- 提示: 首次启动 Codex 时若日志显示"codex marketplace add 失败"，请手动 `codex marketplace add taptap/agents-plugins`（确保已登录 GitHub）后重启
+- 提示: 首次启动 Codex 时若日志显示 remote marketplace 自愈失败，请按日志清理 `~/.codex/.tmp/marketplaces/taptap-plugins` 与 `~/.codex/plugins/cache/taptap-plugins` 后重试 `codex plugin marketplace add taptap/agents-plugins`
 - 错误: [如有]

@@ -35,8 +35,8 @@
 
 ## 设计约束
 
-- `sync` 主要负责 Claude Code 侧基础环境引导，并补充 Codex 插件 clone / marketplace 维护。
-- Codex 插件分发单独处理：SessionStart 会维护 `~/.agents/plugins/taptap-plugins/` 独立 clone，并合并更新 `~/.agents/plugins/marketplace.json`；`sync` 不再写入或维护 `~/.agents/skills`。
+- `sync` 主要负责 Claude Code 侧基础环境引导，并补充 Codex remote marketplace 自愈、启用状态镜像和默认插件 cache 安装。
+- Codex 插件分发走 GitHub remote marketplace：SessionStart 会同步执行 `ensure-codex-plugins.sh`，以 `~/.codex/.tmp/marketplaces/taptap-plugins/` 的 install metadata + clone 为准，必要时自愈为 `codex plugin marketplace add taptap/agents-plugins`（兼容旧版 `codex marketplace add`），再把项目 `.codex/config.toml` 的启用状态镜像到 `~/.codex/config.toml`；不再维护旧的本地 marketplace / skills 镜像。
 
 ## MCP 相关
 
@@ -73,7 +73,7 @@
 
 ### Codex Skills
 
-Codex 已支持插件原生分发 bundled skills，`sync` 不再通过 SessionStart hook 维护 `~/.agents/skills`。
+Codex 已支持插件原生分发 bundled skills，`sync` 不再通过 SessionStart hook 维护旧的用户级 skills 镜像。
 
 ## 维护说明
 
