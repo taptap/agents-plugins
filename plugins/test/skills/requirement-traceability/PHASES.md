@@ -116,13 +116,18 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 
 ### 3.1.5 枚举值覆盖前置检查（条件触发）
 
-回读上游 `clarified_requirements.json` 的 `functional_points[].enum_factors[]`：
+按以下优先级读取上游 `enum_factors`：
 
-1. **字段不存在**（独立使用本 skill / 上游版本不支持 / RC 跳过 3.2.6）→ 跳过本步骤，在最终 `traceability_coverage_report.json` 标记 `enum_coverage_check: "skipped"` 并注明原因
-2. **存在且非空** → 对每个功能点的每个枚举值，扫描 `final_cases.json` 中该 FP 关联用例的 `title` / `steps[].action` / `steps[].expected` / `preconditions` 是否含该取值字面量
+1. **优先**：`clarified_requirements.json` 的 `functional_points[].enum_factors[]`（完整 pipeline）
+2. **降级**：`requirement_points.json` 的 `[].enum_factors[]`（lite-pipeline，无 clarified_requirements 时）
+3. **都不存在**（独立使用本 skill / 上游版本不支持 / RC 跳过 3.2.6）→ 跳过本步骤，在最终 `traceability_coverage_report.json` 标记 `enum_coverage_check: "skipped"` 并注明原因（`source_missing`）
+
+读到的 enum_factors 按以下规则处理：
+
+- **存在且非空** → 对每个功能点的每个枚举值，扫描 `final_cases.json` 中该 FP 关联用例的 `title` / `steps[].action` / `steps[].expected` / `preconditions` 是否含该取值字面量
    - 至少 1 条用例覆盖 → 该枚举值标记 `covered`
    - 0 条用例覆盖 → 该枚举值标记 `enum_coverage_gap`，记入该 FP 的 gap 列表
-3. **存在且为 `[]`**（RC 显式声明无枚举）→ 跳过扫描，标记 `enum_coverage_check: "no_factors"`
+- **存在且为 `[]`**（上游显式声明无枚举）→ 跳过扫描，标记 `enum_coverage_check: "no_factors"`
 
 **对 forward verification 的影响**（强约束）：
 

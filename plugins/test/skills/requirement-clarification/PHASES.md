@@ -494,6 +494,9 @@ clarify 阶段结束后，**必须立即进入阶段 4: consolidate**。
 
 从 clarified_requirements.json 中提取编号功能点清单，附带验收标准和测试关注维度。供下游 test-case-generation 消费。
 
+**必须继承的字段**（不允许在本阶段重新提取或部分继承）：
+- `enum_factors[]` — 完整复制每个功能点的同名数组（仅省略 `covered_by_rules` 反向引用即可，其他字段全部保留）。下游 test-case-generation 与 requirement-traceability 在 lite-pipeline（仅有 `requirement_points.json`、无 `clarified_requirements.json`）下从此字段读取枚举覆盖要求；字段缺失会让 #16h/#16i/#16j 链路在 lite-pipeline 中失效。功能点不涉及分类变量时仍须写 `enum_factors: []` 显式声明，**禁止**省略字段名本身。
+
 ### 4.3 标记未解决问题
 
 将所有 `unconfirmed` 的问题汇总到 `clarified_requirements.json` 的 `open_questions` 字段，供下游 skill 作为风险输入。

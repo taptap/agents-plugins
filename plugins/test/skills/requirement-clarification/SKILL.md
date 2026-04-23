@@ -283,10 +283,22 @@ handoffs:
     "name": "用户注册",
     "acceptance_criteria": ["..."],
     "priority": "P0 | P1 | P2",
-    "test_focus": ["功能边界", "异常处理"]
+    "test_focus": ["功能边界", "异常处理"],
+    "enum_factors": [
+      {
+        "id": "EF-1",
+        "name": "通知类型",
+        "values": ["点赞", "收藏", "回复", "转发", "评论", "Review"],
+        "open_set": false,
+        "default_behavior": null,
+        "source": "PRD §3.2 列举"
+      }
+    ]
   }
 ]
 ```
+
+> `enum_factors` 必须从 `clarified_requirements.json` 的同名字段**完整继承**（仅省略 `covered_by_rules` 反向引用，因 requirement_points.json 不含 business_rules），不允许在 4.2 阶段重做提取或部分继承。下游 test-case-generation 与 requirement-traceability 在仅有 `requirement_points.json` 而无 `clarified_requirements.json` 的轻量管道下，会从此字段读取枚举覆盖要求；字段缺失会让 #16i/#16j 的强约束失效。
 
 ### implementation_brief.json（实现任务清单，供下游 coding agent 消费）
 

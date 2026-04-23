@@ -281,11 +281,16 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 ### 4.0 枚举值覆盖要求（必做前置）
 
-进入 4.1/4.2 生成之前，回读上游 `clarified_requirements.json` 的 `functional_points[].enum_factors[]`：
+进入 4.1/4.2 生成之前，按以下优先级读取 `enum_factors`：
 
-1. **存在且非空** → 提取每个功能点的 `(FP-N, enum_factor.name, values[])` 三元组列表，作为生成阶段的**硬覆盖要求**：每个枚举值至少必须有 1 条用例覆盖。`open_set: true` 的枚举额外要求覆盖 `default_behavior` 描述的默认分支
-2. **存在但为 `[]`**（RC 显式声明无枚举）→ 跳过本步骤
-3. **字段缺失**（独立使用本 skill 或上游版本不支持）→ 跳过本步骤，但在 review 阶段（5.1）的覆盖度评分中扣分
+1. **优先**：`clarified_requirements.json` 的 `functional_points[].enum_factors[]`（完整 pipeline）
+2. **降级**：`requirement_points.json` 的 `[].enum_factors[]`（lite-pipeline，无 clarified_requirements 时）
+3. **都不存在** → 跳过本步骤，但在 review 阶段（5.1）的覆盖度评分中扣分
+
+读到的 enum_factors 按以下规则处理：
+
+- **存在且非空** → 提取每个功能点的 `(FP-N, enum_factor.name, values[])` 三元组列表，作为生成阶段的**硬覆盖要求**：每个枚举值至少必须有 1 条用例覆盖。`open_set: true` 的枚举额外要求覆盖 `default_behavior` 描述的默认分支
+- **存在但为 `[]`**（上游显式声明无枚举）→ 跳过本步骤
 
 把上述三元组列表传递给 test-case-writer 子 Agent（4.1 路径）或主 Agent 内联生成（4.2 路径）。Agent 的 Task prompt 中需明确："本模块涉及枚举变量 `{name}`，取值 `[v1, v2, ...]`，每个取值至少生成 1 条覆盖用例（用例标题或 steps 中显式提及该取值名）"。
 
