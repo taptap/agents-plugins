@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.60
+
+### Test Plugin (0.0.29)
+
+- Added "集成测试价值评估" section to `integration-test-design/SKILL.md`: defines which scenarios deserve integration tests (API contracts, routing, cross-module notifications, telemetry payloads, auth gates, DB CRUD with side effects) vs which should be pushed to unit (pure deserialization, decision logic, state operations) or E2E (UI rendering, telemetry trigger conditions, pure passthrough)
+- Changed analyze phase to require explicit layering judgement per scenario; non-integration scenarios now go to a "跳过的场景" table instead of being silently dropped
+- Added shared `_shared/UNIT_VS_INTEGRATION_BOUNDARIES.md`: cross-skill boundary rules across `unit-test-design`, `integration-test-design`, and upstream `test-case-generation` (E2E), with L1-L6 layer ownership table and a one-line decision rule
+
+### Marketplace
+
+- Bumped version from 0.1.59 to 0.1.60
+- Updated test plugin to version 0.0.29
+
 ## 0.1.59
 
 ### Test Plugin (0.0.28)
