@@ -277,7 +277,108 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 2. `context_summary.md` — 模块 >= 3 时必须存在；缺失则补生成
 3. **停止条件**：`decomposition.md` 补生成后仍为空 → **停止整个 skill**，输出错误「功能拆解失败，无法继续」
 
+## 阶段 3.5: scan-ambiguities - 生成前歧义扫描
+
+本阶段在 decompose 完成、generate 启动前执行，目的是把"AI 生成时会瞎猜的预期/边界/分支"提前显式化，让用户一次性确认；用户未回答或回答信息不足以确定预期时，对应步骤的 `expected` 在 generate 时**统一写为 `[待确认] {原因}`**，避免 AI 编造看似合理但需求未规定的预期。
+
+### 3.5.1 触发条件
+
+- `decomposition.md` 已生成
+- 始终运行扫描（不论充分性等级），但仅在扫到 ≥ 1 条歧义时才向用户提问
+
+### 3.5.2 扫描歧义点（按"功能点 × 待确认事项"出题）
+
+主 Agent 逐模块审视 `decomposition.md` + 需求文档（含上游 `clarified_requirements.json` 如有），按以下分类识别歧义点。**粒度强制为 (functional_point, ambiguity)**，一个功能点可对应多个待确认事项，每个事项是一道独立的 question：
+
+| 类型 | 触发场景 | 示例 |
+| --- | --- | --- |
+| 预期行为不明 | 操作的成功反馈/跳转/副作用未说明 | "提交成功后跳转到哪个页面？" |
+| 边界值不明 | 文档提到限制但未给具体数字 | "标题最大长度限制是多少？" |
+| 分支条件不明 | 多分支但触发条件描述模糊 | "免登录态下点击点赞触发登录弹窗还是 toast？" |
+| 异常处理不明 | 网络/权限/超时等异常路径未规定 | "上传失败后是否自动重试？提示文案是什么？" |
+| 默认行为不明 | 可选字段/未填项的默认值/表现未说明 | "封面未上传时列表展示什么占位图？" |
+
+**跳过条件**：以下不算歧义点，不要列入
+
+- 4.0 已经强制覆盖的 enum_factors（避免重复问）
+- 评审性问题（"这个交互合不合理"——不属于 case 生成，归 RR/RC）
+- 通用约定可推断的（如错误提示统一展示在表单下方）
+
+### 3.5.3 向用户呈现
+
+收集所有歧义点后：
+
+- **0 条** → 跳过本阶段，直接进入阶段 4
+- **≥ 1 条** → 调用 AskUserQuestion 一次性提问（按模块分组，每个 (FP, ambiguity) 一道 question）
+
+每道 question 标准选项（按 [输出溯源原则](../../CONVENTIONS.md#输出溯源原则) 标注 `evidence_tag` + `evidence_ref`，`evidence_ref` 必须含 `decomposition.md` / 需求文档中的原文摘录）：
+
+```json
+{
+  "questions": [
+    {
+      "question": "{模块名} - {功能点描述}: {歧义点描述}？",
+      "header": "{模块名} 歧义 {N}/{Total}",
+      "evidence_ref": "decomposition.md『{原文摘录}』",
+      "options": [
+        {"label": "{候选答案 A}", "description": "{说明}", "evidence_tag": "derived", "evidence_ref": "decomposition.md『{原文摘录}』"},
+        {"label": "{候选答案 B}", "description": "{说明}", "evidence_tag": "derived", "evidence_ref": "decomposition.md『{原文摘录}』"},
+        {"label": "标为待确认", "description": "用例中该步骤的预期写为 [待确认] {原因}，避免 AI 推测", "evidence_tag": "derived", "evidence_ref": "decomposition.md『{原文摘录}』"}
+      ],
+      "multiSelect": false
+    }
+  ]
+}
+```
+
+候选答案 A/B 由 Agent 基于需求合理推断给出（≤ 3 个），用户也可在回复中自由补充文字。
+
+### 3.5.4 应用回复
+
+逐项处理用户回复，写入 `clarifications.json`：
+
+```json
+[
+  {
+    "module": "模块名",
+    "functional_point": "FP-1 或简短描述",
+    "ambiguity": "歧义点原话",
+    "user_response": "用户选择/补充的明确答案" | null,
+    "status": "confirmed | pending"
+  }
+]
+```
+
+判定规则：
+
+- 用户选了具体候选答案，或回复中给出可作为 `expected` 的明确文本 → `status: confirmed`，`user_response` 填入答案
+- 用户选「标为待确认」、未回复、回复"我不知道/你定/随便"等无效信息 → `status: pending`，`user_response: null`
+- 用户回复模糊但有方向（如"应该是跳到首页吧"），主 Agent 不要自作主张 → 当作 `pending`，可在 `user_response` 字段记录原文供后续参考
+
+### 3.5.5 注入到 generate 阶段
+
+`clarifications.json` 在阶段 4 由 test-case-writer 子 Agent（4.1 路径）或主 Agent（4.2 路径）读取并按以下规则使用：
+
+- `status: confirmed` → 用 `user_response` 作为对应 step 的 `expected`
+- `status: pending` → 对应 step 的 `expected` 写为 `[待确认] {ambiguity 简述}`，**禁止**根据猜测填写
+
+### 阶段 3.5 完成检查
+
+- 如有歧义点：`clarifications.json` 必须存在且包含所有抛给用户的歧义条目（含未回复的 pending 项）
+- 如无歧义点：可跳过文件生成，直接进入阶段 4
+
 ## 阶段 4: generate - 并行生成
+
+### 4.0.0 消费 clarifications.json（必做前置）
+
+进入生成前，主 Agent 与 test-case-writer 子 Agent 都必须读取 `clarifications.json`（如阶段 3.5 产出），按以下规则使用：
+
+- 一条 clarification 命中某个 (module, functional_point, ambiguity) → 在生成对应 step 时强制按其结果填 `expected`：
+  - `status: confirmed` → 用 `user_response` 作为 `expected`（可在保留语义前提下做最小润色）
+  - `status: pending` → `expected` 必须写为 `[待确认] {ambiguity 简述}`，**禁止**用任何推测填充
+- 未被 clarification 命中的 step → 按需求原文/合理推断生成（保持原行为）
+
+`clarifications.json` 不存在 → 跳过本规则，按原流程生成。
 
 ### 4.0 枚举值覆盖要求（必做前置）
 
@@ -307,6 +408,7 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 3. 指定 `model="sonnet"`（按模型分层策略，用例生成使用 Sonnet）
 4. 每条用例必须包含 `confidence` 字段（0-100），评分标准见 Agent 定义文件
 5. Task prompt 中告知 `confidence_ceiling` 值（从 `sufficiency_assessment.json` 读取）：生成的用例 `confidence` 不得超过此值
+6. 如 `clarifications.json` 存在，Task prompt 中明确指示子 Agent Read 该文件，并按 4.0.0 规则使用（confirmed → 用 user_response，pending → 写 `[待确认] {原因}`）
 
 **并行策略**：在单条消息中同时发起所有模块的 Task 调用，实现真正并行。
 
@@ -323,6 +425,8 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 在主 Agent 中按模块顺序生成所有用例，调用 `mcp__cases__save_test_cases(file_path='<workdir>/module_{N}_cases.json', cases=[...])` 写入对应模块文件（N 从 1 开始）。简单需求快速路径（阶段 3.0）视为单模块，写入 `module_1_cases.json`。**禁止用 Write 工具直接写 *_cases.json**。
 
 生成前回读 `sufficiency_assessment.json` 获取 `confidence_ceiling`，所有用例的 `confidence` 不得超过此值。
+
+如 `clarifications.json` 存在，主 Agent 必须按 4.0.0 规则使用（confirmed → 用 user_response，pending → 写 `[待确认] {原因}`），不允许根据猜测填充已被标 pending 的预期。
 
 ### 阶段 4 完成检查（强制）
 
@@ -461,6 +565,12 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 ### 6.1 收集待确认问题
 
 从 phase 5.6 的合并结果中提取 60 ≤ confidence < 80 的 findings。如果没有待确认问题，跳过本阶段直接进入 phase 7。
+
+**过滤规则（避免重复打扰）**：对每条 finding，扫描其 `affected_cases` 对应用例的 `steps[].expected`：
+
+- 若至少一条 affected case 的某个 step `expected` 已含 `[待确认]` 前缀，且该 step 与 finding 描述的歧义点指向同一处（语义重叠）→ **跳过该 finding**，不再让用户重复回答（阶段 3.5 已问过）
+- 完全无 `[待确认]` 标记的 finding → 正常进入 6.2 流程
+- 拿不准是否重叠时倾向"跳过"，避免用户疲劳；finding 摘要里追加 `skipped_due_to_pending: true` 写入 `tc_gen_review.md`
 
 ### 6.2 向用户呈现
 

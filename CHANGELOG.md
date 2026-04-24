@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.59
+
+### Test Plugin (0.0.28)
+
+- Added phase 3.5 `scan-ambiguities` to `test-case-generation`: between decompose and generate, the main agent enumerates `(functional_point, ambiguity)` pairs (unspecified expected behavior, missing boundaries, ambiguous branches, etc.), batches them into a single `AskUserQuestion` call, and writes the results to `clarifications.json`. Generate consumes that file: confirmed answers fill `expected`; pending items force the step's `expected` to `[待确认] {原因}` so the writer cannot fabricate plausible-but-unspecified expectations
+- Changed phase 6 `confirm` to skip review findings whose affected case already carries a `[待确认]` marker on the same step, preventing duplicate prompts to the user for items already raised in 3.5
+- Changed `test-case-writer` agent: added `clarifications.json` as a conditional input with explicit confirmed/pending handling rules
+- Updated SKILL.md: pipeline step list now includes 3.5, intermediate files table adds `clarifications.json`, Closing Checklist documents the new conditional artifact
+
+### Marketplace
+
+- Bumped version from 0.1.58 to 0.1.59
+- Updated test plugin to version 0.0.28
+
 ## 0.1.38
 
 ### Test Plugin (0.0.7)
