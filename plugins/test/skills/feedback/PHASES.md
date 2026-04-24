@@ -231,7 +231,7 @@ python3 plugins/test/skills/feedback/scripts/feishu_api.py load-cache
 | `--issue_stage` | 发现阶段 | `UI/UE/PM内部LR` / `UI/UE/PM验收` / `冒烟测试` / `新功能测试` / `回归测试` / `灰度阶段` / `线上阶段` |
 | `--description` / `-d` | 描述内容（Markdown 格式） | 自定义文本 |
 | `--business` / `-b` | 业务线名称 | `商店` / `社区` / `iOS` / `小游戏` / `启动器` / `PC` / `TapSDK` |
-| `--reporter` / `-r` | 报告人用户名 | `jinshichen` / `zhangtao` / `wangweidong` 等 |
+| `--reporter` / `-r` | 报告人用户名 | `jinshichen` / `zhangtao` / `liyafeng` 等 |
 | `--operator` / `-o` | 经办人用户名 | `chenhao` / `chenyihao` / `liufeng` 等 |
 
 ### 支持的更新字段
@@ -240,7 +240,7 @@ python3 plugins/test/skills/feedback/scripts/feishu_api.py load-cache
 |------|------|--------|
 | `--description` / `-d` | 描述内容（Markdown 格式） | 自定义文本 |
 | `--business` / `-b` | 业务线名称 | `商店` / `社区` / `iOS` / `小游戏` / `启动器` / `PC` / `TapSDK` |
-| `--reporter` / `-r` | 报告人用户名 | `jinshichen` / `zhangtao` / `wangweidong` 等 |
+| `--reporter` / `-r` | 报告人用户名 | `jinshichen` / `zhangtao` / `liyafeng` 等 |
 | `--operator` / `-o` | 经办人用户名 | `chenhao` / `chenyihao` / `liufeng` 等 |
 
 ### 注意事项

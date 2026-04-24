@@ -156,7 +156,7 @@ slack_read_thread(channel_id="C01EB1KAE4B", message_ts="1769651933.515359")
 > **注意**：创建 Bug 不再使用 MCP，直接使用 Python API 脚本可以创建 bug 单，并更新设置字段（包括描述、业务线、报告人、经办人），更加高效。
 
 **支持的用户名**（自动转换为 user_key）：
-- 测试: `jinshichen`, `zhangtao`, `wangweidong`, `liyafeng`
+- 测试: `jinshichen`, `zhangtao`, `liyafeng`
 - 研发: `chenhao`, `chenyihao`, `liufeng`, `zhouxianli`, `dingshuai`
 
 **支持的业务线**（自动转换为 ID）：

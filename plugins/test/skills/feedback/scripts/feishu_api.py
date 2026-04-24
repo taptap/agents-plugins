@@ -100,9 +100,8 @@ class FeishuProjectAPI:
     # 数据来源: 飞书项目 API /open_api/{project_key}/teams/all + /open_api/user/query
     USER_MAP = {
         # === 测试负责人 ===
-        "jinshichen": "7519012859116879900",  # 金诗晨 - 商店/社区
+        "jinshichen": "7519012859116879900",  # 金诗晨 - 商店/社区 + iOS 社区版（接手 wangweidong 离职后的工作）
         "zhangtao": "7094479243123507203",     # 张涛 - 小游戏/TapSDK
-        "wangweidong": "7097070166873309188",  # 王伟栋 - iOS 社区版
         "zhouchunhui": "7540167756541427715",  # 周春晖 - 沙盒/云玩
         "liyafeng": "7308268753316298753",     # 李雅峰 - PC 启动器
         
