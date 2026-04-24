@@ -26,9 +26,16 @@
 - 用户指定 `mode=execute` 且工作目录中存在 `forward_verification.json` → execute 模式
 - 否则 → sync 模式
 
-### 1.3a Precondition 校验（CRITICAL，必须执行）
+### 1.3 确定参数
 
-按 mode 走对应表，**任一项不满足直接 stop，输出明确错误信息**。Phase 4.6 的兜底逻辑只是 last-resort 救命，不应承担 precondition 缺失的责任。
+- `parent_module_id`：优先使用参数值，否则读取 `MS_DEFAULT_NODE_ID` 环境变量
+- `plan_name`：优先使用参数值，否则询问用户提供需求名称
+
+> **已废弃**：`confidence_threshold`（默认 90）。当前 P6 状态映射不再用阈值——pass + ext_deps 非空时直接降级为 Prepare（详见 SKILL.md「P6 状态映射」）。如果传入了这个参数，会被 writeback-from-fv 忽略。
+
+### 1.4 Precondition 校验（CRITICAL，必须执行）
+
+按 mode 走对应表，**任一项不满足直接 stop，输出明确错误信息**。下游 Phase 4 的兜底逻辑只是 last-resort 救命，不应承担 precondition 缺失的责任。
 
 | mode | precondition |
 | --- | --- |
@@ -44,13 +51,6 @@ python3 $SKILLS_ROOT/shared-tools/scripts/metersphere_helper.py \
 ```
 
 mapping 不存在或 sha 不匹配 → 提示用户先跑 `refresh-mapping`，**不要**自动重 import。
-
-### 1.3 确定参数
-
-- `parent_module_id`：优先使用参数值，否则读取 `MS_DEFAULT_NODE_ID` 环境变量
-- `plan_name`：优先使用参数值，否则询问用户提供需求名称
-
-> **已废弃**：`confidence_threshold`（默认 90）。当前 P6 状态映射不再用阈值——pass + ext_deps 非空时直接降级为 Prepare（详见 SKILL.md「P6 状态映射」）。如果传入了这个参数，会被 writeback-from-fv 忽略。
 
 ---
 

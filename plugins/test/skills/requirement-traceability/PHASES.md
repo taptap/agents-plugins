@@ -6,7 +6,7 @@
 
 ## 阶段 1: init - 输入验证
 
-确认代码变更来源（唯一阻断条件）。需求来源的路由统一在阶段 2 的 2.0 步骤中处理。
+确认代码变更来源（主要阻断条件之一）+ 标准模式跑 1.3 precondition 校验。需求来源的路由统一在阶段 2 的 2.0 步骤中处理。
 
 ### 1.1 确认代码变更来源
 
@@ -629,7 +629,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/metersphere_helper.py \
   validate-fv $TEST_WORKSPACE/forward_verification.json
 ```
 
-- 校验通过（exit 0）→ 继续 4.7 / Phase 5
+- 校验通过（exit 0）→ 继续下一阶段（标准模式：4.7 → 5/6；smoke-test 模式：5S.1 → 5S.2）
 - 校验失败（exit 2）→ stderr 是结构化 `{type: validation, errors: [{path, message}]}`，**stop**
 
 **异常处理**（详见 [Recovery Cookbook](../_shared/RECOVERY.md#2-r-vfvvalidate-fv-校验失败)）：
@@ -655,7 +655,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/metersphere_helper.py \
 对每条高 conf fail，逐条 AskUserQuestion（不批量）：
 
 ```
-case {case_id}: {title or requirement_name}
+case {case_id}{requirement_name 或对应 final_cases.title 加在括号里}
 AI 判定: Failure (conf={confidence})
 Evidence:
   - location: {evidence.code_location}
@@ -790,7 +790,7 @@ Evidence:
 回读 `traceability_coverage_report.json`，检查以下条件：
 
 1. `gaps` 数组中是否存在 `status == "missing"` 或 `status == "partial"` 的条目
-2. 如果 gaps 为空 → **跳过 Phase 5**，回溯完成
+2. 如果 gaps 为空 → **跳过 Phase 5**（**注意：仍然进 Phase 6 writeback**，与 5.4 D4 规则一致——loop 是缺口修复机制，不是 writeback 的前置条件）
 3. 如果存在缺口 → 进入 5.1
 
 ### 5.1 缺口分类
