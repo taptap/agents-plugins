@@ -29,15 +29,23 @@
 
 仅当本次执行需要走到 Phase 6 写回 MS plan（即非 smoke-test 模式）时检查；smoke-test 模式跳过本节。
 
-| 项 | 校验 |
-| --- | --- |
-| `final_cases.json` 存在 | 文件可读、顶层 array 非空 |
-| `ms_case_mapping.json` 存在 | 文件可读、顶层为 `{generated_at, source_cases_file, ms_project_id, entries}` 结构（v2 格式） |
-| mapping 与 cases 一致 | mapping.source_cases_file.sha256 == sha256(final_cases.json) |
+#### 1.3.a 硬阻断项（任一不满足 → STOP）
 
-任一不满足 → **停止**，提示用户：
-- mapping 缺失 → 先跑 `metersphere-sync` mode=sync 完成 import
-- mapping 过期（sha 不匹配）→ 跑 `metersphere_helper.py refresh-mapping --diff-only` 查看差异，再 `--apply` 修复
+| 项 | 校验 | 失败提示 |
+| --- | --- | --- |
+| `final_cases.json` 存在 | 文件可读、顶层 array 非空 | 先跑 test-case-generation 产出 final_cases |
+| `ms_case_mapping.json` 存在 | 文件可读、顶层为 `{generated_at, source_cases_file, ms_project_id, entries}` 结构（v2 格式） | 先跑 `metersphere-sync` mode=sync 完成 import |
+| mapping 与 cases 一致 | mapping.source_cases_file.sha256 == sha256(final_cases.json) | 跑 `metersphere_helper.py refresh-mapping --diff-only` 查看差异，再 `--apply` 修复 |
+
+#### 1.3.b 软警告项（不满足 → 早期提示，不阻断）
+
+> **D3 防御**：standard 模式默认会走 Phase 6 writeback。如果到了 Phase 6 才发现 ms_plan_info 缺失，前面 4 个 phase 等于白跑。1.3 提前一次性把所有 writeback 依赖的文件检查掉，缺什么早警告。
+
+| 项 | 校验 | 缺失时行为 |
+| --- | --- | --- |
+| `ms_plan_info.json` 存在 | 文件可读、含 `plan_id` 字段 | 在 chat 输出**警告**：「ms_plan_info.json 不存在；Phase 6 writeback 会被跳过；如需写 MS，请补跑 `metersphere-sync mode=sync` 完成测试计划创建后重跑本 skill」。**不 STOP**——用户仍可能只想要 coverage report，不想 writeback。Phase 6.1 会再校验一次，缺失时优雅 skip writeback。 |
+
+#### 1.3.c 兜底定位提醒
 
 > **Phase 4.6 兜底落盘** 的定位：last-resort 救命，**不应**承担 precondition 缺失的责任。如果走到了 4.6，说明 Phase 3.2 的 forward_verification 产出有 bug，应该回归 3.2 修而不是依赖兜底。
 
@@ -596,7 +604,21 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 }
 ```
 
-**`source: "synthesized_from_coverage_report"` 字段是兜底版的标记**，下游 metersphere-sync 在 Phase 4.4 看到该字段时，回写评论中追加"AI 回溯（降级判定，无用例级粒度）"以提示人工后续复核。
+**`source: "synthesized_from_coverage_report"` 字段是兜底版的硬约束标记**——schema 校验把它当作 evidence 缺失的唯一豁免凭证。**写每一条兜底记录时都不能漏**。下游 metersphere-sync 在 Phase 4.4 看到该字段时，回写评论中追加"AI 回溯（降级判定，无用例级粒度）"以提示人工后续复核。
+
+#### 4.6 自校验清单（CRITICAL，写完合成 fv 后必跑）
+
+合成完毕、落盘前**逐条 assert**：
+
+- [ ] 每条记录都有 `source: "synthesized_from_coverage_report"`（漏写 → 4.6a 校验直接 stop，无恢复路径）
+- [ ] `case_id` 形如 `FORWARD-TRACER-FP-{N}`
+- [ ] `requirement_id` 形如 `FP-{N}`
+- [ ] `result` ∈ `{pass, fail, inconclusive}`
+- [ ] `confidence` 是 number（pass 不能 < 70；schema 会拒）
+- [ ] `inconclusive` 必须带 `inconclusive_reason`（取 `external_dependency` 或 `insufficient_context` 兜底）
+- [ ] `trace` 字段非空（兜底说明文案）
+
+> **D2 教训防御**：本节列出的字段**全部硬约束**，少一个就让整个 skill 在 4.6a stop。落盘前用 jq / grep 自查比走到 4.6a 才发现错误便宜得多。
 
 > **定位提醒**：4.6 是 last-resort 救命，不应承担 precondition 缺失或 3.2 跑偏的责任。**正常路径不应该走到 4.6**。如果反复走到这里，说明 3.2 有 bug，回归 3.2 修。
 
@@ -633,17 +655,39 @@ Evidence:
       - {mode}: ruled out by {ruled_out_by}
       - ...
 
-请确认:
+请确认 (必须选 A/B/C 之一):
   A. 确认是缺陷 → 保持 fail
   B. 误判，重判为 Pass → 改写本条 fv 的 result=pass，evidence.human_override 记录
-  C. 改为 inconclusive → 改写 result=inconclusive + inconclusive_reason="human_override"，evidence.human_override 记录
+       ⚠️ 选 B 时**必须同时**给出新的 verification_logic 与至少一条 considered_failure_modes
+       （schema 要求 pass 必须有 evidence.{code_location, verification_logic}；
+        高 conf pass 还要 considered_failure_modes）。
+       原 fail 的 code_location 可保留作为参考起点。
+  C. 改为 inconclusive → 改写 result=inconclusive + inconclusive_reason="human_override"，
+       evidence.human_override 记录（evidence 其余字段可保留）
 ```
+
+#### 4.7.1 不可解析回答的兜底（D1 防御）
+
+用户可能回 "嗯/随便/等等" / 给非 ABC 内容 / 给多选 / 完全不相关的话。**绝不允许死循环或静默继续**。
+
+| 场景 | 处理 |
+| --- | --- |
+| 用户明确选 A/B/C | 按上面表执行（A 不写 human_override；B/C 按 4.7.2 写 human_override） |
+| 用户回复中**包含明确终止意图**（"算了" / "停" / "跳过" / "不改" / "维持原判"） | 视为 A 处理，**不写 human_override**（fv 保持原状）|
+| 用户回复**不可解析或与本 case 无关** | **再发起一次 AskUserQuestion 澄清**，prompt 多加一行「上次回复无法识别为 A/B/C，请明确选项」。最多 1 次 |
+| 澄清后仍不可解析 | 默认走 A（保持 fail），**不写 human_override**（fv 保持原状）。在 chat 输出汇总时单独列出本 case_id + 标 "ambiguous_response, kept as fail"，提示用户后续可手工 review。**继续处理下一条 fail**，不阻塞流程 |
+
+> **设计原则**：4.7 是质量加固关，不是质量门——卡住主流程比错放一个 false positive 危害更大。默认保持 AI 原判更安全（fail 进 MS Failure 让 QA 二次审）。
+>
+> **为什么 A / 不可解析都不写 human_override**：human_override 语义是「人工改判过」，from=fail 又 to=fail 不算改判；schema 允许但语义混乱。不写 human_override 时，audit 走 chat 输出 + Phase 6 摘要列单独的 ambiguous-list（不入 fv）。
+
+#### 4.7.2 改判后的处理
 
 被改判的条目，写回 fv.json，并在 `evidence.human_override` 里记录：
 
 ```json
 "evidence": {
-  ...,
+  ...原字段...,
   "human_override": {
     "from": "fail",
     "to": "pass",
@@ -652,7 +696,11 @@ Evidence:
 }
 ```
 
-复核改写完后**重跑一次 4.6a 的 schema 校验**确认仍合法（schema 允许 human_override）。
+复核改写完后**重跑一次 4.6a 的 schema 校验**确认仍合法。如果改判后 schema 失败（例如选 B 但没补全 verification_logic / considered_failure_modes）：
+
+1. 给用户报错：「改判 case {case_id} 后 schema 校验失败：{字段缺失列表}」
+2. 再发起一次 AskUserQuestion，让用户补齐字段（最多 1 次）
+3. 仍不合规 → **撤销本次改判**，恢复原 fail 状态，记 `human_override.reason: "override_failed_validation"`，`from=fail, to=fail`
 
 ### 5S.1 缺陷提取与优先级判定（仅 smoke-test 模式）
 
@@ -843,7 +891,10 @@ Evidence:
 2. **mapping 完整性**：确认 `$TEST_WORKSPACE/ms_case_mapping.json` 存在（已在 1.3 precondition 校验过 sha 一致）。
 3. **plan_id 必须就位**：writeback-from-fv 需要 `plan_id` 入参，**不会创建 plan**。检查 `$TEST_WORKSPACE/ms_plan_info.json` 是否存在：
    - 存在 → 提取 `plan_id` 用于 6.2
-   - 不存在 → **stop**，提示用户：「先跑 `metersphere-sync mode=sync` 把用例 import 到 MS 并创建测试计划，会落盘 ms_plan_info.json，然后才能进 writeback」
+   - 不存在 → **优雅 skip 整个 Phase 6**，**不 STOP**：
+     - 在最终摘要中明确标 `writeback_skipped: "missing_ms_plan_info"`
+     - 提示用户：「ms_plan_info.json 不存在；本次未写 MS。如需写 MS，请补跑 `metersphere-sync mode=sync` 完成测试计划创建后重跑本 skill 的 Phase 6（fv 已落盘可直接复用）」
+     - **理由**：1.3.b 早期已经警告过用户。如果用户依然主动跑到这里说明他可能就不想 writeback（只要 coverage report）。1.3.b warn + 6.1 skip 的组合避免「白跑 4 phase 才 stop」的体验问题（D3）。
 
 ### 6.2 调用 helper.writeback-from-fv（直接调脚本，不再走 Skill）
 
