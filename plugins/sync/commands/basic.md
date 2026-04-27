@@ -5,15 +5,18 @@ description: 一键配置开发环境（MCP + Hooks + MR 模板 + Claude Skills 
 
 ## Context
 
-此命令会完成 Claude Code 侧的基础环境配置，并补充 Codex 插件独立 clone：
+此命令会完成 Claude Code 侧的基础环境配置，并补充 Codex remote marketplace 自愈与插件配置：
 
 1. 配置 `context7` MCP
 2. 配置 SessionStart hooks
 3. 同步 GitLab Merge Request 默认模板
 4. 同步项目级 Claude Skills 模板
 5. 配置 Status Line
-6. 配置 Codex 插件独立 clone
+6. 配置 Codex 插件
 7. 检测语言并启用 LSP 插件
+
+重跑 `/sync:basic` 时，必须把当前 sync 源目录里的 project hooks scripts 重新覆盖到项目内。
+不要因为目标文件已存在而跳过，尤其 `.codex/hooks/scripts/ensure-codex-plugins.sh` 必须用当前版本刷新，这样 zeus 这类下游仓库才能拿到最新的 marketplace 自愈逻辑。
 
 ## Your Task
 
@@ -85,6 +88,10 @@ bash {SCRIPTS_DIR}/detect-lsp.sh "$(pwd)"
 | 4 | `sync:skills-sync` | haiku | `PROJECT_ROOT={值}`<br>`SKILLS_DIR={值}` |
 | 5 | `sync:statusline-config` | haiku | `SCRIPTS_DIR={值}` |
 | 6 | `sync:codex-plugins-config` | haiku | `PROJECT_ROOT={值}`<br>`SCRIPTS_DIR={值}` |
+
+额外要求：
+- `sync:hooks-config` 和 `sync:codex-plugins-config` 都必须把当前 `SCRIPTS_DIR` 下的脚本覆盖复制到项目目录，不能因为目标文件已存在而跳过
+- 特别是 `.codex/hooks/scripts/ensure-codex-plugins.sh`，必须确保内容升级到当前源目录版本
 
 ### Phase 2：汇总结果并处理 LSP
 
