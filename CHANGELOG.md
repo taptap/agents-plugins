@@ -1,31 +1,57 @@
 # Changelog
 
-## 0.1.60
+## 0.1.40
 
-### Test Plugin (0.0.29)
+### Test Plugin (0.0.8)
 
-- Added "集成测试价值评估" section to `integration-test-design/SKILL.md`: defines which scenarios deserve integration tests (API contracts, routing, cross-module notifications, telemetry payloads, auth gates, DB CRUD with side effects) vs which should be pushed to unit (pure deserialization, decision logic, state operations) or E2E (UI rendering, telemetry trigger conditions, pure passthrough)
-- Changed analyze phase to require explicit layering judgement per scenario; non-integration scenarios now go to a "跳过的场景" table instead of being silently dropped
-- Added shared `_shared/UNIT_VS_INTEGRATION_BOUNDARIES.md`: cross-skill boundary rules across `unit-test-design`, `integration-test-design`, and upstream `test-case-generation` (E2E), with L1-L6 layer ownership table and a one-line decision rule
+**requirement-clarification**
 
-### Marketplace
+- Added 多变体一致性追问 (CRITICAL): when a requirement adds UI elements / modifies component behavior on cells/lists/tabs, or touches multi-tab pages, the skill must proactively ask whether the change applies to all variants — defends against class-inheritance / parent-component implicit propagation (e.g. "发出的 tab 错错展示了不再通知按钮" class of bugs)
+- Added PRD doc-quality proofreading: surfaces missing acceptance criteria, undefined enums, ambiguous "等等" wording before clarification proceeds
+- Added icon source confirmation: requires PM to specify icon source (设计稿原图 / 现有 icon library / 待补) instead of letting the agent guess
+- Changed categorical-variable elicitation to force positive enumeration over exception phrasing (e.g. "支持 A/B/C" not "除了 D 都支持")
+- Added enum_factors wiring through `requirement_points.json` so lite-pipeline downstream consumers preserve the enum coverage chain
 
-- Bumped version from 0.1.59 to 0.1.60
-- Updated test plugin to version 0.0.29
+**test-case-generation**
 
-## 0.1.59
-
-### Test Plugin (0.0.28)
-
-- Added phase 3.5 `scan-ambiguities` to `test-case-generation`: between decompose and generate, the main agent enumerates `(functional_point, ambiguity)` pairs (unspecified expected behavior, missing boundaries, ambiguous branches, etc.), batches them into a single `AskUserQuestion` call, and writes the results to `clarifications.json`. Generate consumes that file: confirmed answers fill `expected`; pending items force the step's `expected` to `[待确认] {原因}` so the writer cannot fabricate plausible-but-unspecified expectations
-- Changed phase 6 `confirm` to skip review findings whose affected case already carries a `[待确认]` marker on the same step, preventing duplicate prompts to the user for items already raised in 3.5
+- Added phase 3.5 `scan-ambiguities`: between decompose and generate, the main agent enumerates `(functional_point, ambiguity)` pairs (unspecified expected behavior, missing boundaries, ambiguous branches), batches them into a single `AskUserQuestion`, writes results to `clarifications.json`. Generate consumes that file: confirmed answers fill `expected`; pending items force the step's `expected` to `[待确认] {原因}` so the writer cannot fabricate plausible-but-unspecified expectations
+- Changed phase 6 `confirm` to skip review findings whose affected case already carries a `[待确认]` marker on the same step, preventing duplicate prompts
+- Fixed forbid ambiguous OR in test case preconditions/steps/expected — agents now reject "A 或 B" phrasing during generation review
 - Changed `test-case-writer` agent: added `clarifications.json` as a conditional input with explicit confirmed/pending handling rules
-- Updated SKILL.md: pipeline step list now includes 3.5, intermediate files table adds `clarifications.json`, Closing Checklist documents the new conditional artifact
+
+**requirement-traceability**
+
+- Added Phase 4.6 forward_verification.json fallback synthesis: when Phase 3.2 doesn't produce per-case verification, synthesize from `traceability_coverage_report.json` per-FP verdict so MS testplan writeback always has fuel
+- Changed Phase 6.1 to forbid silent skipping when `forward_verification.json` is missing — falls back to 4.6 synthesis or fails loudly
+- Changed Closing Checklist to mark `forward_verification.json` and `ms_sync_report.json` as mandatory artifacts; explicitly forbids "degraded path" as an excuse to skip
+- Fixed traceability ↔ metersphere-sync writeback chain (P10/P11/P12 from second TAP-6841255319 run): real Skill invocation, max_loop_iterations contract, plan_name resolution
+- Closed D1-D12 dead branches in the traceability flow (mode dispatch, ID system, agent filenames, schema consistency)
+- Extracted Recovery Cookbook from main PHASES.md into a standalone reference
+- Deprecated forward-tracer (rolled into main agent path), updated description to be triggering-friendly
+
+**integration-test-design**
+
+- Added "集成测试价值评估" section: defines which scenarios deserve integration tests (API contracts, routing, cross-module notifications, telemetry payloads, auth gates, DB CRUD with side effects) vs which should be pushed to unit (pure deserialization, decision logic, state operations) or E2E (UI rendering, telemetry trigger conditions, pure passthrough)
+- Changed analyze phase to require explicit layering judgement per scenario; non-integration scenarios now go to a "跳过的场景" table instead of being silently dropped
+- Added shared `_shared/UNIT_VS_INTEGRATION_BOUNDARIES.md`: cross-skill boundary rules across `unit-test-design`, `integration-test-design`, `test-case-generation` (E2E), with L1-L6 layer ownership table and a one-line decision rule
+
+**Docs (AI_CODING_BEST_PRACTICES.md)**
+
+- Restructured into three reader-intent layers (30s lookup → per-stage SOP → case study); dissolved standalone "3 things to know" section into per-stage gotchas; dropped duplicate "what skill do I use" tables
+- Stage 4 split into 4a (AI fidelity via `requirement-traceability`) and 4b (manual on-device walkthrough); multi-layer verification table now anchors each layer to a stage
+- Stage 5 explicitly references git plugin coverage (`git:commit-push-pr`, `git:code-reviewing`)
+- Stage 3 documents plan-mode three-phase flow (design → review → implement)
+
+**feedback skill (chore)**
+
+- Reassigned ownership of iOS 社区版 (wangweidong → jinshichen)
+- Reassigned 易页's PM modules (聊天/好友/通知/账号 等) to 裘达立
+- Reassigned 内容发布 dev contacts to 陈昊/刘峰/陈一豪
 
 ### Marketplace
 
-- Bumped version from 0.1.58 to 0.1.59
-- Updated test plugin to version 0.0.28
+- Bumped version from 0.1.39 to 0.1.40
+- Updated test plugin to version 0.0.8
 
 ## 0.1.39
 
