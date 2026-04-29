@@ -129,10 +129,12 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py file-content <owner/r
 | 1. init | 验证输入，确认代码变更来源 | — |
 | 2. fetch | 获取需求文档和代码变更列表 | `change_checklist.md` |
 | 3. diff/context/callgraph | 逐代码变更深度分析 | `code_change_analysis.md` |
-| 4. impact | 影响面评估 | 追加写入 `code_change_analysis.md` |
-| 5. coverage | 测试覆盖评估 | `test_coverage_report.md` |
+| 4. impact | 影响面评估 | 追加写入 `code_change_analysis.md`（最终格式见 [TEMPLATES.md](TEMPLATES.md#code_change_analysismd-模板)） |
+| 5. coverage | 测试覆盖评估 | `test_coverage_report.md`（格式见 [TEMPLATES.md](TEMPLATES.md#test_coverage_reportmd-模板)） |
 | 6. generate | 为覆盖缺口生成补充用例 | `supplementary_cases.json` |
 | 7. output | 结构化输出 | `change_analysis.json`、`change_coverage_report.json` |
+
+> **飞书云文档输出**：`code_change_analysis.md` 和 `test_coverage_report.md` 是最终上传到飞书云文档的人类可读报告（multi-doc 模式：父目录「{需求}-变更分析-{时间}」下挂 3 个子文档），格式约束统一定义在 [TEMPLATES.md](TEMPLATES.md)。
 
 > **Android 三方交互命中时（按需）**：`code_change_analysis.md` 追加外部影响评估章节，`test_coverage_report.md` 追加外部影响测试访问评估章节，`supplementary_cases.json` 合并外部影响建议用例。不新增文件，详见 [EXTERNAL-IMPACT.md](EXTERNAL-IMPACT.md)。
 
