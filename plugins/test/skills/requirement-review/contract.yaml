@@ -27,7 +27,7 @@ output:
       description: 评审报告（7 章结构，含就绪度判定和按职能分组问题列表），发布到飞书 Wiki
       format: markdown
     - name: rr_summary.json
-      description: 结构化窄摘要（verdict / issue_count / blocking_issues / role_breakdown），供 ai-case requirement_review workflow 的 post_complete 与 extract_story_output 消费。schema 在 contracts/rr-summary.schema.json
+      description: 结构化窄摘要（verdict / issue_count / blocking_issues），供 ai-case requirement_review workflow 的 post_complete 与 extract_story_output 消费。schema 在 contracts/rr-summary.schema.json
       format: json
 
 dependencies:

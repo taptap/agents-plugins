@@ -21,7 +21,7 @@
     "risk_count": {
       "type": "integer",
       "minimum": 0,
-      "description": "识别到的风险项总数 (high + medium + low)"
+      "description": "风险项数量合计（integer）。例如 5。按等级拆分见 risk_breakdown 字段，不要把分桶 dict 写到本字段。"
     },
     "new_features": {
       "type": "array",
@@ -39,12 +39,8 @@
     },
     "risk_breakdown": {
       "type": "object",
-      "description": "按等级统计的风险数",
+      "description": "按等级（high / medium / low）分桶的风险数。例如 {\"high\": 1, \"medium\": 2, \"low\": 2}。",
       "additionalProperties": {"type": "integer", "minimum": 0}
-    },
-    "scenario": {
-      "enum": ["story", "bug"],
-      "description": "变更分析的场景模式"
     }
   }
 }

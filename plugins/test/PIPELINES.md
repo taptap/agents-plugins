@@ -4,6 +4,9 @@
 
 概要描述见 [README.md](README.md#快速开始)。
 
+> **受众**：实现编排层 / pipeline 的开发者。
+> **不是**：skill 运行的强制依赖文件 — 各 skill 的 `contract.yaml` 已是机器可读的接口定义，本文是给人读的跨 skill 链路全景图。
+
 ## 链路 A — 功能测试全流程
 
 ```

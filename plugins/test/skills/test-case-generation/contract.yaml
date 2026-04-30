@@ -74,6 +74,10 @@ output:
       description: output 阶段的补充用例（如有覆盖缺口）
       format: json
       optional: true
+    - name: requirement_points.md
+      description: understand 阶段的功能点清单 fallback 产出（仅当工作目录无上游 requirement_points.json 时产出；与 test-case-review 同名同 schema，primary+fallback 模式）
+      format: markdown
+      optional: true
   structured:
     total_modules:
       type: number

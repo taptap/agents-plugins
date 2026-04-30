@@ -1,4 +1,23 @@
 # shared-tools Python scripts dependencies
-# All scripts use Python standard library only (urllib, json, argparse, etc.)
-# No third-party packages required.
-# Minimum Python version: 3.8+ (for typing module compatibility)
+# Minimum Python version: 3.8+ (typing module compatibility)
+#
+# 大多数 helper（fetch_feishu_doc.py / gitlab_helper.py / github_helper.py /
+# search_mrs.py / search_prs.py / codex_agent.py）仅用 Python 标准库（urllib / json / argparse 等），
+# 无需 third-party 包。下列依赖按 *实际被哪些脚本用到* 列出，全部为 lazy-load：
+# 装了才能跑相应命令；不装不影响其它 helper。
+
+# === 必需（缺则相应 helper 直接失败）===
+
+# metersphere_helper.py：MS API 签名用 AES-CBC 加密
+pycryptodome>=3.18
+
+# validate_contracts.py：跨 skill contract.yaml 一致性校验（Check 14）
+pyyaml>=6.0
+
+# === 可选（缺则降级，不影响主流程）===
+
+# metersphere_helper.py：fv schema 强校验（无之 helper 跳过 schema 校验，但仍可工作）
+jsonschema>=4.17
+
+# metersphere_helper.py / codex_agent.py：从 .env 加载凭证（无之必须用 shell 环境变量）
+python-dotenv>=1.0

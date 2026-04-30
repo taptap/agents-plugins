@@ -141,11 +141,25 @@
 
 为覆盖缺口生成补充用例。
 
-**写入方式（强制）**：调用 MCP tool `mcp__cases__save_test_cases(file_path='<workdir>/supplementary_cases.json', cases=[...])`。**禁止用 Write 工具直接写 *_cases.json**，会被 hook 拒绝。tool input_schema 已强约束字段（title/priority/preconditions/steps），违反字段定义会被 API 在生成阶段直接拒绝。详见 [CONVENTIONS.md 用例 JSON 格式](../../CONVENTIONS.md#用例-json-格式)。
+**写入方式（强制）**：调用 MCP tool `mcp__cases__save_test_cases(file_path='<workdir>/review_supplementary_cases.json', cases=[...])`。**禁止用 Write 工具直接写 *_cases.json**，会被 hook 拒绝。tool input_schema 已强约束字段（title/priority/preconditions/steps），违反字段定义会被 API 在生成阶段直接拒绝。详见 [CONVENTIONS.md 用例 JSON 格式](../../CONVENTIONS.md#用例-json-格式)。
 
 如果没有需要补充的用例，跳过本步骤、不调用 tool。
 
 ### 5.4 输出
+
+按 [TEMPLATES.md](TEMPLATES.md) 中 review_summary.md 模板组织报告（8 节，无 H1）：
+
+0. 评审结论（用例就绪度判定 + 待修复分级 + 元数据，含 `分析方式：AI 辅助 + 评审人决策`）
+1. 评审总览（核心指标 + 覆盖率目标线 ≥ 90%）
+2. 需求覆盖率（已覆盖 / 部分覆盖 / 未覆盖 三组分别列出）
+3. 场景完整性（端到端不闭环 + 缺失边界场景按需求点分组）
+4. 用例正确性（预期错误 + 步骤术语 + 优先级合理性）
+5. 用例规范性（命名 + 步骤 + 前置条件）
+6. 修复 to-do（按用例 ID 分组，跨章节问题汇总到一起，引用编号 + 一句话动作）
+7. 建议补充的用例（与 §2.3 未覆盖呼应，按 P1/P2 分组）
+
+> ⚠️ 飞书云文档名已是「{需求名称}-用例评审-{YYYYMMDDHH}」，review_summary.md **不写 H1 标题**避免重复。
+> ⚠️ 状态符号统一用中文 `[已覆盖]/[部分覆盖]/[未覆盖]`、`[通过]/[有条件]/[不通过]`，**禁止 emoji 与 markdown 表格**——实测飞书 import 会破坏 emoji 与表格渲染，详见 TEMPLATES.md「关键约束」。
 
 写入 `review_summary.md`。Chat 输出统计摘要和补充用例清单。
 

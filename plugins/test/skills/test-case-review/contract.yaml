@@ -2,7 +2,7 @@ name: test-case-review
 version: "1.1"
 description: >
   评审已有测试用例的覆盖度和质量。输入测试用例 + 需求文档，
-  输出 review_result.json + review_summary.md + 可选 supplementary_cases.json。
+  输出 review_result.json + review_summary.md + 可选 review_supplementary_cases.json。
 
 input:
   one_of:
@@ -49,8 +49,8 @@ output:
     - name: tc_review_detail.md
       description: 4 维度逐项评审详细记录
       format: markdown
-    - name: supplementary_cases.json
-      description: 补充用例（如有覆盖缺口）
+    - name: review_supplementary_cases.json
+      description: 评审后补充的覆盖缺口用例（v0.0.10 起从 supplementary_cases.json 改名以避免与 change-analysis / test-case-generation 撞名）
       format: json
       optional: true
   structured:

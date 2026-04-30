@@ -12,7 +12,7 @@ description: >
 
 - Skill 类型：集成同步
 - 适用场景：将 AI 生成的测试用例导入 MeterSphere 平台，创建测试计划并关联用例；可选在需求还原度检查后自动回写执行结果
-- 必要输入：`final_cases.json` 或 `supplementary_cases.json`（至少一个）+ `plan_name`
+- 必要输入：`final_cases.json` 或 任一补充用例文件（`change_supplementary_cases.json` / `review_supplementary_cases.json` / 旧版 `supplementary_cases.json`，至少一个）+ `plan_name`
 - 输出产物：`ms_sync_report.json`（必须）、`ms_case_mapping.json`、`ms_plan_info.json`
 - 失败门控：MS 连通性检查失败时停止；pycryptodome 未安装时停止
 - 执行步骤：`init → import → plan → execute(可选) → output`
@@ -48,6 +48,9 @@ python3 $HELPER ping
 # 导入用例（自动按 module 分组创建子模块，--requirement 指定需求名作为父模块）
 python3 $HELPER import-cases <parent_module_id> <cases.json> \
   [--requirement <需求名>] [--tags 'AI 变更分析'] [--mapping-out PATH]
+
+# 列出测试计划阶段选项（如 smoke / new_feature_test / regression_test 等）
+python3 $HELPER list-stages
 
 # 查找或创建测试计划
 python3 $HELPER find-or-create-plan <plan_name> [--stage smoke]
@@ -110,6 +113,7 @@ exit 2 → 入参/校验非法，stderr 同上
 | `list-modules` | `[{id, name, case_count, children}, ...]` |
 | `ensure-module` | `{id, name, parent_id, is_new}` |
 | `import-cases` | `{imported, failed, modules_created, mapping_path, metersphere_url, failed_details}` |
+| `list-stages` | `[{value, label}, ...]`（测试计划 stage 选项，供 find-or-create-plan 的 --stage 参数选值） |
 | `find-or-create-plan` | `{plan_id, plan_name, plan_url, is_new, status}` |
 | `add-cases-to-plan` | `{plan_id, added_count}` |
 | `list-plan-cases` | `{plan_id, total, cases: [{id, case_id, name, status, priority, executor, node_path}, ...]}` |
@@ -145,7 +149,7 @@ writeback-from-fv 内部按下面规则把 fv 写回 MS plan：
 | `fail` | — | **Failure** | `AI 判定不通过 (conf={c}) — evidence: {first_loc} — 失败原因: {actual_brief}` |
 | `inconclusive` | — | **Prepare** | `AI 无法判定 — 原因: {inconclusive_reason}` |
 
-> **关键变更（vs v0.0.15）**：旧版本基于 `confidence_threshold`（默认 90）判定 Pass/Failure/Prepare。当前版本不再用阈值——pass + ext_deps 非空时**直接降级为 Prepare**（不是「Pass + caveat 评论」），保证 MS Pass 语义不掺水。conf 仅作为 schema 校验门槛（pass 必须 conf≥70）和 comment 显示。
+> **关键变更（vs v0.0.15）**：旧版本基于 `confidence_threshold`（默认 90）判定 Pass/Failure/Prepare。v0.0.16 起不再用阈值——pass + ext_deps 非空时**直接降级为 Prepare**（不是「Pass + caveat 评论」），保证 MS Pass 语义不掺水。conf 仅作为 schema 校验门槛（pass 必须 conf≥70）和 comment 显示。v0.0.17 起 `confidence_threshold` 字段从 contract.yaml 删除（之前作为 deprecated 占位）。
 
 被降级为 Prepare 的条目通过 `pass_with_caveats.md` + `pending_external_validation.md` 单独汇总，给 QA 做回归清单。
 

@@ -167,7 +167,7 @@ verify-agent prompt 模板：
 
 ## 测试执行报告格式
 
-代码生成类 skill（unit-test-design、integration-test-design）在 verify 阶段尝试执行测试后，将执行结果持久化为 `test_execution_report.json`，供下游 test-failure-analyzer 消费。
+代码生成类 skill 在 verify 阶段尝试执行测试后，将执行结果持久化为 JSON 文件，供下游 test-failure-analyzer 消费。v0.0.10 起按 skill 区分文件名以避免撞名：unit-test-design 产出 `unit_test_execution_report.json`，integration-test-design 产出 `integration_test_execution_report.json`。两者结构一致。
 
 ```json
 {

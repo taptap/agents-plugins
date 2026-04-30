@@ -48,9 +48,10 @@
 }
 ```
 
-> **例外**：追溯类 Agent（如 forward-tracer、reverse-tracer）使用领域特定输出格式
-> （`requirement_to_code` / `code_to_requirement`），不强制遵循通用 `{agent, findings}` 结构。
-> 领域特定格式需在 Agent 定义文件中完整描述。
+> **例外**：追溯类 / 模块级 sub-agent（如 case-tracer）：
+> - 输出格式可使用领域特定结构（如 `case_results[]`、`requirement_to_code` 等），不强制遵循通用 `{agent, findings}` 结构。
+> - 节名可按 sub-agent 语义调整：例如 `## 执行流程`（替代 `## 分析重点`，sub-agent 跑流程而非维度分析）、`## 输出`（替代 `## 输出格式`）、`## 置信度评分`（替代 `## 置信度评分指南`）。
+> - 领域特定格式 / 替代节名都必须在 Agent 定义文件中完整描述并自洽。
 
 ## 置信度评分指南
 
