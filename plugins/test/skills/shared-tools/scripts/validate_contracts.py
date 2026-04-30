@@ -5,8 +5,14 @@
 1. from_upstream 引用的文件名在上游 skill 的 output.files 中存在
 2. 跨 skill 输出文件名无冲突（同名文件由不同 skill 产出）
 3. contract.yaml 的 name 字段与目录名一致
+
+可选参数:
+  --allowlist <path>   YAML 白名单文件，用于豁免"经设计认可的冲突"。
+                       格式见 plugins/test/contracts/known-collisions.yaml。
+                       未列入白名单的冲突仍报 fail。
 """
 
+import argparse
 import os
 import sys
 
@@ -77,20 +83,54 @@ def check_name_consistency(contracts):
     return issues
 
 
-def check_output_collisions(contracts):
-    """检查跨 skill 的输出文件名冲突。"""
+def load_allowlist(path):
+    """加载白名单。返回 {filename: set(owners)} — 命中且 owners 子集即豁免。"""
+    if not path:
+        return {}
+    if not os.path.isfile(path):
+        print(f"警告: 白名单文件不存在: {path}", file=sys.stderr)
+        return {}
+    with open(path, encoding="utf-8") as f:
+        data = yaml.safe_load(f) or {}
+    allowlist = {}
+    for fname, entry in (data.get("collisions") or {}).items():
+        owners = entry.get("owners") if isinstance(entry, dict) else None
+        if owners:
+            allowlist[fname] = set(owners)
+    return allowlist
+
+
+def check_output_collisions(contracts, allowlist=None):
+    """检查跨 skill 的输出文件名冲突。allowlist 内的冲突降级为 warning。"""
+    allowlist = allowlist or {}
     file_owners = {}
     for skill_name, contract in contracts.items():
         for fname in get_output_files(contract):
             file_owners.setdefault(fname, []).append(skill_name)
 
     issues = []
+    warnings = []
     for fname, owners in sorted(file_owners.items()):
-        if len(owners) > 1:
+        if len(owners) <= 1:
+            continue
+        owners_set = set(owners)
+        allowed_owners = allowlist.get(fname)
+        if allowed_owners and owners_set.issubset(allowed_owners):
+            warnings.append(
+                f"  [ALLOWED] '{fname}' 共享 owner: {', '.join(sorted(owners_set))}（白名单豁免）"
+            )
+            continue
+        # 部分新增 owner 不在白名单 → 仍报 fail，提示需补
+        if allowed_owners:
+            extra = sorted(owners_set - allowed_owners)
+            issues.append(
+                f"  [COLLISION] '{fname}' 出现新 owner {extra} 未列入白名单（已知 owners: {sorted(allowed_owners)}）"
+            )
+        else:
             issues.append(
                 f"  [COLLISION] '{fname}' 被多个 skill 产出: {', '.join(owners)}"
             )
-    return issues
+    return issues, warnings
 
 
 def check_upstream_refs(contracts):
@@ -106,10 +146,24 @@ def check_upstream_refs(contracts):
 
 
 def main():
+    parser = argparse.ArgumentParser(
+        description="校验所有 skill 的 contract.yaml 一致性"
+    )
+    parser.add_argument(
+        "--allowlist",
+        default=None,
+        help="YAML 白名单文件路径，豁免设计认可的 output collision",
+    )
+    args = parser.parse_args()
+
     skills_dir = find_skills_dir()
     contracts = load_contracts(skills_dir)
+    allowlist = load_allowlist(args.allowlist)
 
-    print(f"已加载 {len(contracts)} 个 skill 的 contract.yaml\n")
+    print(f"已加载 {len(contracts)} 个 skill 的 contract.yaml")
+    if allowlist:
+        print(f"已加载 {len(allowlist)} 条 collision 白名单")
+    print()
 
     all_issues = []
 
@@ -124,9 +178,11 @@ def main():
         print("--- name 字段一致性: PASS ---")
 
     # 检查 2: 输出文件名冲突
-    collision_issues = check_output_collisions(contracts)
-    if collision_issues:
+    collision_issues, collision_warnings = check_output_collisions(contracts, allowlist)
+    if collision_issues or collision_warnings:
         print("\n--- 输出文件名冲突 ---")
+        for w in collision_warnings:
+            print(w)
         for issue in collision_issues:
             print(issue)
         all_issues.extend(collision_issues)

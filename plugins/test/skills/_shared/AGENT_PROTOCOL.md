@@ -12,7 +12,6 @@
 agents/
 ├── AGENT_TEMPLATE.md                 # 统一模板
 ├── test-case-writer.md               # 测试用例生成 Agent
-├── failure-classifier.md             # 测试失败分类 Agent (预留)
 ├── ui-fidelity-checker.md            # UI 还原度检查 Agent
 ├── requirement-understanding/        # 需求理解多视角 Agent
 │   ├── functional-perspective.md
@@ -21,9 +20,8 @@ agents/
 ├── test-case-generation/              # 测试用例生成评审冗余对
 │   ├── review-agent-1.md
 │   └── review-agent-2.md
-├── requirement-traceability/         # 需求追溯 Agent（反向追溯 + 正向降级回退）
-│   ├── forward-tracer.md
-│   └── reverse-tracer.md
+├── requirement-traceability/         # 需求追溯 Agent（按模块拆分场景）
+│   └── case-tracer.md                # 用例中介验证拆模块并行 sub-agent
 └── change-analysis/                  # 变更分析交叉验证 Agent
     └── codex-change-analyzer.md      # Codex CLI 独立分析（与主 Agent 交叉验证）
 ```

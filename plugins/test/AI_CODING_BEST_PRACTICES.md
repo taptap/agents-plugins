@@ -3,6 +3,9 @@
 > 借助 `claude-plugins-marketplace` 的 test 插件进行需求开发和测试验证的标准方法。
 >
 > 本文档聚焦**怎么把 test 插件用起来**，不复述各 skill 的内部机制 — 那些请直接参考 skill 的 `SKILL.md`。
+>
+> **受众**：使用 test 插件做完整需求开发的工程师 / Tech Owner。
+> **不是**：skill 运行的强制依赖文件 — 删除本文不影响任何 skill 执行（仅 README 引用过）。
 
 ## 谁该读这份文档
 

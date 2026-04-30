@@ -82,6 +82,6 @@ python3 $SKILLS_ROOT/shared-tools/scripts/metersphere_helper.py \
 ## 注意事项
 
 1. **不写其他模块的 case**：哪怕看到对其他模块有影响，也只在本模块 case 范围内输出。跨模块影响由主 agent 在 Phase 4.1 交叉验证时处理
-2. **不写 reverse 部分**：reverse-tracer 由主 agent 内联完成（PHASES 3.3）
+2. **不写 reverse 部分**：反向通道由主 agent 内联完成（PHASES 3.3）
 3. **不调 metersphere-sync / writeback**：本 sub-agent 只产出 fv 子集，下游回写由主 agent 在 Phase 6 调 `helper.writeback-from-fv` 统一处理
 4. **失败透明**：如果某条 case 实在追不动也要标 inconclusive 输出，不要静默丢弃；主 agent 合并时会按数量校验本模块产出 ≥ 输入 cases 数量

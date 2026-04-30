@@ -179,7 +179,7 @@
 | 路径 | 来源 PHASES 步骤 | `case_id` 命名 | 必有字段 |
 | --- | --- | --- | --- |
 | 用例中介验证（常态） | 3.2.3 | 上游 `final_cases.json` 的 `case_id`（如 `M1-TC-01`） | `case_id` / `requirement_id` / `result` / `confidence` + 按 result 分支必填 evidence / actual / inconclusive_reason |
-| forward-tracer 降级 | 3.2.4 | `FORWARD-TRACER-{requirement_id}` | 同上 |
+| 正向降级 / forward fallback | 3.2.4 | `FORWARD-TRACER-{requirement_id}` | 同上 |
 | coverage-report 兜底合成 | 4.6 | `FORWARD-TRACER-FP-{N}` | `case_id` / `requirement_id` / `requirement_name` / `result` / `confidence` / `trace` / `source: "synthesized_from_coverage_report"`；兜底版 evidence 可缺，但下游 4.6a schema 校验会要求补 |
 
 落盘后必须跑 `metersphere_helper.py validate-fv` 校验。

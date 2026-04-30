@@ -1,0 +1,68 @@
+# 已知 contract output 文件名冲突白名单
+#
+# validate_contracts.py 默认会把"多个 skill 在 contract.yaml 中声明同名 output"判为冲突。
+# 本文件列出"经过设计认可"的同名输出 — 它们由共享 helper 产出，运行时不会同时写入。
+#
+# 格式：
+#   collisions:
+#     <filename>:
+#       owners: [skill-a, skill-b, ...]   # 实际声明这个文件的 skill 列表（顺序无关）
+#       reason: "为什么这次共享是 OK 的"
+#       enforcement: "运行时如何避免互相覆盖"
+#
+# 评审协定（Batch 1）：
+# 允许进白名单的两类模式：
+#   (A) 共享 helper 产出 + 运行时互斥（同一 helper 决定输出格式 + 调用路径互斥）
+#   (B) primary + fallback producer（schema 完全一致；下游优先消费上游产出，
+#       仅在上游缺失时由本 skill 内置回退兜底产出）
+# 禁止：
+#   - 语义不同但同名（必须改名，例：risk_assessment.json）
+#   - 临时性"共存但接受被覆盖"（让 caller 改用工作区子目录）
+
+collisions:
+  forward_verification.enriched.json:
+    owners: [metersphere-sync, requirement-traceability]
+    reason: |
+      两者最终都会调用同一个 metersphere_helper.py writeback-from-fv 共享脚本产出此文件。
+      运行时 qa-workflow 只走 requirement-traceability 的 Phase 6 writeback；
+      手动模式下用户两条路径互斥（要么 metersphere-sync mode=execute，要么 traceability writeback）。
+    enforcement: |
+      qa-workflow / qa-lite 只走 traceability writeback；不允许同会话先 metersphere-sync execute
+      再 traceability — 这种用法虽不会触发但也不被推荐。
+
+  ms_sync_report.json:
+    owners: [metersphere-sync, requirement-traceability]
+    reason: 同 forward_verification.enriched.json，由同一 writeback helper 产出。
+    enforcement: 同上。
+
+  pass_with_caveats.md:
+    owners: [metersphere-sync, requirement-traceability]
+    reason: 同 forward_verification.enriched.json。
+    enforcement: 同上。
+
+  pending_external_validation.md:
+    owners: [metersphere-sync, requirement-traceability]
+    reason: 同 forward_verification.enriched.json。
+    enforcement: 同上。
+
+  ui_fidelity_report.json:
+    owners: [requirement-traceability, ui-fidelity-check]
+    reason: |
+      模式 (B) primary + fallback producer。schema 完全一致。
+      ui-fidelity-check 是 canonical producer；
+      requirement-traceability PHASES 3.4 内置回退仅在工作目录无该文件时自产。
+    enforcement: |
+      requirement-traceability/PHASES.md L470 显式判断："如果工作目录已有
+      ui_fidelity_report.json（上游产出）→ 跳过，在阶段 4 直接使用"。
+      即先 ui-fidelity-check 后 traceability 时，traceability 的 3.4 不会写。
+
+  requirement_points.md:
+    owners: [test-case-generation, test-case-review]
+    reason: |
+      模式 (B) primary + fallback producer。schema 完全一致（编号 RP-N + 验收标准）。
+      两 skill 都在 understand 阶段从需求文档提取功能点；如工作目录已有上游
+      requirement_points.json（来自 requirement-clarification）则不产，否则各自 fallback 自产。
+    enforcement: |
+      test-case-generation/PHASES.md L478 与 test-case-review/PHASES.md L37 都明文
+      "已有上游产出文件 → 优先消费"，落地为只在缺上游时才写本文件。
+      v0.0.14 起 TCG contract 显式声明该 optional output（之前漏声明导致 validate_contracts 漏检）。

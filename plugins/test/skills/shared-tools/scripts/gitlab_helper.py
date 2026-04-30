@@ -215,9 +215,9 @@ USAGE = """\
 
 
 def main():
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
         print(USAGE, file=sys.stderr)
-        sys.exit(1)
+        sys.exit(0 if len(sys.argv) >= 2 else 1)
 
     if not GITLAB_URL:
         print("[ERROR] 环境变量 GITLAB_URL 未设置", file=sys.stderr)

@@ -12,7 +12,13 @@ TEMP_DIRS=()
 
 new_tmpdir() {
   local dir
-  dir="$(mktemp -d)"
+  if ! dir="$(mktemp -d 2>/dev/null)"; then
+    # 沙盒/容器中 /tmp 不可写时，整套 Check 7 子用例都会拿到空字符串后续调用 mkdir / 文件写入，
+    # 而那些 if-cond 包裹会吞掉错误并最终 EXIT=0 假绿。这里直接硬失败，让 sandbox 用例显式报错。
+    echo "  FAIL: mktemp -d failed (sandbox restrictions on TMPDIR?)" >&2
+    EXIT_CODE=1
+    exit 1
+  fi
   TEMP_DIRS+=("$dir")
   printf '%s\n' "$dir"
 }
@@ -1177,6 +1183,96 @@ do
 done
 
 # ============================================================
+# 10. [test 插件] SKILL.md frontmatter name ↔ directory（Codex skill loader 严格匹配）
+# 注：当前仅扫描 plugins/test/，因 git 插件存在历史 name='git-<dir>' 写法，本检查不予波及。
+# 后续若要把规则推广到全部插件，需先与 git 插件沟通命名一致性方案。
+# ============================================================
+echo "=== Check 10: [test] SKILL.md frontmatter name ↔ directory ==="
+check10_failed=0
+while IFS= read -r -d '' skill_md; do
+  dir=$(basename "$(dirname "$skill_md")")
+  fname=$(awk '/^name:/{gsub(/[ \r"]/,"",$2); print $2; exit}' "$skill_md")
+  rel="${skill_md#"$REPO_ROOT"/}"
+  if [[ -z "$fname" ]]; then
+    fail "${rel} missing name in frontmatter"
+    check10_failed=1
+  elif [[ "$dir" != "$fname" ]]; then
+    fail "${rel} frontmatter name='${fname}' != dir='${dir}'"
+    check10_failed=1
+  fi
+done < <(find "${REPO_ROOT}/plugins/test" -path '*/skills/*/SKILL.md' -not -path '*/_shared/*' -print0)
+if [[ $check10_failed -eq 0 ]]; then
+  pass "all SKILL.md frontmatter name matches directory"
+fi
+
+# ============================================================
+# 11. [test 插件] handoffs[].skill 目标 skill 存在性
+# ============================================================
+echo "=== Check 11: [test] handoffs[].skill targets exist ==="
+check11_failed=0
+while IFS= read -r -d '' skill_md; do
+  rel="${skill_md#"$REPO_ROOT"/}"
+  while IFS= read -r line; do
+    target=$(echo "$line" | sed -E 's/.*skill:[[:space:]]*([a-z][a-z0-9_-]*):([a-z][a-z0-9_-]*).*/\1\/\2/')
+    plugin=${target%/*}
+    name=${target#*/}
+    if [[ -z "$plugin" || -z "$name" || "$plugin" == "$line" ]]; then
+      continue
+    fi
+    if [[ ! -d "${REPO_ROOT}/plugins/${plugin}/skills/${name}" ]]; then
+      fail "${rel} handoffs target ${plugin}:${name} → plugins/${plugin}/skills/${name} not found"
+      check11_failed=1
+    fi
+  done < <(grep -E '^[[:space:]]+skill:[[:space:]]*[a-z][a-z0-9_-]*:[a-z][a-z0-9_-]*' "$skill_md" 2>/dev/null)
+done < <(find "${REPO_ROOT}/plugins/test" -path '*/skills/*/SKILL.md' -not -path '*/_shared/*' -print0)
+if [[ $check11_failed -eq 0 ]]; then
+  pass "all handoffs targets resolve"
+fi
+
+# ============================================================
+# 12. [test 插件] subagent_type 引用的 agent 文件存在性
+# ============================================================
+echo "=== Check 12: [test] subagent_type referenced agents exist ==="
+check12_failed=0
+while IFS= read -r -d '' f; do
+  rel="${f#"$REPO_ROOT"/}"
+  plugin=$(echo "$f" | sed -E "s|.*plugins/([^/]+)/.*|\1|")
+  while IFS= read -r agent; do
+    # 内置 agent (Claude Code / Agent SDK 提供) 不需要插件内文件
+    case "$agent" in
+      generalPurpose|general-purpose|Explore|Plan|statusline-setup) continue ;;
+    esac
+    if ! find "${REPO_ROOT}/plugins/${plugin}/agents" -name "${agent}.md" 2>/dev/null | grep -q .; then
+      fail "${rel} → subagent_type=\"${agent}\" but plugins/${plugin}/agents/**/${agent}.md not found"
+      check12_failed=1
+    fi
+  done < <(grep -oE 'subagent_type[[:space:]]*=[[:space:]]*"[^"]+"' "$f" 2>/dev/null | sed -E 's/.*"([^"]+)".*/\1/' | sort -u)
+done < <(find "${REPO_ROOT}/plugins/test" \( -path '*/skills/*/SKILL.md' -o -path '*/skills/*/PHASES.md' -o -path '*/skills/*/references/*.md' \) -not -path '*/_shared/*' -print0)
+if [[ $check12_failed -eq 0 ]]; then
+  pass "all subagent_type references resolve"
+fi
+
+# ============================================================
+# 13. [test 插件] references/ 路径解析（SKILL.md / PHASES.md 引用的 references/*.md 必须存在）
+# ============================================================
+echo "=== Check 13: [test] references/ paths exist ==="
+check13_failed=0
+while IFS= read -r -d '' f; do
+  rel="${f#"$REPO_ROOT"/}"
+  skill_dir=$(dirname "$f")
+  while IFS= read -r ref; do
+    if [[ ! -f "${skill_dir}/${ref}" ]]; then
+      fail "${rel} → ${ref} not found"
+      check13_failed=1
+    fi
+    # 字符类用排除型而非白名单：兼容中文/Unicode 文件名（如 references/knowledge-base/实名问题.md）
+  done < <(grep -oE 'references/[^[:space:])"`]+\.md' "$f" 2>/dev/null | sort -u)
+done < <(find "${REPO_ROOT}/plugins/test" \( -path '*/skills/*/SKILL.md' -o -path '*/skills/*/PHASES.md' \) -print0)
+if [[ $check13_failed -eq 0 ]]; then
+  pass "all references/ paths resolve"
+fi
+
+# ============================================================
 # N. Contract bridge check（producer 端 contract.yaml 自检 + 与消费方对账）
 # ============================================================
 echo "=== Check N: Contract bridge ==="
@@ -1199,6 +1295,32 @@ else
 fi
 
 # ============================================================
+# 14. [test 插件] contract.yaml 跨 skill 一致性 + 输出文件名冲突
+# 委托给 plugins/test/skills/shared-tools/scripts/validate_contracts.py
+# 含白名单（plugins/test/contracts/known-collisions.yaml）豁免设计认可的共享 helper 输出
+# ============================================================
+echo "=== Check 14: [test] contract.yaml cross-skill consistency ==="
+
+CONTRACT_VALIDATOR="${REPO_ROOT}/plugins/test/skills/shared-tools/scripts/validate_contracts.py"
+COLLISION_ALLOWLIST="${REPO_ROOT}/plugins/test/contracts/known-collisions.yaml"
+if [[ ! -f "$CONTRACT_VALIDATOR" ]]; then
+  fail "validate_contracts.py not found at ${CONTRACT_VALIDATOR}"
+elif ! command -v python3 >/dev/null 2>&1; then
+  echo "  SKIP: python3 not installed"
+elif ! python3 -c 'import yaml' >/dev/null 2>&1; then
+  echo "  SKIP: PyYAML not installed (pip install pyyaml)"
+else
+  contract_log="$(mktemp 2>/dev/null || echo /tmp/contract-check.log)"
+  if python3 "$CONTRACT_VALIDATOR" --allowlist "$COLLISION_ALLOWLIST" >"$contract_log" 2>&1; then
+    pass "contract.yaml cross-skill consistency (name / collisions / from_upstream)"
+  else
+    fail "contract.yaml cross-skill consistency"
+    sed 's/^/    /' "$contract_log"
+  fi
+  rm -f "$contract_log"
+fi
+
+# ============================================================
 # N+1. testcase.schema.json 校验（委托给 tests/check-schemas.sh）
 # ============================================================
 echo "=== Check N+1: testcase.schema.json ==="
@@ -1211,12 +1333,14 @@ elif ! command -v python3 >/dev/null 2>&1; then
 elif ! python3 -c 'import jsonschema' >/dev/null 2>&1; then
   echo "  SKIP: jsonschema not installed (pip install jsonschema)"
 else
-  if bash "$CHECK_SCHEMAS" >/tmp/schema-check.log 2>&1; then
-    pass "testcase.schema.json valid + rejects 4 invalid patterns"
+  schema_log="$(mktemp 2>/dev/null || echo /tmp/schema-check.log)"
+  if bash "$CHECK_SCHEMAS" >"$schema_log" 2>&1; then
+    pass "5 contract schemas (testcase / ca-summary / defect-list / rr-summary / smoke-test-report) valid + reject ~30 invalid patterns"
   else
-    fail "testcase.schema.json validation"
-    sed 's/^/    /' /tmp/schema-check.log
+    fail "contract schemas validation"
+    sed 's/^/    /' "$schema_log"
   fi
+  rm -f "$schema_log"
 fi
 
 # ============================================================

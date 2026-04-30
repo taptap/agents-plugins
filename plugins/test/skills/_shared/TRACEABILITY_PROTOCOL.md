@@ -13,7 +13,7 @@ requirement-traceability 采用双通道追溯：
 
 **正向通道**用具体的测试用例作为中介——AI 拿用例的"操作步骤 + 预期结果"逐条对照代码推理"代码是否真能实现这条用例"。按优先级消费：① 上游 `final_cases.json`（test-case-generation 产出）→ ② `requirement_points.json` 的 `acceptance_criteria` → ③ 兜底从需求描述提取。详见 [requirement-traceability/PHASES.md](../requirement-traceability/PHASES.md) 3.1-3.2 节。
 
-**反向通道**主 agent 内联完成（v0.0.16 起不再调 Task sub-agent，详见 `requirement-traceability/PHASES.md` 3.3）：从代码变更出发寻找需求对应，结果直接写进 `code_analysis.md` 的「reverse-tracer 输出（主 agent 内联）」节。
+**反向通道**主 agent 内联完成（v0.0.16 起不再调 Task sub-agent，详见 `requirement-traceability/PHASES.md` 3.3）：从代码变更出发寻找需求对应，结果直接写进 `code_analysis.md` 的「反向追溯输出（主 agent 内联）」节。
 
 两个通道由主 agent 顺序执行（先正向，再反向），结果在 output 阶段交叉验证。
 

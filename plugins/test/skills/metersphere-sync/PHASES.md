@@ -18,7 +18,7 @@
 按 [CONVENTIONS.md](../../CONVENTIONS.md#上游输入消费) 定义的优先级确认输入：
 
 1. 工作目录中存在 `final_cases.json` → 作为主输入
-2. 工作目录中存在 `supplementary_cases.json` → 作为主输入
+2. 工作目录中存在补充用例文件（任一）：`change_supplementary_cases.json` / `review_supplementary_cases.json` / `supplementary_cases.json` → 作为主输入。多个并存时按列出顺序优先（v0.0.10 起按上游 skill 区分文件名以避免撞名，旧版 supplementary_cases.json 仅 test-case-generation 内部使用）
 3. 以上均不存在 → **停止**
 
 ### 1.2 确定执行模式
@@ -31,7 +31,7 @@
 - `parent_module_id`：优先使用参数值，否则读取 `MS_DEFAULT_NODE_ID` 环境变量
 - `plan_name`：优先使用参数值，否则询问用户提供需求名称
 
-> **已废弃**：`confidence_threshold`（默认 90）。当前 P6 状态映射不再用阈值——pass + ext_deps 非空时直接降级为 Prepare（详见 SKILL.md「P6 状态映射」）。如果传入了这个参数，会被 writeback-from-fv 忽略。
+> **已删除**：`confidence_threshold`（v0.0.16 起 helper 不再识别此参数；v0.0.17 起从 contract.yaml 删除）。当前 P6 状态映射不再用阈值——pass + ext_deps 非空时直接降级为 Prepare（详见 SKILL.md「P6 状态映射」）。
 
 ### 1.4 Precondition 校验（CRITICAL，必须执行）
 
@@ -288,7 +288,7 @@ mapping 不存在或 sha 不匹配 → **stop**，输出 `{type: stale_mapping, 
 
 ### 4.4 重新执行场景
 
-- **有补充用例**（`supplementary_cases.json` 存在）：先执行 Phase 2 重新 import + Phase 3 追加关联（mapping 会自动重写），再跑 4.1 回写
+- **有补充用例**（`change_supplementary_cases.json` / `review_supplementary_cases.json` / 旧版 `supplementary_cases.json` 任一存在）：先执行 Phase 2 重新 import + Phase 3 追加关联（mapping 会自动重写），再跑 4.1 回写
 - **无补充用例**：直接对计划中已有用例重新跑 4.1。`writeback-from-fv` 的幂等比对会跳过状态相同的条目，只更新真正变化的。
 
 ### 4.5 单条调用（仅诊断 / 应急用）

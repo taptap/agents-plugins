@@ -12,7 +12,7 @@ input:
       description: 测试执行的 stdout/stderr 输出
     test_report:
       type: file
-      description: 测试执行报告文件（优先消费上游 unit-test-design / integration-test-design 产出的 test_execution_report.json，也支持其他 JSON/XML/文本格式）
+      description: 测试执行报告文件（优先消费上游 unit-test-design 的 unit_test_execution_report.json 或 integration-test-design 的 integration_test_execution_report.json；v0.0.10 起两者改名以避免撞名，也支持其他 JSON/XML/文本格式）
       from_upstream: [unit-test-design, integration-test-design]
   optional:
     test_command:

@@ -14,7 +14,8 @@ description: >
 - Skill 类型：核心工作流
 - 适用场景：基于需求文档或上游澄清结果，拆解功能模块、生成测试用例、冗余对评审、用户确认，输出可入库的最终用例集
 - 必要输入：需求链接、本地需求文档，或上游 `clarified_requirements.json` + `requirement_points.json`（至少一个）
-- 输出产物：`final_cases.json`（必须）、`test_cases.json`（review 前中间版本）、`tc_gen_review.md`、`review_summary.json`、`decomposition.md`、`context_summary.md`（仅 >= 3 模块时生成）、`sufficiency_assessment.json`（充分性评估）、`clarifications.json`（仅阶段 3.5 扫到 ≥ 1 条歧义时生成）
+- 输出产物（对外）：`final_cases.json`（必须）、`tc_gen_review.md`、`review_summary.json`、`decomposition.md`、`context_summary.md`（仅 >= 3 模块时生成）、`sufficiency_assessment.json`（充分性评估）、`clarifications.json`（仅阶段 3.5 扫到 ≥ 1 条歧义时生成）
+- 中间产物（merge 完后保留作审计，下游 skill 不消费）：`module_*_cases.json`、`test_cases.json`（review 前快照）、`supplementary_cases.json`（output 阶段补充用例，已 merge 进 final_cases.json）
 - 失败门控：需求正文不可读时停止生成；需求充分性不足时暂停请求用户补充或标注风险；所有用例必须严格基于需求，不补充未提及功能
 - 执行步骤：`init → understand（含充分性门控）→ decompose → scan-ambiguities（生成前歧义确认）→ generate → review → confirm → output`
 

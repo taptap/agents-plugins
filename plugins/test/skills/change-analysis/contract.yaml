@@ -68,12 +68,12 @@ output:
     - name: change_fix_analysis.json
       description: 根因分析和修复完整性评估（Bug 场景）
       format: json
-    - name: risk_assessment.json
-      description: 残余风险评估和行动建议（Bug 场景）
+    - name: bug_risk_assessment.json
+      description: Bug 场景的残余风险评估和行动建议（v0.0.10 起改名以避免与 requirement-traceability 的 risk_assessment.json 撞名）
       format: json
       optional: true
-    - name: supplementary_cases.json
-      description: 为覆盖缺口生成的补充用例（Story 场景，可选）
+    - name: change_supplementary_cases.json
+      description: 为代码变更覆盖缺口生成的补充用例（Story 场景，可选；v0.0.10 起从 supplementary_cases.json 改名以避免与 test-case-generation / test-case-review 撞名）
       format: json
       optional: true
     - name: ca_summary.json

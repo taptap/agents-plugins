@@ -93,7 +93,7 @@
 
 本阶段主 agent 顺序执行两个通道：先正向（用例中介验证 → `forward_verification.json`），再反向（代码追溯，主 agent 内联到 `code_analysis.md`），在阶段 4 交叉验证。
 
-> **历史变更（v0.0.16）**：旧版本声称 forward-tracer / reverse-tracer 两个 sub-agent 并行调度，但实际 AI 跑 skill 时 sub-agent 调度不可靠（46 条用例的实际跑都是手工补的）。当前版本主 agent 顺序内联。`agents/requirement-traceability/forward-tracer.md` / `reverse-tracer.md` agent 定义文件保留，作为降级路径（3.2.4）和未来选配（条件成熟时再做 sub-agent 调度）。
+> **历史变更（v0.0.16 / v0.0.9 清理）**：旧版本曾用 forward-tracer / reverse-tracer 两个独立 sub-agent 并行调度，但实际 AI 跑 skill 时 sub-agent 调度不可靠（46 条用例的实际跑都是手工补的）。当前版本主 agent 顺序内联：正向走用例中介验证（3.2.1-3.2.3），反向走主 agent 直接代码归属（3.3）。原 `agents/requirement-traceability/forward-tracer.md` / `reverse-tracer.md` 已在 v0.0.9 删除，降级 prompt 内联到 3.2.4。
 
 ### 3.0 准备 diff 数据
 
@@ -357,17 +357,42 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 - `inconclusive` 必须带 `inconclusive_reason`
 - `external_dependencies.types` 取值：`device | server | third_party | framework_default | user_action | data_state | timing`
 
-#### 3.2.4 降级回退
+#### 3.2.4 降级回退（forward fallback，主 agent 内联）
 
-如果代码不可读、diff 信息严重不足（如 fetch 阶段只拿到文件名清单）→ 降级为传统 forward-tracer Agent 模式（不做用例中介，直接需求 → 代码模糊映射）。降级时 forward-tracer 输出 `{agent, requirement_to_code}` 格式（`status: covered/partial/missing`），需适配为 `forward_verification.json` 格式后写入：
+如果代码不可读、diff 信息严重不足（如 fetch 阶段只拿到文件名清单）→ 降级走 forward fallback：跳过用例中介，直接做需求 → 代码模糊映射。本路径主 agent 内联完成（v0.0.9 起原 forward-tracer.md 已删除，prompt 内联在此）。
 
-| forward-tracer status | 映射后 result | confidence 处理 |
+**输入**：
+
+1. `traceability_checklist.md` 中的需求点列表（R1, R2... 或上游 FP-N）
+2. 现有的 diff 数据（无论多稀疏）
+3. 需求文档（如有）
+
+**逐需求点判定**：
+
+对每个需求点 R：在 diff 中寻找语义/命名/路径上可对应到该需求的代码变更。
+按以下三档输出 status：
+
+| status | 判定标准 | 置信度区间 |
 | --- | --- | --- |
-| `covered` | `pass` | 保留 forward-tracer 的 confidence |
-| `partial` | `inconclusive` | confidence 取 forward-tracer 值的 80% |
-| `missing` | `fail` | 保留 forward-tracer 的 confidence |
+| `covered` | 代码中有明确的函数/接口/路由直接对应需求点（命名、注释、路径可验证） | 70-100 |
+| `partial` | 代码逻辑看起来在做该需求，但没有直接命名或注释对应 | 50-69 |
+| `missing` | 代码变更中未发现与该需求相关的实现 | confidence 反映"漏掉"的把握度，50-100 |
 
-降级时 `case_id` 字段填 `"FORWARD-TRACER-{requirement_id}"`，标记数据来源。
+**适配为 `forward_verification.json` 格式**（schema 强约束）：
+
+| 内联 status | 映射后 result | confidence 处理 |
+| --- | --- | --- |
+| `covered` | `pass`（必带 `evidence.{code_location, verification_logic}`） | 保留判定 confidence |
+| `partial` | `inconclusive`（必带 `inconclusive_reason: "fallback_partial"`） | 判定 confidence × 0.8 |
+| `missing` | `fail`（必带 `actual` 描述缺失现象 + `evidence`） | 保留判定 confidence |
+
+降级时 `case_id` 字段固定填 `"FORWARD-TRACER-{requirement_id}"`，标记数据来源以便下游审计。
+
+**注意事项**：
+
+1. **宁可 inconclusive 也不要瞎 pass**：本路径无用例可比对，凡推断把握不足应降为 inconclusive
+2. **每条 result=pass 必须带 evidence**：仅当真能在代码中指认到具体函数/路由时才能 pass，否则按 partial 处理
+3. **写完后跑 4.6a schema 校验**：与正常路径相同，由 `metersphere_helper.py validate-fv` 把关
 
 ### 3.2.5 API 契约感知检查（条件触发）
 
@@ -414,9 +439,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 
 ### 3.3 反向通道：直接代码追溯（主 agent 内联，不拆 sub-agent）
 
-> **历史变更说明**：旧版本描述「启动 reverse-tracer sub-agent 并行」，agent 定义文件 `agents/requirement-traceability/reverse-tracer.md` 是存在的，但实际 AI 跑 skill 时 sub-agent 调度不可靠——上次跑 46 条用例的反向部分实际是主 agent 手工补的。当前版本明确：**主 agent 顺序内联完成反向追溯，不调 Task 启动 sub-agent**。
->
-> agent 定义文件保留作为：（1）降级路径（3.2.4 forward-tracer），（2）未来如果收集到足够数据证明 sub-agent 调度有价值，可以再开启。在此之前默认不调。
+> **历史变更说明**：旧版本描述「启动 reverse-tracer sub-agent 并行」，但实际 AI 跑 skill 时 sub-agent 调度不可靠——上次跑 46 条用例的反向部分实际是主 agent 手工补的。当前版本明确：**主 agent 顺序内联完成反向追溯，不调 Task 启动 sub-agent**。原 `agents/requirement-traceability/reverse-tracer.md` 已在 v0.0.9 删除。
 
 **主 agent 反向追溯流程**（在正向通道完成 3.2 后串行执行）：
 
@@ -428,7 +451,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 3. **输出**：直接写进 `code_analysis.md`，不需要单独 JSON 文件；reverse 部分用以下格式：
 
 ```markdown
-## reverse-tracer 输出（主 agent 内联）
+## 反向追溯输出（主 agent 内联）
 
 ### 已归属变更
 - src/Network.swift:140-160 → FP-2「网络错误处理」（confidence 90）
@@ -467,7 +490,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 ### 3.5 降级回退
 
 - 反向追溯失败（diff 完全无法解析）→ 主 agent 跳过 3.3，仅依赖 3.2 正向通道的结果，在 4.1 交叉验证时标注「reverse 缺失」
-- 正向通道完全失败（无可追踪用例）→ 走 3.2.4 的 forward-tracer 降级路径
+- 正向通道完全失败（无可追踪用例）→ 走 3.2.4 的 forward fallback 降级路径
 
 > 不再有「Task 工具不可用」的降级讨论——本 skill 已经不依赖 Task 工具拆 sub-agent。
 
@@ -485,7 +508,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 
 在原有交叉验证基础上，新增正向验证结果的合并：
 
-1. 回读 `forward_verification.json`（正向用例验证产出）和 `code_analysis.md` 的「reverse-tracer 输出（主 agent 内联）」节（反向代码追溯结果）
+1. 回读 `forward_verification.json`（正向用例验证产出）和 `code_analysis.md` 的「反向追溯输出（主 agent 内联）」节（反向代码追溯结果）
 2. 对每个需求点：
    - 正向用例验证 pass → 需求实现确认（confidence 取用例验证的 confidence）
    - 正向用例验证 fail → 标记为实现缺口
@@ -850,7 +873,7 @@ Evidence:
 
 1. 仅对**用户确认需要重新追溯的需求点**执行增量分析（不重跑全量）
 2. 重新获取相关代码变更的最新 diff（代码可能已更新）
-3. 使用与 Phase 3.2 一致的验证方式（按 3.1 输入路由优先级消费 `final_cases.json` / `requirement_points.json`），仅对修复的需求点对应的用例增量执行。forward-tracer agent 仅在与首次全量验证相同的降级条件触发时才使用
+3. 使用与 Phase 3.2 一致的验证方式（按 3.1 输入路由优先级消费 `final_cases.json` / `requirement_points.json`），仅对修复的需求点对应的用例增量执行。3.2.4 forward fallback 仅在与首次全量验证相同的降级条件触发时才使用
 4. 合并增量结果到 `traceability_matrix.json` 和 `traceability_coverage_report.json`
 5. 回到 5.0 重新判定缺口
 

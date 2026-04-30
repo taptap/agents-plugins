@@ -3,7 +3,7 @@ version: "1.0"
 description: >
   将 AI 生成的测试用例同步到 MeterSphere：创建模块、导入用例、创建测试计划、关联用例。
   可选执行验证结果回写（高置信度用例自动标记通过）。
-  输入 final_cases.json 或 supplementary_cases.json，输出 ms_sync_report.json。
+  输入 final_cases.json 或 *_supplementary_cases.json（change_supplementary_cases.json / review_supplementary_cases.json / supplementary_cases.json 均可），输出 ms_sync_report.json。
   触发：同步到 MS、导入 MeterSphere、创建测试计划、MS 同步、执行回写。
 
 input:
@@ -14,7 +14,7 @@ input:
       from_upstream: test-case-generation
     supplementary_cases:
       type: file
-      description: 补充用例文件（change-analysis 或 test-case-review 产出）
+      description: 补充用例文件。v0.0.10 起按上游 skill 区分文件名以避免撞名 — change-analysis 产出 change_supplementary_cases.json，test-case-review 产出 review_supplementary_cases.json。本字段接受任一文件路径
       from_upstream: [change-analysis, test-case-review]
   optional:
     forward_verification:
@@ -38,12 +38,6 @@ input:
     plan_name:
       type: string
       description: 测试计划名称（不提供则需用户指定）
-    confidence_threshold:
-      type: number
-      description: >
-        【已废弃 v0.0.16】当前 P6 状态映射不再用阈值；pass + ext_deps 非空直接降级为 Prepare。
-        如果传入会被 writeback-from-fv 忽略。保留字段定义用于向后兼容老调用方，不影响行为。
-      deprecated: true
     mode:
       type: string
       description: >
