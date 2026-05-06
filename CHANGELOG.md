@@ -1,5 +1,47 @@
 # Changelog
 
+## 0.1.41
+
+### Test Plugin (0.0.9)
+
+**requirement-review**
+
+- Optimized 10 readability issues in Feishu reports based on real samples; rebuilt `TEMPLATES.md` for `report.md`
+- Fixed 5 Feishu docx import compatibility issues + 4 structural issues (TOC, section numbering, intent table, chat output) after live import testing
+- Fixed `rr_summary.json` writing illegal `review_mode` values like `single_agent_serial` (schema enum is now enforced)
+
+**test-case-review**
+
+- Added `TEMPLATES.md` (8-section strict template for `review_summary.md`); previously had no report template
+- Added §0 case-readiness verdict and §6 fix to-dos grouped by case ID (bold ID + `· ` prefix to preserve hierarchy after Feishu flattens nested bullets)
+
+**change-analysis**
+
+- Added `TEMPLATES.md` constraining multi-doc Feishu output (`code_change_analysis.md` + `test_coverage_report.md`); introduced bidirectional cross-references and per-line `[实证]/[推测]` confidence tagging
+
+**requirement-traceability**
+
+- Added smoke-test mode `report.md` template (6 sections); previously PHASES 5S.2 only constrained JSON output, no markdown template
+- Added §0 overall confidence summary + §2 numerator/denominator titles + §3.2 explicit untraced changes
+- Fixed broken anchor `#coverage_reportjson` → `#traceability_coverage_reportjson` in PHASES.md
+
+**Test plugin audit + CI hardening**
+
+- Extended `tests/validate.sh` from 5 to 9 check categories: SKILL frontmatter ↔ directory, handoffs targets, subagent_type targets, references/ paths, contract.yaml cross-skill consistency
+- Resolved 8 contract output collisions: renamed `risk_assessment.json` → `bug_risk_assessment.json` (change-analysis), split `test_execution_report.json` → `unit_/integration_test_execution_report.json`, split `supplementary_cases.json` → `change_/review_supplementary_cases.json` (canonical kept by test-case-generation)
+- Added `contracts/known-collisions.yaml` whitelist with self-binding "review protocol" rule
+- Removed 3 zombie agents (`forward-tracer`, `reverse-tracer`, `failure-classifier`) and cleaned up 13 dead references across SKILL/PHASES/TEMPLATES/protocol files
+- Honest dependencies: `shared-tools/requirements.txt` now lists actual deps (pycryptodome, pyyaml, jsonschema, python-dotenv, aiohttp); new `feedback/requirements.txt` declares aiohttp; `feedback/contract.yaml` env_vars now match scripts (`FEISHU_PLUGIN_ID/SECRET/USER_KEY`)
+- Standardized `-h/--help` UX across 5 shared helper scripts (previously `--help` was sent as a network query in `search_mrs.py`)
+- Extracted `integration-test-design` 5-phase content into standalone `PHASES.md` (SKILL.md trimmed 387 → 252 lines, aligned with unit-test-design style)
+- Schema validation expanded from 1 to 5 schemas (testcase / ca-summary / defect-list / rr-summary / smoke-test-report) with ~30 negative cases
+- Synced stale filename references across PIPELINES.md (8), README.md (7), test-case-review/TEMPLATES.md (2), change-analysis/TEMPLATES.md (2), change-analysis/contract.yaml (1) following the contract renames above
+
+### Marketplace
+
+- Bumped version from 0.1.40 to 0.1.41
+- Updated test plugin to version 0.0.9
+
 ## 0.1.40
 
 ### Test Plugin (0.0.8)
