@@ -123,11 +123,11 @@
 ```
 [unit-test-design / integration-test-design]
     │
-    └─→ test_execution_report.json (verify 阶段产出)
+    └─→ unit_test_execution_report.json / integration_test_execution_report.json (verify 阶段产出)
         │
         ▼
 [test-failure-analyzer]
-    │  消费: test_execution_report.json + 代码 diff
+    │  消费: unit_test_execution_report.json / integration_test_execution_report.json + 代码 diff
     │
     ├─→ failure_analysis.json
     └─→ action_plan.md
@@ -139,8 +139,8 @@
 
 | 上游 Skill | 输出文件 | 下游 Skill | 输入参数 |
 |---|---|---|---|
-| unit-test-design | `test_execution_report.json` | test-failure-analyzer | `test_report` |
-| integration-test-design | `test_execution_report.json` | test-failure-analyzer | `test_report` |
+| unit-test-design | `unit_test_execution_report.json` | test-failure-analyzer | `test_report` |
+| integration-test-design | `integration_test_execution_report.json` | test-failure-analyzer | `test_report` |
 
 ---
 
@@ -155,7 +155,7 @@ Story 场景:
     ├─→ change_analysis.json
     ├─→ code_change_analysis.md
     ├─→ change_coverage_report.json
-    └─→ supplementary_cases.json (可选)
+    └─→ change_supplementary_cases.json (可选)
 
 Bug 场景:
 [change-analysis]
@@ -164,7 +164,7 @@ Bug 场景:
     ├─→ change_analysis.json
     ├─→ code_change_analysis.md
     ├─→ change_fix_analysis.json
-    └─→ risk_assessment.json
+    └─→ bug_risk_assessment.json
 ```
 
 ### 可选上游
@@ -174,7 +174,7 @@ Bug 场景:
 | requirement-clarification | `clarified_requirements.json` | change-analysis | `clarified_requirements` |
 | requirement-clarification | `requirement_points.json` | change-analysis | `requirement_points` |
 | test-case-generation | `final_cases.json` | change-analysis | `existing_test_cases` |
-| test-case-review | `supplementary_cases.json` | change-analysis | `existing_test_cases` |
+| test-case-review | `review_supplementary_cases.json` | change-analysis | `existing_test_cases` |
 
 ---
 
@@ -187,7 +187,7 @@ Bug 场景:
     │
     ├─→ review_result.json
     ├─→ tc_review_detail.md
-    └─→ supplementary_cases.json (可选)
+    └─→ review_supplementary_cases.json (可选)
 ```
 
 ---
@@ -249,12 +249,15 @@ work_dir/
 ├── traceability_matrix.json       (requirement-traceability)
 ├── traceability_coverage_report.json  (requirement-traceability)
 ├── forward_verification.json      (requirement-traceability)
-├── risk_assessment.json           (requirement-traceability / change-analysis Bug)
+├── risk_assessment.json           (requirement-traceability)
+├── bug_risk_assessment.json       (change-analysis Bug)
 ├── change_analysis.json           (change-analysis)
 ├── code_change_analysis.md        (change-analysis, 中间文件)
 ├── change_coverage_report.json    (change-analysis Story)
 ├── change_fix_analysis.json       (change-analysis Bug)
-├── supplementary_cases.json       (change-analysis / test-case-review)
+├── supplementary_cases.json       (test-case-generation, canonical)
+├── change_supplementary_cases.json (change-analysis)
+├── review_supplementary_cases.json (test-case-review)
 ├── review_result.json             (test-case-review)
 ├── tc_review_detail.md            (test-case-review)
 ├── api_contract_report.json       (api-contract-validation)

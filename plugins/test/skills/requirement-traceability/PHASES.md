@@ -533,7 +533,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 
 ### 4.4 生成 traceability_coverage_report.json
 
-格式见 [TEMPLATES.md](TEMPLATES.md#coverage_reportjson)。包含需求覆盖率、代码追溯率、缺口清单和双向确认率。
+格式见 [TEMPLATES.md](TEMPLATES.md#traceability_coverage_reportjson)。包含需求覆盖率、代码追溯率、缺口清单和双向确认率。
 
 在原有覆盖率统计基础上，新增：
 

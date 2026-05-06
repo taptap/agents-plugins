@@ -67,7 +67,7 @@
 | 用例评审 | test-case-review | 已有测试用例 + 需求文档 | review_result.json + 补充用例 |
 | 变更分析 | change-analysis | Story/Bug + MR/PR/diff | change_analysis.json + change_coverage_report.json |
 | 需求回溯 | requirement-traceability | 需求 + MR/PR/diff | traceability_matrix.json |
-| Bug 修复分析 | change-analysis（Bug 场景） | Bug 链接 + MR/PR/diff | change_fix_analysis.json + risk_assessment.json |
+| Bug 修复分析 | change-analysis（Bug 场景） | Bug 链接 + MR/PR/diff | change_fix_analysis.json + bug_risk_assessment.json |
 | API 契约校验 | api-contract-validation | 前端 diff + 后端 diff/OpenAPI spec | api_contract_report.json |
 
 ### 场景二：AI coding 工作流编排
@@ -86,7 +86,7 @@ change-analysis（变更影响分析）
 test-case-generation（用例生成）
     ↓ final_cases.json
 test-case-review（用例评审）
-    ↓ review_result.json + supplementary_cases.json
+    ↓ review_result.json + review_supplementary_cases.json
 requirement-traceability（需求回溯验证）
     ↓ traceability_matrix.json
 ```
@@ -127,7 +127,7 @@ API 定义   ──→ integration-test-design ──→ 集成测试代码
 > 已合并到链路 F 的 Bug 场景。使用 `change-analysis` 并提供 `bug_link` 参数即可。
 
 ```
-Bug 信息 + MR/PR/本地 diff ──→ change-analysis（Bug 场景）──→ change_fix_analysis.json + risk_assessment.json
+Bug 信息 + MR/PR/本地 diff ──→ change-analysis（Bug 场景）──→ change_fix_analysis.json + bug_risk_assessment.json
 ```
 
 ### 链路 D — 需求回溯增强（配合链路 A）
@@ -155,7 +155,7 @@ test-failure-analyzer（失败分类 + 方案生成）
     ↓ 用户确认 → 执行修复 → 重新测试（最多 3 轮）
 ```
 
-> 注意：链路 E 的输入 `test_execution_report.json` 仅在环境支持执行测试时生成。若仅做代码级测试生成（链路 B）而未实际执行测试，则无法触发链路 E。
+> 注意：链路 E 的输入 `unit_test_execution_report.json` / `integration_test_execution_report.json` 仅在环境支持执行测试时生成。若仅做代码级测试生成（链路 B）而未实际执行测试，则无法触发链路 E。
 
 ### 链路 F — 变更分析（Story/Bug 双场景）
 
@@ -166,13 +166,13 @@ Story 场景:
 Story + MR/PR 或本地 diff
     ↓
 change-analysis（变更影响分析 + 覆盖评估）
-    ↓ change_analysis.json + change_coverage_report.json + supplementary_cases.json
+    ↓ change_analysis.json + change_coverage_report.json + change_supplementary_cases.json
 
 Bug 场景:
 Bug + MR/PR 或本地 diff
     ↓
 change-analysis（根因分析 + 修复完整性评估 + 风险评估）
-    ↓ change_analysis.json + change_fix_analysis.json + risk_assessment.json
+    ↓ change_analysis.json + change_fix_analysis.json + bug_risk_assessment.json
 ```
 
 ### 链路 G — 用例评审（独立触发）
@@ -183,7 +183,7 @@ change-analysis（根因分析 + 修复完整性评估 + 风险评估）
 已有测试用例 + 需求文档
     ↓
 test-case-review（4 维度评审 + 补充用例）
-    ↓ review_result.json + supplementary_cases.json
+    ↓ review_result.json + review_supplementary_cases.json
 ```
 
 ### 链路 H — API 契约校验（独立触发）

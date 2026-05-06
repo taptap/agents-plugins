@@ -124,7 +124,7 @@
 
 ## 7. 建议补充的用例（本次跳过创建）
 
-> 如已开启自动生成，对应用例已写入 `supplementary_cases.json`，本节仅做清单展示。
+> 如已开启自动生成，对应用例已写入 `review_supplementary_cases.json`，本节仅做清单展示。
 
 **P1**
 - {用例方向} — 关联需求点 RP-N
@@ -184,7 +184,7 @@
 **第 7 章「建议补充的用例」**
 
 - 与 §2.3 未覆盖呼应，但更具体（用例方向描述）
-- 按 P1 / P2 分组（P0 通常已在 supplementary_cases.json 自动生成）
+- 按 P1 / P2 分组（P0 通常已在 review_supplementary_cases.json 自动生成）
 - 标注关联的 RP-N
 
 ### 关键约束

@@ -5,7 +5,7 @@
 1. `code_change_analysis.md` — 飞书云文档「代码变更分析报告」
 2. `test_coverage_report.md` — 飞书云文档「测试覆盖评估报告」
 
-> 第三份「补充测试用例」由后端从 `supplementary_cases.json` 渲染，模板不在本 skill 控制；本 skill 只保证 JSON 字段正确（详见 [CONVENTIONS.md 用例 JSON 格式](../../CONVENTIONS.md#用例-json-格式)）。
+> 第三份「补充测试用例」由后端从 `change_supplementary_cases.json` 渲染，模板不在本 skill 控制；本 skill 只保证 JSON 字段正确（详见 [CONVENTIONS.md 用例 JSON 格式](../../CONVENTIONS.md#用例-json-格式)）。
 
 > **关于符号约定**：本 skill 输出的所有 markdown 报告状态标记使用中文方括号（`[实证]/[推测]`、`[高]/[中]/[低]`、`[已覆盖]/[未覆盖]/[待评估]`），**禁止使用 emoji ✅/⚠️/❌、ASCII `[OK]/[!]/[X]`、星级 ★/★★/★★★**——前两类飞书 import 会破坏渲染（详见 §「关键约束」），后一类与跨 workflow 分级符号不统一。
 
@@ -330,6 +330,6 @@ PR Test Plan 覆盖率评估：覆盖核心主路径约 70%，存在 6 个测试
 - **multi-doc 必须双向引用**：
   - code_change_analysis.md §4.4 回归范围 → 引用 test_coverage_report.md §2 缺口编号
   - test_coverage_report.md §2 缺口分析 → 引用 code_change_analysis.md §2/§4 变更点
-  - test_coverage_report.md §4 补充建议 → 引用 ca_sup（supplementary_cases.json 渲染版）的 TC-XX 编号
+  - test_coverage_report.md §4 补充建议 → 引用 ca_sup（change_supplementary_cases.json 渲染版）的 TC-XX 编号
 - **置信度逐条标注**：[实证] 必须有 diff 行号或代码注释为依据；[推测] 必须说明无法实证的原因
 - **覆盖率统计必须精确**：禁止"约 N 个"模糊描述；总变更点必须在 §0 元数据声明并枚举来源
