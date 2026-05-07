@@ -1,8 +1,14 @@
 ---
 name: change-analysis
 description: >
-  分析代码变更的影响面和测试覆盖。输入 Story/Bug 链接或需求文档 + 代码变更（MR/PR 或本地 diff），
+  分析代码变更的影响面和测试覆盖。**变更驱动**：输入是代码变更（MR/PR/diff），
+  产出聚焦在"这次代码改了什么、影响哪些模块、现有用例够不够覆盖变更"。
+  当用户说"补点用例"且驱动力是"代码变更未覆盖"时走本 skill 输出 change_supplementary_cases.json，
+  驱动力是"需求歧义/新需求"时改用 test-case-generation。
+  输入 Story/Bug 链接或需求文档 + 代码变更（MR/PR 或本地 diff），
   输出 change_analysis.json + change_coverage_report.json + 可选 change_supplementary_cases.json。
+  不适用于：双向需求 ↔ 代码验收 / 上线前核对 / 冒烟验证（使用 requirement-traceability）、
+  需求驱动的补充用例（使用 test-case-generation）。
   触发：变更分析、影响分析、测试覆盖分析、Bug 修复分析。
 ---
 

@@ -73,7 +73,7 @@ output:
       format: json
       optional: true
     - name: change_supplementary_cases.json
-      description: 为代码变更覆盖缺口生成的补充用例（Story 场景，可选；v0.0.10 起从 supplementary_cases.json 改名以避免与 test-case-generation / test-case-review 撞名）
+      description: 为代码变更覆盖缺口生成的补充用例（Story 场景，可选；v0.0.10 起从 supplementary_cases.json 改名以避免与 test-case-generation / test-case-review 撞名）。schema 在 contracts/testcase.schema.json
       format: json
       optional: true
     - name: ca_summary.json

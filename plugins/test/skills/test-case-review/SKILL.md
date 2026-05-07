@@ -14,7 +14,7 @@ description: >
 - Skill 类型：独立 skill
 - 适用场景：对照需求文档和设计稿评审已有测试用例，识别覆盖缺口和质量问题，并生成补充用例
 - 必要输入：测试用例（JSON 文件、文本或上游产出）必须非空；需求来源（链接或本地文档）推荐提供
-- 输出产物：`review_result.json`、`review_summary.md`、可选 `review_supplementary_cases.json`、`requirement_points.md`
+- 输出产物：`review_result.json`（评审 verdict 对象，LLM 友好的非严格 JSON，不绑 schema 约束）、`review_summary.md`、可选 `review_supplementary_cases.json`（受 contracts/testcase.schema.json 约束）、`requirement_points.md`
 - 失败门控：测试用例为空时停止；未在需求或用例中出现的信息不能凭经验下结论
 - 执行步骤：`init → fetch → understand → review → summary → output`
 

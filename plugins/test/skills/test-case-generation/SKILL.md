@@ -2,8 +2,12 @@
 name: test-case-generation
 description: >
   根据需求文档和澄清结果拆解功能模块，生成结构化测试用例，并通过冗余对评审确保质量。
+  **需求驱动**：输入是需求文档/Story/澄清结果，产出覆盖需求功能点的用例集；
+  当用户说"补点用例"且驱动力是"需求歧义/新需求/澄清后扩展"时走本 skill，
+  驱动力是"代码变更未覆盖"时改用 change-analysis 的 change_supplementary_cases.json。
   输入需求链接、本地需求文档或上游澄清结果，输出 final_cases.json。
-  不适用于：冒烟验证（使用 requirement-traceability 的 smoke-test 模式）。
+  不适用于：冒烟验证（使用 requirement-traceability 的 smoke-test 模式）、
+  代码变更驱动的补充用例（使用 change-analysis）。
   触发：生成测试用例、写用例、测试设计、用例生成、帮我生成用例。
 ---
 
