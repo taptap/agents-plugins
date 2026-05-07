@@ -8,9 +8,10 @@
 
 ### 目录结构
 
+> 模板文件 `AGENT_TEMPLATE.md` 不放在 `agents/` 下（避免被 Claude/Codex agent 加载器拾取），位于 [`plugins/test/docs/AGENT_TEMPLATE.md`](../../docs/AGENT_TEMPLATE.md)。
+
 ```
 agents/
-├── AGENT_TEMPLATE.md                 # 统一模板
 ├── test-case-writer.md               # 测试用例生成 Agent
 ├── ui-fidelity-checker.md            # UI 还原度检查 Agent
 ├── requirement-understanding/        # 需求理解多视角 Agent
@@ -28,7 +29,7 @@ agents/
 
 ### 模板结构
 
-每个 Agent 定义文件遵循统一结构（详见 [AGENT_TEMPLATE.md](agents/AGENT_TEMPLATE.md)）：
+每个 Agent 定义文件遵循统一结构（详见 [AGENT_TEMPLATE.md](../../docs/AGENT_TEMPLATE.md)）：
 
 1. **角色定义** — 一句话描述
 2. **模型** — 按模型分层策略选择
