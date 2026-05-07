@@ -445,24 +445,38 @@ def ensure_remote_marketplace():
             if remove_marketplace_config_block(user_config):
                 print(f"ℹ️  已移除用户配置中的旧 marketplace 段: {normalized_cfg}")
 
-    if state["state"] in {"local_or_mismatched", "broken_remote", "unknown_clone"}:
-        print(f"⚠️  marketplace {marketplace} 状态异常，准备切换到远端 GitHub 源: {state['reason']}")
-        reset_runtime_state()
-    else:
-        print(f"ℹ️  marketplace {marketplace} 未就绪，准备注册远端 GitHub 源")
+    needs_reset = state["state"] in {"local_or_mismatched", "broken_remote", "unknown_clone"}
 
     if not has_codex:
-        print("⚠️  codex CLI 不在 PATH，无法注册远端 marketplace；继续执行 Step 2/3")
+        if needs_reset:
+            print(
+                f"⚠️  marketplace {marketplace} 状态异常 ({state['reason']})，"
+                "但 codex CLI 不在 PATH，保留现有 clone/cache 以避免破坏可恢复状态；继续执行 Step 2/3"
+            )
+        else:
+            print("⚠️  codex CLI 不在 PATH，无法注册远端 marketplace；继续执行 Step 2/3")
         return detect_marketplace_state()
 
     add_cli = resolve_marketplace_cli("add")
     remove_cli = resolve_marketplace_cli("remove")
     if not add_cli:
-        print(
-            "⚠️  当前 codex CLI 不支持 marketplace add；"
-            "已尝试 `codex plugin marketplace add` 和 `codex marketplace add`，继续执行 Step 2/3"
-        )
+        if needs_reset:
+            print(
+                f"⚠️  marketplace {marketplace} 状态异常 ({state['reason']})，"
+                "但当前 codex CLI 不支持 marketplace add；保留现有 clone/cache，继续执行 Step 2/3"
+            )
+        else:
+            print(
+                "⚠️  当前 codex CLI 不支持 marketplace add；"
+                "已尝试 `codex plugin marketplace add` 和 `codex marketplace add`，继续执行 Step 2/3"
+            )
         return detect_marketplace_state()
+
+    if needs_reset:
+        print(f"⚠️  marketplace {marketplace} 状态异常，准备切换到远端 GitHub 源: {state['reason']}")
+        reset_runtime_state()
+    else:
+        print(f"ℹ️  marketplace {marketplace} 未就绪，准备注册远端 GitHub 源")
 
     add_label = " ".join(add_cli)
     completed = subprocess.run(
