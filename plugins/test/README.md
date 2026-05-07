@@ -256,9 +256,8 @@ plugins/test/
 ├── CONTRACT_SPEC.md            # contract.yaml 编写规范 —— validate.sh Check 14 校验依据
 ├── AI_CODING_BEST_PRACTICES.md # AI 辅助开发实践参考 —— 开发者指南，非 skill 依赖
 ├── PIPELINES.md                # 链路数据流规格 —— 编排层开发者参考，非 skill 依赖
-├── docs/
-│   └── AGENT_TEMPLATE.md       # Agent 编写统一模板（开发者文档，非 agent 加载源）
-├── agents/                     # Agent 定义文件（单一事实源）
+├── agents/                     # Agent 定义文件（单一事实源；无 frontmatter，由 skill 通过 Task tool 显式调用，不被 Claude/Codex agent loader 自动注册）
+│   ├── AGENT_TEMPLATE.md       # 统一模板
 │   ├── test-case-writer.md     # 测试用例生成 Agent
 │   ├── test-case-generation/   # 用例评审冗余对 Agent
 │   │   ├── review-agent-1.md   # 覆盖度视角评审 Agent
