@@ -59,6 +59,8 @@
     └─→ ms_sync_report.json (含执行回写统计)
 ```
 
+> **与 trace Phase 6 writeback 的关系**：上图描述的是手动模式调用入口；自动模式（qa-workflow）下 writeback 由 `requirement-traceability` 内部 Phase 6 触发，不显式调 `metersphere-sync mode=execute`。两入口共享同一 helper，互斥执行。共享/互斥规则详见 [`contracts/known-collisions.yaml`](contracts/known-collisions.yaml) 的 `forward_verification.enriched.json` 条目。
+
 ### 数据流映射
 
 | 上游 Skill | 输出文件 | 下游 Skill | 输入参数 |

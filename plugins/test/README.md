@@ -45,8 +45,9 @@
 |---|---|---|
 | 拿到新需求，通过问答拉齐理解 | requirement-clarification | 交互式，产出 JSON 供下游消费 |
 | 需求文档已写好，评审会前质量把关 | requirement-review | 评估式，产出报告供评审会使用 |
+| 写新用例 / 需求歧义补充用例（**需求驱动**）| test-case-generation | 输入需求/澄清结果，输出 final_cases.json（含可选 supplementary） |
 | 已有测试用例，评审覆盖度和质量 | test-case-review | 对照需求 4 维度评审 |
-| 代码变更已提交，分析影响和覆盖 | change-analysis | Story/Bug 双场景 |
+| 代码变更已提交，分析影响和补充用例（**变更驱动**）| change-analysis | Story/Bug 双场景；输出 change_supplementary_cases.json |
 | 需求实现后验证代码是否正确 | requirement-traceability | 双通道追溯（正向通道内嵌用例中介验证，消费上游 final_cases.json） |
 | 为已有代码写单元测试 | unit-test-design | 分析代码逻辑，生成测试文件 |
 | 为 API/服务写集成测试 | integration-test-design | 分析接口定义，生成集成测试 |
@@ -227,16 +228,16 @@ api-contract-validation（接口签名提取 + 交叉比对）
 ### 冗余对评审
 test-case-generation（review 阶段）和 requirement-traceability 使用冗余对模式 — 2 个独立 Agent 并行分析同一内容，共识发现自动加成置信度 +20。不确定的评审问题抛给用户确认，避免评审幻觉。
 
-### 双通道追溯（v0.0.10+）
+### 双通道追溯
 requirement-traceability 正向用「用例中介验证」（需求→验证用例→AI 逐条对照代码），反向用「直接代码追溯」（代码→需求），两者互补。
 
-### 影响范围分析（v0.0.10+）
+### 影响范围分析
 requirement-clarification 新增影响范围维度 — 基于 `module-relations.json` 模块关系索引分析变更波及范围，避免全库代码扫描的噪声和遗漏。
 
-### UI 还原度检查（v0.0.10+）
+### UI 还原度检查
 Figma MCP 获取设计数据/截图 + Browser MCP 获取实现截图/DOM，AI 对比 6 个维度（布局/间距/颜色/字体/状态/交互）的还原差异。
 
-### 自循环机制（v0.0.10+）
+### 自循环机制
 test-failure-analyzer 支持 分析→修复→重测 自循环（最多 3 轮），AI 自动分类失败原因（预期变化/回归/不稳定）并推荐处理方案。
 
 ### 量化置信度评分
@@ -255,8 +256,9 @@ plugins/test/
 ├── CONTRACT_SPEC.md            # contract.yaml 编写规范 —— validate.sh Check 14 校验依据
 ├── AI_CODING_BEST_PRACTICES.md # AI 辅助开发实践参考 —— 开发者指南，非 skill 依赖
 ├── PIPELINES.md                # 链路数据流规格 —— 编排层开发者参考，非 skill 依赖
+├── docs/
+│   └── AGENT_TEMPLATE.md       # Agent 编写统一模板（开发者文档，非 agent 加载源）
 ├── agents/                     # Agent 定义文件（单一事实源）
-│   ├── AGENT_TEMPLATE.md       # 统一模板
 │   ├── test-case-writer.md     # 测试用例生成 Agent
 │   ├── test-case-generation/   # 用例评审冗余对 Agent
 │   │   ├── review-agent-1.md   # 覆盖度视角评审 Agent

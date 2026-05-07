@@ -32,6 +32,18 @@ input:
     resume:
       type: boolean
       description: 从上次暂停的位置继续执行
+    re_entry_phase:
+      type: string
+      description: >
+        需求变更后的迭代更新模式：从 test-case-generation 的指定阶段重新进入。
+        合法值：understand | decompose | generate | review。
+        触发表述："需求改了重跑"、"再来一版"、"需求小改后重新生成用例"。
+        本参数会透传给 test-case-generation；其他 skill 仍按需重跑（change-analysis / requirement-traceability 重新基于新用例集执行）。
+    requirement_change_summary:
+      type: string
+      description: >
+        需求变更摘要（配合 re_entry_phase 使用）。
+        简要说明本次变更内容，供 test-case-generation 增量更新时判断影响范围。
 
 output:
   files:

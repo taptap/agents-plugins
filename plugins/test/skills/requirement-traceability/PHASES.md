@@ -911,6 +911,8 @@ Evidence:
 > Mode 触发条件以 [SKILL.md mode dispatch 表](SKILL.md#mode-dispatch单一权威表其余-phases-段落只引用本表) 为准（标准模式且 `ms_plan_info.json` 存在时执行；smoke-test 模式不写 MS，避免污染测试计划状态）。
 >
 > **执行时机**：标准模式下，4. output 完成后立即进入；如果触发了 5. loop，等 loop 收敛退出后再进。
+>
+> **与 metersphere-sync mode=execute 的关系**：本 Phase 6 与 `metersphere-sync mode=execute` 共享同一 helper（`metersphere_helper.py writeback-from-fv`），是同一职责的两个调用入口（自动模式走本 Phase；手动模式用户可直接调 ms-sync）。共享/互斥规则详见 [`contracts/known-collisions.yaml`](../../contracts/known-collisions.yaml) 的 `forward_verification.enriched.json` 条目。
 
 ### 6.1 前置校验
 
