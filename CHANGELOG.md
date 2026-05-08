@@ -25,6 +25,19 @@
 - Added §0 overall confidence summary + §2 numerator/denominator titles + §3.2 explicit untraced changes
 - Fixed broken anchor `#coverage_reportjson` → `#traceability_coverage_reportjson` in PHASES.md
 
+**Skill audit phase 1-3 follow-ups (8-dimension cross-skill review)**
+
+- Bound `testcase.schema.json` on 5 `*_cases.json` output declarations across `test-case-generation` / `test-case-review` / `change-analysis` `contract.yaml` (was implicit via CONVENTIONS.md inheritance; now machine-checkable)
+- Added demand-driven vs change-driven gating in `test-case-generation` and `change-analysis` SKILL descriptions + reverse SKIP cross-references between `change-analysis` and `requirement-traceability`
+- Marked `review_result.json` as LLM-friendly non-strict JSON in `test-case-review/SKILL.md` (verdict object, not `TestCaseList`; deliberately not schema-bound)
+- Synced `testcase.schema.json` from ai-case Pydantic source: `Step.expected` is now required (allows empty string); previously had `default=''` so callers could omit it. MCP tool input_schema auto-reflects this constraint at LLM tool-call time
+- Relaxed `test_method` from required to optional in `CONVENTIONS.md` to match Pydantic (which was already Optional; documentation was lagging) — supplementary case producers may omit it
+- Cross-referenced `contracts/known-collisions.yaml` from `requirement-traceability/PHASES.md` Phase 6 and `PIPELINES.md` to clarify that trace Phase 6 writeback and `metersphere-sync mode=execute` share the same `metersphere_helper.py writeback-from-fv` helper as two coexisting entry points (auto vs manual mode), not duplicate implementations
+- Added `re_entry_phase` + `requirement_change_summary` optional inputs to `qa-workflow` for "rerun after requirement change" scenarios, passthrough to `test-case-generation`
+- Updated README selection guide to surface the demand-driven (tcg) vs change-driven (ca) split; dropped stale "v0.0.10+" version gates from architecture features section
+- Added quickstart note in `requirement-clarification/SKILL.md` clarifying that `output/*.json` files are pre-shipped format samples, not runtime artifacts
+- Added inline annotation in `agents/` tree (README + `_shared/AGENT_PROTOCOL.md`) explaining why files in `plugins/test/agents/` are not auto-registered as Claude/Codex subagents (no YAML frontmatter; loaded explicitly via Task tool calls inside skills)
+
 **Test plugin audit + CI hardening**
 
 - Extended `tests/validate.sh` from 5 to 9 check categories: SKILL frontmatter ↔ directory, handoffs targets, subagent_type targets, references/ paths, contract.yaml cross-skill consistency
