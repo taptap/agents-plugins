@@ -25,7 +25,11 @@ output:
 
 dependencies:
   scripts:
-    - feedback/scripts/feishu_api.py
+    - feedback/scripts/feishu_api.py    # 需 aiohttp，见 feedback/requirements.txt
   mcp_servers:
     - slack
-  env_vars: []
+  env_vars:
+    # feedback/scripts/feishu_api.py 创建/更新飞书 Bug 时必需
+    - FEISHU_PLUGIN_ID
+    - FEISHU_PLUGIN_SECRET
+    - FEISHU_USER_KEY

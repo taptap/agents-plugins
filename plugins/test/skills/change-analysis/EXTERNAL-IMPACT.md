@@ -125,7 +125,7 @@
 ### 8.2 建议测试用例
 
 > 为每个命中模块生成不少于 1 条关键路径测试用例和 1 条边界/异常测试用例。
-> 同时将这些用例写入 `supplementary_cases.json`（格式同 CONVENTIONS.md 用例 JSON 格式，禁止包含 tags 字段，标签由后端自动赋值）。
+> 同时将这些用例写入 `change_supplementary_cases.json`（格式同 CONVENTIONS.md 用例 JSON 格式，禁止包含 tags 字段，标签由后端自动赋值）。
 
 #### {命中模块名称} — 关键路径
 
@@ -164,7 +164,7 @@
 | ---------- | ------------ | ---- |
 | 阶段 3A：diff 分析 | MR 属于 Android 项目时，完成文件分类后执行命中检测 | 对照「命中判断规则」标记命中项，记录到 `change_checklist.md` |
 | 阶段 4：impact | 追加 `code_change_analysis.md` 第八章 | 按「步骤 1」模板填写逐模块分析 |
-| 阶段 6：generate | 追加 `test_coverage_report.md` 第八章 | 按「步骤 2」模板填写，并将新增用例同步写入 `supplementary_cases.json` |
+| 阶段 6：generate | 追加 `test_coverage_report.md` 第八章 | 按「步骤 2」模板填写，并将新增用例同步写入 `change_supplementary_cases.json` |
 | 阶段 7：output | `change_analysis.json` 的 `key_findings` 和 `action_items` 中体现外部影响条目 | 命中 ⚠️ 级别时补充外部影响高风险发现 |
 
 > **不命中时**：上述所有介入点均跳过，不新增任何章节，不影响主工作流其他内容。

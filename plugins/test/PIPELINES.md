@@ -4,6 +4,9 @@
 
 概要描述见 [README.md](README.md#快速开始)。
 
+> **受众**：实现编排层 / pipeline 的开发者。
+> **不是**：skill 运行的强制依赖文件 — 各 skill 的 `contract.yaml` 已是机器可读的接口定义，本文是给人读的跨 skill 链路全景图。
+
 ## 链路 A — 功能测试全流程
 
 ```
@@ -55,6 +58,8 @@
     │  消费: final_cases.json, forward_verification.json, ms_case_mapping.json
     └─→ ms_sync_report.json (含执行回写统计)
 ```
+
+> **与 trace Phase 6 writeback 的关系**：上图描述的是手动模式调用入口；自动模式（qa-workflow）下 writeback 由 `requirement-traceability` 内部 Phase 6 触发，不显式调 `metersphere-sync mode=execute`。两入口共享同一 helper，互斥执行。共享/互斥规则详见 [`contracts/known-collisions.yaml`](contracts/known-collisions.yaml) 的 `forward_verification.enriched.json` 条目。
 
 ### 数据流映射
 
@@ -120,11 +125,11 @@
 ```
 [unit-test-design / integration-test-design]
     │
-    └─→ test_execution_report.json (verify 阶段产出)
+    └─→ unit_test_execution_report.json / integration_test_execution_report.json (verify 阶段产出)
         │
         ▼
 [test-failure-analyzer]
-    │  消费: test_execution_report.json + 代码 diff
+    │  消费: unit_test_execution_report.json / integration_test_execution_report.json + 代码 diff
     │
     ├─→ failure_analysis.json
     └─→ action_plan.md
@@ -136,8 +141,8 @@
 
 | 上游 Skill | 输出文件 | 下游 Skill | 输入参数 |
 |---|---|---|---|
-| unit-test-design | `test_execution_report.json` | test-failure-analyzer | `test_report` |
-| integration-test-design | `test_execution_report.json` | test-failure-analyzer | `test_report` |
+| unit-test-design | `unit_test_execution_report.json` | test-failure-analyzer | `test_report` |
+| integration-test-design | `integration_test_execution_report.json` | test-failure-analyzer | `test_report` |
 
 ---
 
@@ -152,7 +157,7 @@ Story 场景:
     ├─→ change_analysis.json
     ├─→ code_change_analysis.md
     ├─→ change_coverage_report.json
-    └─→ supplementary_cases.json (可选)
+    └─→ change_supplementary_cases.json (可选)
 
 Bug 场景:
 [change-analysis]
@@ -161,7 +166,7 @@ Bug 场景:
     ├─→ change_analysis.json
     ├─→ code_change_analysis.md
     ├─→ change_fix_analysis.json
-    └─→ risk_assessment.json
+    └─→ bug_risk_assessment.json
 ```
 
 ### 可选上游
@@ -171,7 +176,7 @@ Bug 场景:
 | requirement-clarification | `clarified_requirements.json` | change-analysis | `clarified_requirements` |
 | requirement-clarification | `requirement_points.json` | change-analysis | `requirement_points` |
 | test-case-generation | `final_cases.json` | change-analysis | `existing_test_cases` |
-| test-case-review | `supplementary_cases.json` | change-analysis | `existing_test_cases` |
+| test-case-review | `review_supplementary_cases.json` | change-analysis | `existing_test_cases` |
 
 ---
 
@@ -184,7 +189,7 @@ Bug 场景:
     │
     ├─→ review_result.json
     ├─→ tc_review_detail.md
-    └─→ supplementary_cases.json (可选)
+    └─→ review_supplementary_cases.json (可选)
 ```
 
 ---
@@ -246,12 +251,15 @@ work_dir/
 ├── traceability_matrix.json       (requirement-traceability)
 ├── traceability_coverage_report.json  (requirement-traceability)
 ├── forward_verification.json      (requirement-traceability)
-├── risk_assessment.json           (requirement-traceability / change-analysis Bug)
+├── risk_assessment.json           (requirement-traceability)
+├── bug_risk_assessment.json       (change-analysis Bug)
 ├── change_analysis.json           (change-analysis)
 ├── code_change_analysis.md        (change-analysis, 中间文件)
 ├── change_coverage_report.json    (change-analysis Story)
 ├── change_fix_analysis.json       (change-analysis Bug)
-├── supplementary_cases.json       (change-analysis / test-case-review)
+├── supplementary_cases.json       (test-case-generation, canonical)
+├── change_supplementary_cases.json (change-analysis)
+├── review_supplementary_cases.json (test-case-review)
 ├── review_result.json             (test-case-review)
 ├── tc_review_detail.md            (test-case-review)
 ├── api_contract_report.json       (api-contract-validation)

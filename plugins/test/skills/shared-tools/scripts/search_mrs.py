@@ -270,10 +270,27 @@ def search_story_mrs(story_id: str) -> dict:
 
 # ==================== 入口 ====================
 
+USAGE = """\
+用法: python3 search_mrs.py <story_id>
+
+参数:
+    story_id    Story ID（如 TAP-1234567 或纯数字 1234567）
+
+环境变量（详见脚本顶部 docstring）:
+    GITLAB_URL              GitLab 实例地址（必填）
+    GITLAB_TOKEN            GitLab Private Token（必填）
+    GITLAB_PROJECT_MAPPING  项目 ID 映射 JSON（必填）
+    GITLAB_SSL_VERIFY       false 关闭 SSL 验证（可选，默认开启）
+
+示例:
+    python3 search_mrs.py 7891234567
+"""
+
+
 def main():
-    if len(sys.argv) < 2:
-        print("用法: python3 search_mrs.py <story_id>", file=sys.stderr)
-        sys.exit(1)
+    if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
+        print(USAGE, file=sys.stderr)
+        sys.exit(0 if len(sys.argv) >= 2 else 1)
 
     story_id = sys.argv[1]
 

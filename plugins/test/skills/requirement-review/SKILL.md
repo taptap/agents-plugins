@@ -31,9 +31,11 @@ description: >
 | 飞书文档链接（`/wiki/` 或 `/docx/`） | → 直接作为需求文档，跳过 Story 元信息获取 |
 | 系统预取的 Story 信息（prompt 注入） | → 确认预取数据后进入 fetch 阶段 |
 | 无参数（如"帮我做需求评审"） | → 询问用户提供 Story 链接或需求文档链接 |
-| 模糊输入 | → 询问澄清：是需求评审（本 skill）、变更分析（change-analysis）还是用例评审（test-case-review） |
+| 模糊输入 | → 询问澄清意图，根据下方"邻近 skill 引导表"判断 |
 | 已有代码变更需要分析 | → 引导到 `change-analysis` |
 | 已有测试用例需要评审 | → 引导到 `test-case-review` |
+| 需要生成测试用例 | → 引导到 `test-case-generation` |
+| 需要做冒烟测试 | → 引导到 `smoke-test` |
 
 ## 评审原则
 
@@ -130,8 +132,8 @@ python3 $SKILLS_ROOT/shared-tools/scripts/gitlab_helper.py file-content <project
 - **fetch 阶段**：每获取到一类数据，在 chat 中输出该数据的关键摘要，让用户确认。关键数据缺失时输出明确的阻断提示并等待用户补充
 - **understand 阶段**：输出功能点清单摘要和需求分类结果，让用户确认理解是否准确
 - **review 阶段**：输出关键发现摘要和检查进度；阻断项使用结构化问答确认
-- **output 阶段**：输出飞书文档链接
-- **不要**在 chat 中输出完整的评审报告详情（详细内容输出到飞书文档）
+- **output 阶段**：输出飞书文档链接 + 简短结论摘要（评审结论 / 阻断项数 / 各职能问题分布；详细模板见 [PHASES.md 5.2](PHASES.md#52-chat-输出)）
+- **不要**在 chat 中重复输出 report.md 的完整内容（详细评审报告以飞书文档为准；chat 仅给指标摘要）
 
 ### 中间文件输出（持久化模式）
 

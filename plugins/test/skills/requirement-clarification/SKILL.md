@@ -30,6 +30,7 @@ handoffs:
 - 失败门控：需求正文不可读且用户无法补充信息时停止；所有未经确认的信息标记为 `unconfirmed`
 - 执行步骤：`init → fetch → clarify → consolidate`（阶段不可跳过）
 - 澄清维度检查项：[CHECKLIST.md](CHECKLIST.md)
+- 参考样例：[output/](output/) 目录下的 `clarified_requirements.json` / `requirement_points.json` / `implementation_brief.json` / `clarification_log.md` 是预制的格式参考样例，**非运行时产出**，仅供初次使用者了解输出形态
 
 ## 核心能力
 

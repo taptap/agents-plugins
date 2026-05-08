@@ -1,0 +1,10 @@
+# feedback skill Python dependencies
+# Minimum Python version: 3.8+
+#
+# scripts/feishu_api.py 用于创建/更新飞书项目 Bug 单（SKILL.md 阶段 3 必经路径）。
+# 缺包则该脚本启动即报错并退出，无法降级。
+
+# === 必需 ===
+
+# feishu_api.py：异步 HTTP 客户端，用于飞书项目 Open API 调用
+aiohttp>=3.8

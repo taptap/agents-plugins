@@ -25,6 +25,7 @@ description: >
 - **状态持久化** — `workflow_state.json` 记录进度，支持中断恢复
 - **多种代码变更来源** — MR/PR 链接、本地 git diff、用户指定代码目录
 - **工作流模板** — qa-full（完整）、qa-lite（无 MS）、verify-only（仅验证）
+- **迭代更新模式** — 用户说"需求改了重跑"/"再来一版"时，传 `re_entry_phase` + `requirement_change_summary` 给 test-case-generation 跳过前序阶段从指定 phase 重新进入；下游 change-analysis / requirement-traceability 仍基于新用例集重跑
 
 ## 工作流全景
 

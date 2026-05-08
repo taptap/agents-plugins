@@ -11,14 +11,14 @@
           "type": "string"
         },
         "expected": {
-          "default": "",
-          "description": "预期结果（可为空字符串，但字段必须存在）",
+          "description": "预期结果（必填，但允许空字符串）",
           "title": "Expected",
           "type": "string"
         }
       },
       "required": [
-        "action"
+        "action",
+        "expected"
       ],
       "title": "Step",
       "type": "object"

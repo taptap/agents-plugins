@@ -55,11 +55,11 @@ output:
       description: decompose 阶段的全局上下文摘要（>=3 模块时生成）
       format: markdown
     - name: "module_*_cases.json"
-      description: generate 阶段各功能模块的用例文件（N 由模块拆解数决定，由并行子 Agent 写入）
+      description: generate 阶段各功能模块的用例文件（N 由模块拆解数决定，由并行子 Agent 写入）。schema 在 contracts/testcase.schema.json
       format: json
       pattern: true
     - name: test_cases.json
-      description: generate 收尾时由 Bash 合并 module_*_cases.json 产出的中间用例集（review 前快照）
+      description: generate 收尾时由 Bash 合并 module_*_cases.json 产出的中间用例集（review 前快照）。schema 在 contracts/testcase.schema.json
       format: json
     # ===== 可选产物（仅 review 阶段实际执行时产出）=====
     - name: tc_gen_review.md
@@ -71,8 +71,12 @@ output:
       format: json
       optional: true
     - name: supplementary_cases.json
-      description: output 阶段的补充用例（如有覆盖缺口）
+      description: output 阶段的补充用例（如有覆盖缺口）。schema 在 contracts/testcase.schema.json
       format: json
+      optional: true
+    - name: requirement_points.md
+      description: understand 阶段的功能点清单 fallback 产出（仅当工作目录无上游 requirement_points.json 时产出；与 test-case-review 同名同 schema，primary+fallback 模式）
+      format: markdown
       optional: true
   structured:
     total_modules:

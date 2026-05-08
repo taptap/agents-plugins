@@ -166,10 +166,26 @@ def search_related_prs(work_item_id: str) -> dict:
     }
 
 
+USAGE = """\
+用法: python3 search_prs.py <work_item_id>
+
+参数:
+    work_item_id    Story / Bug 工作项 ID（如 TAP-7891234567 或纯数字）
+
+环境变量（详见脚本顶部 docstring）:
+    GITHUB_TOKEN            GitHub Personal Access Token（必填）
+    GITHUB_REPO_MAPPING     仓库映射 JSON（必填）
+    GITHUB_URL              GitHub API 地址（可选，默认 api.github.com）
+
+示例:
+    python3 search_prs.py 7891234567
+"""
+
+
 def main():
-    if len(sys.argv) < 2:
-        print("用法: python3 search_prs.py <work_item_id>", file=sys.stderr)
-        sys.exit(1)
+    if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
+        print(USAGE, file=sys.stderr)
+        sys.exit(0 if len(sys.argv) >= 2 else 1)
 
     if not GITHUB_TOKEN:
         print("[ERROR] 环境变量 GITHUB_TOKEN 未设置", file=sys.stderr)

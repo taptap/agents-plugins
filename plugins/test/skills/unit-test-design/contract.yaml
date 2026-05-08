@@ -42,8 +42,8 @@ output:
     - name: test_plan.md
       description: 测试点清单（每个函数的测试用例设计）
       format: markdown
-    - name: test_execution_report.json
-      description: 测试执行结果（verify 阶段执行测试后产出，环境不支持时不生成）
+    - name: unit_test_execution_report.json
+      description: 单元测试执行结果（verify 阶段执行测试后产出，环境不支持时不生成；v0.0.10 起从 test_execution_report.json 改名以避免与 integration-test-design 撞名）
       format: json
       optional: true
   structured:

@@ -36,15 +36,6 @@
           "owner": {"type": "string", "description": "PM / Dev / QA / Design"}
         }
       }
-    },
-    "role_breakdown": {
-      "type": "object",
-      "description": "按职能分类的待确认问题数量",
-      "additionalProperties": {"type": "integer", "minimum": 0}
-    },
-    "review_mode": {
-      "enum": ["multi_perspective", "single_agent"],
-      "description": "实际采用的评审模式"
     }
   }
 }

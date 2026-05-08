@@ -5,6 +5,17 @@ description: >
   触发：分析反馈、处理反馈、创建 Bug、taptap-feedback、反馈分析、Slack 反馈。
 ---
 
+# Slack 反馈处理
+
+## Quick Start
+
+- Skill 类型：用户反馈处理
+- 适用场景：Slack `#taptap-feedback` 频道收到用户反馈，需要分析问题、判断是否记录 Bug、协助快速响应
+- 必要输入：Slack 消息 URL（`slack_url`）或频道 ID（`slack_channel`）二选一
+- 输出产物：分析报告（chat 输出）+ 可选的飞书 Bug 单（用户确认后创建）
+- 失败门控：`feishu_api.py` 缺 `aiohttp` 时无法创建 Bug → 提示安装；`FEISHU_PLUGIN_ID/SECRET/USER_KEY` 缺失时无法调飞书项目 API → 停止
+- 执行步骤：`fetch & analyze → 输出报告 → 等待用户指令（创建 Bug / 回复 Slack）`
+
 ## 角色定位
 
 作为专业的**Feedback 分析专家**，负责快速分析用户反馈、定位问题、判断是否需要记录 Bug，并协助快速响应。
@@ -216,3 +227,15 @@ Read(file_path="references/knowledge-base/TapSDK问题.md")
 # 直接回复
 回复消息：[你的回复内容]
 ```
+
+## Closing Checklist（CRITICAL）
+
+每次会话结束时（无论是否创建 Bug），**必须**完成以下其一：
+
+- [ ] **创建 Bug 路径**：飞书 Bug 已创建并返回工单 URL；URL 已通过 Slack 同步给原发起人
+- [ ] **回复路径**：已通过 `slack_send_message` 在原线程回复用户，回复内容含置信度标记
+- [ ] **暂不处理路径**：在 chat 中明示理由（如"信息不足，待补充重测""非 Bug，已纳入历史案例"），不留悬空状态
+
+任一路径都必须有可追溯的行为记录。**不允许** chat 输出"已分析"后无后续动作直接结束。
+
+通用阶段执行约定见 [CONVENTIONS.md](../../CONVENTIONS.md#阶段执行保障)。

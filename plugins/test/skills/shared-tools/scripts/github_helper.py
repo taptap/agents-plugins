@@ -141,9 +141,9 @@ USAGE = """\
 
 
 def main():
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
         print(USAGE, file=sys.stderr)
-        sys.exit(1)
+        sys.exit(0 if len(sys.argv) >= 2 else 1)
     if not GITHUB_TOKEN:
         print("[ERROR] 环境变量 GITHUB_TOKEN 未设置", file=sys.stderr)
         sys.exit(1)

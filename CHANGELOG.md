@@ -1,5 +1,60 @@
 # Changelog
 
+## 0.1.41
+
+### Test Plugin (0.0.9)
+
+**requirement-review**
+
+- Optimized 10 readability issues in Feishu reports based on real samples; rebuilt `TEMPLATES.md` for `report.md`
+- Fixed 5 Feishu docx import compatibility issues + 4 structural issues (TOC, section numbering, intent table, chat output) after live import testing
+- Fixed `rr_summary.json` writing illegal `review_mode` values like `single_agent_serial` (schema enum is now enforced)
+
+**test-case-review**
+
+- Added `TEMPLATES.md` (8-section strict template for `review_summary.md`); previously had no report template
+- Added §0 case-readiness verdict and §6 fix to-dos grouped by case ID (bold ID + `· ` prefix to preserve hierarchy after Feishu flattens nested bullets)
+
+**change-analysis**
+
+- Added `TEMPLATES.md` constraining multi-doc Feishu output (`code_change_analysis.md` + `test_coverage_report.md`); introduced bidirectional cross-references and per-line `[实证]/[推测]` confidence tagging
+
+**requirement-traceability**
+
+- Added smoke-test mode `report.md` template (6 sections); previously PHASES 5S.2 only constrained JSON output, no markdown template
+- Added §0 overall confidence summary + §2 numerator/denominator titles + §3.2 explicit untraced changes
+- Fixed broken anchor `#coverage_reportjson` → `#traceability_coverage_reportjson` in PHASES.md
+
+**Skill audit phase 1-3 follow-ups (8-dimension cross-skill review)**
+
+- Bound `testcase.schema.json` on 5 `*_cases.json` output declarations across `test-case-generation` / `test-case-review` / `change-analysis` `contract.yaml` (was implicit via CONVENTIONS.md inheritance; now machine-checkable)
+- Added demand-driven vs change-driven gating in `test-case-generation` and `change-analysis` SKILL descriptions + reverse SKIP cross-references between `change-analysis` and `requirement-traceability`
+- Marked `review_result.json` as LLM-friendly non-strict JSON in `test-case-review/SKILL.md` (verdict object, not `TestCaseList`; deliberately not schema-bound)
+- Synced `testcase.schema.json` from ai-case Pydantic source: `Step.expected` is now required (allows empty string); previously had `default=''` so callers could omit it. MCP tool input_schema auto-reflects this constraint at LLM tool-call time
+- Relaxed `test_method` from required to optional in `CONVENTIONS.md` to match Pydantic (which was already Optional; documentation was lagging) — supplementary case producers may omit it
+- Cross-referenced `contracts/known-collisions.yaml` from `requirement-traceability/PHASES.md` Phase 6 and `PIPELINES.md` to clarify that trace Phase 6 writeback and `metersphere-sync mode=execute` share the same `metersphere_helper.py writeback-from-fv` helper as two coexisting entry points (auto vs manual mode), not duplicate implementations
+- Added `re_entry_phase` + `requirement_change_summary` optional inputs to `qa-workflow` for "rerun after requirement change" scenarios, passthrough to `test-case-generation`
+- Updated README selection guide to surface the demand-driven (tcg) vs change-driven (ca) split; dropped stale "v0.0.10+" version gates from architecture features section
+- Added quickstart note in `requirement-clarification/SKILL.md` clarifying that `output/*.json` files are pre-shipped format samples, not runtime artifacts
+- Added inline annotation in `agents/` tree (README + `_shared/AGENT_PROTOCOL.md`) explaining why files in `plugins/test/agents/` are not auto-registered as Claude/Codex subagents (no YAML frontmatter; loaded explicitly via Task tool calls inside skills)
+
+**Test plugin audit + CI hardening**
+
+- Extended `tests/validate.sh` from 5 to 9 check categories: SKILL frontmatter ↔ directory, handoffs targets, subagent_type targets, references/ paths, contract.yaml cross-skill consistency
+- Resolved 8 contract output collisions: renamed `risk_assessment.json` → `bug_risk_assessment.json` (change-analysis), split `test_execution_report.json` → `unit_/integration_test_execution_report.json`, split `supplementary_cases.json` → `change_/review_supplementary_cases.json` (canonical kept by test-case-generation)
+- Added `contracts/known-collisions.yaml` whitelist with self-binding "review protocol" rule
+- Removed 3 zombie agents (`forward-tracer`, `reverse-tracer`, `failure-classifier`) and cleaned up 13 dead references across SKILL/PHASES/TEMPLATES/protocol files
+- Honest dependencies: `shared-tools/requirements.txt` now lists actual deps (pycryptodome, pyyaml, jsonschema, python-dotenv, aiohttp); new `feedback/requirements.txt` declares aiohttp; `feedback/contract.yaml` env_vars now match scripts (`FEISHU_PLUGIN_ID/SECRET/USER_KEY`)
+- Standardized `-h/--help` UX across 5 shared helper scripts (previously `--help` was sent as a network query in `search_mrs.py`)
+- Extracted `integration-test-design` 5-phase content into standalone `PHASES.md` (SKILL.md trimmed 387 → 252 lines, aligned with unit-test-design style)
+- Schema validation expanded from 1 to 5 schemas (testcase / ca-summary / defect-list / rr-summary / smoke-test-report) with ~30 negative cases
+- Synced stale filename references across PIPELINES.md (8), README.md (7), test-case-review/TEMPLATES.md (2), change-analysis/TEMPLATES.md (2), change-analysis/contract.yaml (1) following the contract renames above
+
+### Marketplace
+
+- Bumped version from 0.1.40 to 0.1.41
+- Updated test plugin to version 0.0.9
+
 ## 0.1.40
 
 ### Test Plugin (0.0.8)

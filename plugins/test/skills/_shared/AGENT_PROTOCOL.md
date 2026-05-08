@@ -10,9 +10,8 @@
 
 ```
 agents/
-├── AGENT_TEMPLATE.md                 # 统一模板
+├── AGENT_TEMPLATE.md                 # 统一模板（无 frontmatter，不会被 agent loader 注册，仅作为新建 Agent 的复制起手参考）
 ├── test-case-writer.md               # 测试用例生成 Agent
-├── failure-classifier.md             # 测试失败分类 Agent (预留)
 ├── ui-fidelity-checker.md            # UI 还原度检查 Agent
 ├── requirement-understanding/        # 需求理解多视角 Agent
 │   ├── functional-perspective.md
@@ -21,16 +20,15 @@ agents/
 ├── test-case-generation/              # 测试用例生成评审冗余对
 │   ├── review-agent-1.md
 │   └── review-agent-2.md
-├── requirement-traceability/         # 需求追溯 Agent（反向追溯 + 正向降级回退）
-│   ├── forward-tracer.md
-│   └── reverse-tracer.md
+├── requirement-traceability/         # 需求追溯 Agent（按模块拆分场景）
+│   └── case-tracer.md                # 用例中介验证拆模块并行 sub-agent
 └── change-analysis/                  # 变更分析交叉验证 Agent
     └── codex-change-analyzer.md      # Codex CLI 独立分析（与主 Agent 交叉验证）
 ```
 
 ### 模板结构
 
-每个 Agent 定义文件遵循统一结构（详见 [AGENT_TEMPLATE.md](agents/AGENT_TEMPLATE.md)）：
+每个 Agent 定义文件遵循统一结构（详见 [AGENT_TEMPLATE.md](../../agents/AGENT_TEMPLATE.md)）：
 
 1. **角色定义** — 一句话描述
 2. **模型** — 按模型分层策略选择
