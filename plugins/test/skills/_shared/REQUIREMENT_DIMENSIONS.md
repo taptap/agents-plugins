@@ -61,11 +61,13 @@
 
 **对应关系**（review ↔ clarification 互转参考）：
 
-| review verdict | review confidence 范围 | 对应 clarification confidence_level | 对应 clarification 功能点 confidence 平均 |
-|---|---|---|---|
-| `ready` | ≥ 80 且阻断项=0 | `high` | ≥ 80 |
-| `ready_with_conditions` | 50-79 或阻断项 1-5 | `medium` | 50-79 |
-| `not_ready` | < 50 或阻断项 > 5 | `low` | < 50 |
+review verdict 按以下**优先级判定**，命中即停（确保 verdict 唯一，详见 [PHASES.md 5.1.5.1 verdict 硬规则](../requirement-review/PHASES.md#515-evaluation-output)）：
+
+| 优先级 | review verdict | review 判定条件 | 对应 clarification confidence_level | 对应 clarification 功能点 confidence 平均 |
+|---|---|---|---|---|
+| 1 | `not_ready` | 阻断项 > 5 **或** confidence < 50 | `low` | < 50 |
+| 2 | `ready` | 阻断项 = 0 **且** confidence ≥ 80 | `high` | ≥ 80 |
+| 3 | `ready_with_conditions` | 其余（默认兜底） | `medium` | 50-79 |
 
 **评分规则一致性**：review 5.1.5.1 和 clarification 3.2.1 同构（基础分 + 已确认/source=document 占比 + 反例命中 + 核心维度补强 + 阻断/assumption 扣分），但因 review 是维度级、clarification 是功能点级，加权项的具体权重不同。新 skill 加入时应复用其中之一。
 
