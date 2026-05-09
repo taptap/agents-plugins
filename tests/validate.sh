@@ -1355,12 +1355,6 @@ elif ! command -v python3 >/dev/null 2>&1; then
 elif ! python3 -c 'import jsonschema' >/dev/null 2>&1; then
   echo "  SKIP: jsonschema not installed"
 else
-  # validate-fv 是纯本地校验子命令，不调 MS API。但 metersphere_helper.py
-  # 模块级强制检查 MS_ACCESS_KEY / MS_SECRET_KEY（其它子命令需要），CI 没配
-  # 这俩 env → 模块加载就 exit 1。注入 dummy 值让 helper 启动通过；validate-fv
-  # 全程不会实际使用这俩 key。
-  export MS_ACCESS_KEY="${MS_ACCESS_KEY:-ci_dummy}"
-  export MS_SECRET_KEY="${MS_SECRET_KEY:-ci_dummy}"
   abcd_tmpdir="$(new_tmpdir)"
   # 准备一个真实存在的文件供 boundary 校验通过
   echo "dummy" > "${abcd_tmpdir}/file.txt"
