@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.1.42
+
+### Test Plugin (0.0.10)
+
+**requirement-review / requirement-clarification — single-agent strong-reasoning rewrite**
+
+- Replaced multi-perspective subagent design with single-agent + structured reasoning across `requirement-review` and `requirement-clarification`; aligns with industry practice that single agent + strong schema + grounded reasoning beats parallel subagents for requirement-style analysis where context fits one window
+- Removed three perspective subagent definitions (`agents/requirement-understanding/{user,functional,exception}-perspective.md`); only consumers were the two skills above, both refactored
+- Promoted `requirement-review` 4.1b serial review to canonical path with mandatory 假设 / 反例搜索 / 结论 + original-text quoting
+- Added `requirement-review` §4.1.7 enum normalization (anti-collapse) and §4.1.8 multi-variant consistency (class-inheritance defense against UI implicit propagation)
+- Added `rr_summary.confidence` (0-100) with reproducible scoring formula in §5.1.5.1
+- Replaced verdict OR rule with priority chain (hit-and-stop) so verdict is unique under any (confidence, blocking) combination — previously `confidence=50, 阻断=6` would land in both `not_ready` and `ready_with_conditions`
+- Renamed mode wording from disparaging "degraded" to neutral "设计稿评审模式 / 描述评审模式" (review keeps 3 modes; no exploratory mode since Story context is required)
+
+**Feishu report formatting — checkbox feedback loop**
+
+- `requirement-review/TEMPLATES.md` §3 各职能问题列表改为 list + P0/P1 + 二选一 checkbox 反馈结构; added Closing Checklist Next Steps with handoffs to `test-case-generation`
+- `test-case-review/TEMPLATES.md` §6 修复 to-do uses MeterSphere edit links + `[已修复/无需修复]` checkbox; rewrote todo lines to use action verbs (修步骤/补步骤/改预期 etc.) instead of internal dimension tags; converted §2 coverage matrix to tables
+- `requirement-traceability/TEMPLATES.md` §4 缺陷清单 adds `[有效 bug/无效 bug]` checkbox per defect with `---` dividers; converted §3.1 coverage matrix and §3.2 code traceability to tables
+- `change-analysis/TEMPLATES.md` converted §2.5 model fields, §4.1/§4.2 impact domains, §3 coverage to tables; added §6 cross-validation summary template with §6.4 综合结论 checkbox
+
+**Conventions / shared / contracts**
+
+- New `CONVENTIONS.md`「飞书文档渲染规范」section as the single source of truth on table-vs-bullet selection, banned elements, severity terminology; replaces obsolete "no markdown table" rule that lived in each skill (Feishu import has supported tables for some time, verified end-to-end)
+- `_shared/REQUIREMENT_DIMENSIONS.md` terminology mapping table aligns severity (阻断/关注 with P0/P1 alias for `report.md`), status (per-FP vs per-dimension), and verdict↔confidence mapping; deprecates blocking/concern English and the 4-tier 阻断/高/中/低
+- `contracts/rr-summary.schema.json` makes `confidence` and `blocking_issues` required (must be explicit empty array if none)
+- `contracts/rr-summary.schema.json` fixture in `tests/check-schemas.sh` updated to include `confidence` plus out-of-range / missing rejection cases
+- `requirement-clarification` redesigned single-agent confidence formula; aligned severity to Chinese 阻断/关注
+
+### Marketplace
+
+- Bumped version from 0.1.41 to 0.1.42
+- Updated test plugin to version 0.0.10
+
 ## 0.1.41
 
 ### Test Plugin (0.0.9)
