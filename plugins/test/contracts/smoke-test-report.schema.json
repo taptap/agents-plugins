@@ -3,7 +3,7 @@
   "title": "SmokeTestReport",
   "description": "冒烟测试报告 (smoke_test_report.json)。requirement-traceability 在 smoke-test 模式产出，被 ai-case smoke_test workflow post_complete 直接读取写入 session.output_data。源真实样本：session 239。设计取舍：additionalProperties=true 允许 skill 演进加新字段；not.anyOf.required 是显式 ban 已知拼错（result / verdicts / defects_summary / verify_summary 等）的黑名单，不是穷举——发现新拼错模式时追加。",
   "type": "object",
-  "required": ["verdict", "verification_summary", "defect_summary"],
+  "required": ["verdict", "input_quality", "verification_channel", "verification_summary", "defect_summary"],
   "additionalProperties": true,
   "not": {
     "anyOf": [
@@ -15,12 +15,20 @@
   },
   "properties": {
     "verdict": {
-      "enum": ["pass", "fail"],
-      "description": "冒烟测试判定，ai-case 写入 output_data.smoke_test_verdict 给前端展示"
+      "enum": ["pass", "fail", "pass-with-degraded-input", "fail-with-degraded-input", "inconclusive"],
+      "description": "冒烟测试判定（v0.0.12 由二元扩展为五档；根因：上一版无任何用例输入时仍硬判 pass/fail 失实）。计算规则：input_quality × P0 count 二维表，详见 requirement-traceability/PHASES.md §5S.2。ai-case 写入 output_data.smoke_test_verdict 给前端展示。**ai-case 后端需新增 5 个映射：pass/fail 沿用、pass-with-degraded-input/fail-with-degraded-input 显示降级提示、inconclusive 显示输入残缺提示**"
+    },
+    "input_quality": {
+      "enum": ["full", "medium", "low"],
+      "description": "用例输入质量（v0.0.12 新增，单一权威字段）：full=有 final_cases.json；medium=仅 supplementary 或 requirement_points；low=三者全无（走 4.6 兜底）。详见 requirement-traceability/PHASES.md §1.3.d"
+    },
+    "verification_channel": {
+      "enum": ["dual_channel", "forward_only", "reverse_only", "forward_synthesized"],
+      "description": "实际使用的验证通道（v0.0.12 新增，由 §4.4 自动计算禁止模型自由填）：dual_channel=正反向都确认；forward_only=仅正向；reverse_only=仅反向；forward_synthesized=fv 含 synthesized_from_coverage_report 条目（即 4.6 兜底）"
     },
     "fail_reason": {
       "type": ["string", "null"],
-      "description": "verdict=fail 时的原因说明"
+      "description": "verdict 非 pass 时的原因说明；fail-with-degraded-input / inconclusive 必须以特定前缀开头，详见 requirement-traceability/PHASES.md §5S.2"
     },
     "verification_summary": {
       "type": "object",

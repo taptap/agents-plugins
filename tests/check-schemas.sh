@@ -109,7 +109,7 @@ for label, data in [
     ('defect-list 缺 name',
      {'defects': [{'priority': 'P0'}]}),
     ('defect-list priority enum',
-     {'defects': [{'name': 'x', 'priority': 'P3'}]}),
+     {'defects': [{'name': 'x', 'priority': 'P4'}]}),
     ('defect-list 拼错 title',
      {'defects': [{'name': 'x', 'priority': 'P0', 'title': 'y'}]}),
     ('defect-list 拼错 actual',
@@ -157,6 +157,8 @@ for label, data in [
 smoke = load('smoke-test-report')
 assert_valid('smoke ok', smoke, {
     'verdict': 'pass',
+    'input_quality': 'full',
+    'verification_channel': 'dual_channel',
     'fail_reason': None,
     'verification_summary': {
         'total_points': 10, 'passed': 9, 'failed': 0, 'inconclusive': 1,
@@ -168,21 +170,45 @@ assert_valid('smoke ok', smoke, {
         'by_category': {'implementation_missing': 1},
     },
 })
+assert_valid('smoke degraded medium', smoke, {
+    'verdict': 'fail-with-degraded-input',
+    'input_quality': 'medium',
+    'verification_channel': 'forward_only',
+    'fail_reason': '⚠️ 用例输入不完整（仅 change_supplementary_cases），发现 1 个 P0 缺陷',
+    'verification_summary': {'total_points': 33, 'passed': 30, 'failed': 2, 'inconclusive': 1},
+    'defect_summary': {'total': 2, 'by_priority': {'P0': 1, 'P1': 1, 'P2': 0}},
+})
+assert_valid('smoke inconclusive low', smoke, {
+    'verdict': 'inconclusive',
+    'input_quality': 'low',
+    'verification_channel': 'forward_synthesized',
+    'fail_reason': '本次冒烟测试无任何用例输入，verdict 不可信',
+    'verification_summary': {'total_points': 7, 'passed': 6, 'failed': 1, 'inconclusive': 0},
+    'defect_summary': {'total': 0},
+})
 for label, data in [
     ('smoke 缺 required verdict',
-     {'verification_summary': {}, 'defect_summary': {'total': 0}}),
+     {'input_quality': 'full', 'verification_channel': 'dual_channel', 'verification_summary': {}, 'defect_summary': {'total': 0}}),
+    ('smoke 缺 input_quality',
+     {'verdict': 'pass', 'verification_channel': 'dual_channel', 'verification_summary': {}, 'defect_summary': {'total': 0}}),
+    ('smoke 缺 verification_channel',
+     {'verdict': 'pass', 'input_quality': 'full', 'verification_summary': {}, 'defect_summary': {'total': 0}}),
     ('smoke verdict enum',
-     {'verdict': 'unknown', 'verification_summary': {}, 'defect_summary': {'total': 0}}),
+     {'verdict': 'unknown', 'input_quality': 'full', 'verification_channel': 'dual_channel', 'verification_summary': {}, 'defect_summary': {'total': 0}}),
+    ('smoke input_quality enum',
+     {'verdict': 'pass', 'input_quality': 'partial', 'verification_channel': 'dual_channel', 'verification_summary': {}, 'defect_summary': {'total': 0}}),
+    ('smoke verification_channel enum',
+     {'verdict': 'pass', 'input_quality': 'full', 'verification_channel': 'fake_channel', 'verification_summary': {}, 'defect_summary': {'total': 0}}),
     ('smoke 拼错 result',
-     {'verdict': 'pass', 'result': 'ok', 'verification_summary': {}, 'defect_summary': {'total': 0}}),
+     {'verdict': 'pass', 'input_quality': 'full', 'verification_channel': 'dual_channel', 'result': 'ok', 'verification_summary': {}, 'defect_summary': {'total': 0}}),
     ('smoke 拼错 verdicts',
-     {'verdict': 'pass', 'verdicts': [], 'verification_summary': {}, 'defect_summary': {'total': 0}}),
+     {'verdict': 'pass', 'input_quality': 'full', 'verification_channel': 'dual_channel', 'verdicts': [], 'verification_summary': {}, 'defect_summary': {'total': 0}}),
     ('smoke 拼错 defects_summary',
-     {'verdict': 'pass', 'verification_summary': {}, 'defects_summary': {'total': 0}, 'defect_summary': {'total': 0}}),
+     {'verdict': 'pass', 'input_quality': 'full', 'verification_channel': 'dual_channel', 'verification_summary': {}, 'defects_summary': {'total': 0}, 'defect_summary': {'total': 0}}),
     ('smoke defect_summary 缺 total',
-     {'verdict': 'pass', 'verification_summary': {}, 'defect_summary': {}}),
+     {'verdict': 'pass', 'input_quality': 'full', 'verification_channel': 'dual_channel', 'verification_summary': {}, 'defect_summary': {}}),
     ('smoke defect_summary 拼错 priority_distribution',
-     {'verdict': 'pass', 'verification_summary': {}, 'defect_summary': {'total': 0, 'priority_distribution': {}}}),
+     {'verdict': 'pass', 'input_quality': 'full', 'verification_channel': 'dual_channel', 'verification_summary': {}, 'defect_summary': {'total': 0, 'priority_distribution': {}}}),
 ]:
     assert_invalid(label, smoke, data)
 

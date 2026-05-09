@@ -45,17 +45,6 @@ collisions:
     reason: 同 forward_verification.enriched.json。
     enforcement: 同上。
 
-  ui_fidelity_report.json:
-    owners: [requirement-traceability, ui-fidelity-check]
-    reason: |
-      模式 (B) primary + fallback producer。schema 完全一致。
-      ui-fidelity-check 是 canonical producer；
-      requirement-traceability PHASES 3.4 内置回退仅在工作目录无该文件时自产。
-    enforcement: |
-      requirement-traceability/PHASES.md L470 显式判断："如果工作目录已有
-      ui_fidelity_report.json（上游产出）→ 跳过，在阶段 4 直接使用"。
-      即先 ui-fidelity-check 后 traceability 时，traceability 的 3.4 不会写。
-
   requirement_points.md:
     owners: [test-case-generation, test-case-review]
     reason: |
@@ -65,4 +54,4 @@ collisions:
     enforcement: |
       test-case-generation/PHASES.md L478 与 test-case-review/PHASES.md L37 都明文
       "已有上游产出文件 → 优先消费"，落地为只在缺上游时才写本文件。
-      v0.0.14 起 TCG contract 显式声明该 optional output（之前漏声明导致 validate_contracts 漏检）。
+      TCG contract 显式声明该 optional output 以便 validate_contracts 检测到。

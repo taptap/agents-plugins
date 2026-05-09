@@ -1099,6 +1099,120 @@ def _validate_code_location(loc: str, repo_root: Path) -> str | None:
     return None
 
 
+# trace 中识别"跨组件"信号的关键词集合（粗粒度，不求穷尽），模块级常量避免每条 entry 重新 lower()
+_FE_KW_LOWER = ('frontend', 'tsx', 'jsx', 'vue', 'pages/', 'components/', 'onclick', 'render', 'state', 'store', 'maker/apps/web')
+_BE_KW_LOWER = ('handler', 'controller', 'service.', 'repo.', 'grpc', 'rpc', 'route', 'middleware', 'zeus/app')
+_ACTORS_KW_LOWER = {
+    'admin': ('admin', 'admin-v3', 'admin-api-gateway'),
+    'user': ('user', 'c 端', 'c-end', '客户端', 'mobile'),
+    'job': ('job', 'cron', 'tmpjob', 'scheduled'),
+    'system': ('system', 'event', 'webhook', 'callback'),
+}
+# D 表：trace 含某模式 → modes 必须含某关键词之一
+_PATTERN_TO_MODE_KEYWORDS = [
+    (re.compile(r'\b(grpc|rpc|http|/api/)\b', re.I), ['序列化', '版本', '错位', '默认值', '错误码', '兜底']),
+    (re.compile(r'\b(cache|redis|缓存)\b', re.I), ['缓存', '陈旧', '失效', '时序']),
+    (re.compile(r'\b(transaction|tx|事务)\b', re.I), ['事务', '回滚', '隔离', '锁']),
+    (re.compile(r'\b(goroutine|promise|setTimeout|async|await|job|定时)\b', re.I), ['乱序', '超时', '取消', '并发']),
+    (re.compile(r'\b(state|store|setState|useState|render)\b', re.I), ['缓存', '陈旧', '乐观更新', '响应']),
+    (re.compile(r'\b(insert|update|select|delete|query|repo\.|UpdateBalance)\b', re.I), ['并发', '唯一约束', '冲突', '事务']),
+]
+
+
+def _validate_completeness(data: list, used_repo_root: Path | None) -> list[dict]:
+    """A/B/D evidence 完整性约束校验（C 是模型自检建议，不在此机械校验）。
+
+    - A 数据流闭环：pass + conf>=70 → trace 必须含至少 1 个 → 或 -> （跨 hop）
+    - B 跨边界自然记录：pass + conf>=85 + trace 提及多类组件 → code_location ≥ 2 元素，且分布在不同目录根
+    - D failure_modes 与 trace 路径强相关：pass + conf>=85 → modes 必须含与 trace 关键词匹配的条目
+
+    C 约束（Expected 逐项对账）由模型在写 fv 时自检完成（详见 PHASES §3.2.0a），不在此校验：
+    机械校验需要交叉读 case 文件 + 关键词匹配，易被同义词等绕过，ROI 低；
+    强行实装会让用户产生"validator 已经把 C 验了"的安全感，反而误导。
+
+    校验失败返回 schema_path 形如 'completeness/A' 的 error dict 列表。
+    """
+    errors: list[dict] = []
+    for i, entry in enumerate(data):
+        if not isinstance(entry, dict):
+            continue
+        # 兜底合成条目（4.6 路径）跳过 A/B/D —— 它们 fv schema 已豁免 evidence
+        if entry.get('source') == 'synthesized_from_coverage_report':
+            continue
+        if entry.get('result') != 'pass':
+            continue
+        conf = entry.get('confidence')
+        try:
+            conf_n = float(conf) if conf is not None else 0
+        except (TypeError, ValueError):
+            conf_n = 0
+        if conf_n < 70:
+            continue
+
+        trace = entry.get('trace') or ''
+        evidence = entry.get('evidence') or {}
+        code_locations = evidence.get('code_location') or []
+        modes = evidence.get('considered_failure_modes') or []
+        case_id = entry.get('case_id', f'#{i}')
+
+        # === A: 数据流闭环（pass + conf>=70）===
+        if '→' not in trace and '->' not in trace:
+            errors.append({
+                'path': f'$[{i}].trace',
+                'message': "约束A 数据流闭环：pass + conf>=70 的 trace 必须至少含 1 个 → 或 -> （即 ≥ 2 hop），当前 trace 仅单 hop 或为空",
+                'schema_path': 'completeness/A',
+                'case_id': case_id,
+            })
+
+        if conf_n < 85:
+            continue
+
+        # === B: 跨边界自然记录（pass + conf>=85）===
+        trace_lower = trace.lower()
+        actor_categories = sum(1 for kws in _ACTORS_KW_LOWER.values() if any(kw in trace_lower for kw in kws))
+        fe_hit = any(kw in trace_lower for kw in _FE_KW_LOWER)
+        be_hit = any(kw in trace_lower for kw in _BE_KW_LOWER)
+        cross_boundary_signal = (actor_categories >= 2) or (fe_hit and be_hit)
+        if cross_boundary_signal:
+            if len(code_locations) < 2:
+                errors.append({
+                    'path': f'$[{i}].evidence.code_location',
+                    'message': f"约束B 跨边界记录：trace 提示跨组件追溯（actor 类别={actor_categories}, FE+BE={fe_hit and be_hit}），code_location 至少需要 2 个元素，当前 {len(code_locations)} 个",
+                    'schema_path': 'completeness/B',
+                    'case_id': case_id,
+                })
+            else:
+                # 检查目录分布——取每条 code_location 的第一段路径，至少 2 类
+                roots = set()
+                for loc in code_locations:
+                    path_only = loc.split(':')[0]
+                    if path_only.startswith('[') and ']' in path_only:
+                        path_only = path_only.split(']', 1)[1].lstrip('/')
+                    first_seg = path_only.split('/')[0] if '/' in path_only else path_only
+                    roots.add(first_seg)
+                if len(roots) < 2:
+                    errors.append({
+                        'path': f'$[{i}].evidence.code_location',
+                        'message': f"约束B 跨边界记录：trace 跨组件但 code_location 全部位于同一根目录 ({list(roots)[0] if roots else '?'})，未真正跨边界收集",
+                        'schema_path': 'completeness/B',
+                        'case_id': case_id,
+                    })
+
+        # === D: failure_modes 与 trace 路径强相关（pass + conf>=85）===
+        if modes:
+            modes_text = ' '.join(m.get('mode', '') for m in modes if isinstance(m, dict))
+            for pattern, required_kws in _PATTERN_TO_MODE_KEYWORDS:
+                if pattern.search(trace) and not any(kw in modes_text for kw in required_kws):
+                    errors.append({
+                        'path': f'$[{i}].evidence.considered_failure_modes',
+                        'message': f"约束D failure_modes 与 trace 不匹配：trace 含 {pattern.pattern} 模式但 considered_failure_modes 未涵盖 {required_kws} 中任一关键词",
+                        'schema_path': 'completeness/D',
+                        'case_id': case_id,
+                    })
+                    break  # 一条 case 一次报警，不重复
+    return errors
+
+
 def _validate_fv_file(fv_path: Path, *, schema_path: str | None = None,
                        repo_root: str | None = None) -> list[dict]:
     """内部校验函数：返回合法 fv 数据；失败 → 抛 HelperError。
@@ -1157,6 +1271,10 @@ def _validate_fv_file(fv_path: Path, *, schema_path: str | None = None,
                         'message': msg,
                         'schema_path': 'boundary/code_location_exists',
                     })
+
+    # A/B/D evidence 完整性约束（C 是模型自检建议不在此校验）— schema + boundary 都通过后才跑，避免被前序错误掩盖
+    if not errors and isinstance(data, list):
+        errors.extend(_validate_completeness(data, used_repo_root))
 
     if errors:
         extra = {'errors': errors[:30], 'total_errors': len(errors), 'file': str(fv_path)}

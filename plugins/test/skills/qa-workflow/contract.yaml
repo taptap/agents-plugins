@@ -77,7 +77,6 @@ dependencies:
     - metersphere-sync
     - change-analysis
     - requirement-traceability
-    - ui-fidelity-check
     - api-contract-validation
     - shared-tools
     - git:code-reviewing      # 跨插件依赖

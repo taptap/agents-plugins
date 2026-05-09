@@ -56,10 +56,9 @@ Skill(skill: "test:requirement-clarification", args: "story_link=<story_link> de
    - `platform_scope` ← `platform_scope.platforms`
    - `has_design_link` ← `design_link` 是否非空
 3. 根据条件更新步骤状态：
-   - `has_design_link == true` → 步骤 #6 (ui-fidelity-check) 保持 `pending`
-   - `has_design_link == false` → 步骤 #6 设为 `skipped`
-   - `coordination_needed == true` → 步骤 #7 (api-contract-validation) 保持 `pending`
-   - `coordination_needed == false` → 步骤 #7 设为 `skipped`
+   - `coordination_needed == true` → 步骤 #6 (api-contract-validation) 保持 `pending`
+   - `coordination_needed == false` → 步骤 #6 设为 `skipped`
+   - `has_design_link == true` → 不单独占步骤；将 `design_link` 和 `code_dir` 透传给步骤 #7 requirement-traceability，由其 §3.4 隐式触发 UI 还原度静态对比
 4. 更新 `workflow_state.json`：步骤 #1 标记 `completed`
 
 ### 1.2 测试用例生成
@@ -133,7 +132,7 @@ Skill(skill: "test:metersphere-sync", args: "mode=sync plan_name=<derived_params
 
 3. **用户说"帮我 review 并提 MR"**：
    - 同方式 2 生成 local.diff
-   - 额外标记：Phase 3 步骤 #10、#11 自动执行（不在人工验证 gate #9 暂停）
+   - 额外标记：Phase 3 步骤 #9、#10 自动执行（不在人工验证 gate #8 暂停）
 
 更新 `workflow_state.json`：步骤 #4 标记 `completed`
 
@@ -145,24 +144,46 @@ Skill(skill: "test:metersphere-sync", args: "mode=sync plan_name=<derived_params
 Skill(skill: "test:change-analysis", args: "code_changes=<...> story_link=<...>")
 ```
 
-如 `has_design_link == true`：
+如 `coordination_needed == true`：
 ```
-Skill(skill: "test:ui-fidelity-check", args: "design_link=<...>")
+Skill(skill: "test:api-contract-validation", args: "frontend_changes=<...> backend_changes=<...>")
 ```
 
 > 注意：这些 Skill 调用应在**同一条消息**中发出以实现并行。如果工具不支持并行 Skill 调用，则按顺序执行。
+>
+> UI 还原度检查不在此并行 — 由步骤 #7 requirement-traceability §3.4 在内部触发（仅当 `design_link` + `code_dir` 都透传时）。
 
 完成后更新对应步骤为 `completed`。
 
-### 2.2 API 契约校验（条件执行）
+### 2.2 需求回溯（含 MS 测试计划回写）
 
-仅当 `coordination_needed == true` 时执行：
+> **重要边界**：qa-workflow **仅调用** requirement-traceability 的**标准 traceability 模式**（生成需求还原度报告 + MS 计划回写），**不调用** smoke-test 模式。smoke-test 是用户手动入口，需要用户主动通过 `test:requirement-traceability mode=smoke-test` 单独触发。
 
-```
-Skill(skill: "test:api-contract-validation", args: "...")
-```
+#### 2.2.0 上游用例输入预检
 
-### 2.3 需求回溯（含 MS 测试计划回写）
+调用 traceability 前确认 `$TEST_WORKSPACE` 至少存在以下之一：
+
+- `final_cases.json`（来自步骤 #2 test-case-generation；qa-full 模板下默认存在）
+- `change_supplementary_cases.json`（来自步骤 #5 change-analysis 的可选产出，仅 Story 场景且有覆盖缺口时生成）
+- `requirement_points.json`（来自步骤 #1 requirement-clarification）
+
+**处理**：
+
+- 至少一个存在 → 正常进入 2.2.1
+- 全部不存在 → chat 输出警告：
+
+  ```
+  ⚠️ 上游用例输入全部缺失（final_cases / change_supplementary_cases / requirement_points）。
+  本次 traceability 会自动降级到 input_quality=low：
+    - traceability_coverage_report.json 的 confidence 上限封顶 60
+    - risk_assessment.json overall_risk 至少 medium
+    - 报告会显式标注"输入残缺，仅供参考"
+  本工作流仍可继续，但建议补输入后重跑获得可靠判定。
+  ```
+
+  仍调 requirement-traceability（不阻断），由其 §1.3.d 自动处理降级。
+
+#### 2.2.1 调用
 
 ```
 Skill(skill: "test:requirement-traceability", args: "code_changes=<...> story_link=<...> final_cases=$TEST_WORKSPACE/final_cases.json plan_name=<derived_params.plan_name>")
@@ -170,14 +191,14 @@ Skill(skill: "test:requirement-traceability", args: "code_changes=<...> story_li
 
 此步骤包含两部分（详见 requirement-traceability/PHASES.md）：
 
-1. **正向用例中介验证**：消费上游 `final_cases.json`（来自步骤 #2 test-case-generation），对每条用例执行代码路径追踪，落盘 `forward_verification.json`，强制走 `validate-fv` schema 校验（4.6a），高 conf fail 触发 4.7 复核
-2. **Phase 6 writeback**：标准模式下直接调 `metersphere_helper.py writeback-from-fv`（不走 Skill(metersphere-sync)），按 P6 状态映射把 fv 写回 MS plan，落盘 `ms_sync_report.json` + `forward_verification.enriched.json` + `pass_with_caveats.md` + `pending_external_validation.md`。前置条件：上游必须已经跑过 `metersphere-sync mode=sync`（步骤 #2 之后会跑）产出 `ms_case_mapping.json`（v2）和 `ms_plan_info.json`
+1. **正向用例中介验证**：消费上游 `final_cases.json`（来自步骤 #2 test-case-generation）+ `change_supplementary_cases.json`（来自步骤 #5 change-analysis）作为优先级 1.5 档补充用例池。对每条用例执行代码路径追踪，落盘 `forward_verification.json`，强制走 `validate-fv` schema 校验（4.6a），高 conf fail 触发 4.7 复核
+2. **Phase 6 writeback**：标准模式下直接调 `metersphere_helper.py writeback-from-fv`（不走 Skill(metersphere-sync)），按 P6 状态映射把 fv 写回 MS plan，落盘 `ms_sync_report.json` + `forward_verification.enriched.json` + `pass_with_caveats.md` + `pending_external_validation.md`。前置条件：上游必须已经跑过 `metersphere-sync mode=sync`（即步骤 #3）产出 `ms_case_mapping.json`（v2）和 `ms_plan_info.json`
 
 完成后：
 1. Read `$TEST_WORKSPACE/ms_sync_report.json`
-2. 提取 `summary.by_target_status.{Pass, Prepare, Failure}` 和 `summary.failed` 用于 2.4 摘要；如需筛 caveats，回读 `pass_with_caveats.md`
+2. 提取 `summary.by_target_status.{Pass, Prepare, Failure}` 和 `summary.failed` 用于 §2.3 摘要；如需筛 caveats，回读 `pass_with_caveats.md`
 
-### 2.4 暂停 — 等待人工验证
+### 2.3 暂停 — 等待人工验证
 
 输出摘要给用户：
 
@@ -200,7 +221,7 @@ Skill(skill: "test:requirement-traceability", args: "code_changes=<...> story_li
 
 更新 `workflow_state.json`：
 - `current_phase = 3`
-- 步骤 #9 (user_gate) 设为 `waiting`
+- 步骤 #8 (user_gate) 设为 `waiting`
 
 > 如果 2.0 中用户选择了"帮我 review 并提 MR"，则跳过此暂停，直接进入 Phase 3。
 

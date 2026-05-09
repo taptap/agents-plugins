@@ -18,7 +18,7 @@
 按 [CONVENTIONS.md](../../CONVENTIONS.md#上游输入消费) 定义的优先级确认输入：
 
 1. 工作目录中存在 `final_cases.json` → 作为主输入
-2. 工作目录中存在补充用例文件（任一）：`change_supplementary_cases.json` / `review_supplementary_cases.json` / `supplementary_cases.json` → 作为主输入。多个并存时按列出顺序优先（v0.0.10 起按上游 skill 区分文件名以避免撞名，旧版 supplementary_cases.json 仅 test-case-generation 内部使用）
+2. 工作目录中存在补充用例文件（任一）：`change_supplementary_cases.json` / `review_supplementary_cases.json` / `supplementary_cases.json` → 作为主输入。多个并存时按列出顺序优先（按上游 skill 区分文件名以避免撞名；`supplementary_cases.json` 仅 test-case-generation 内部使用）
 3. 以上均不存在 → **停止**
 
 ### 1.2 确定执行模式
@@ -31,7 +31,7 @@
 - `parent_module_id`：优先使用参数值，否则读取 `MS_DEFAULT_NODE_ID` 环境变量
 - `plan_name`：优先使用参数值，否则询问用户提供需求名称
 
-> **已删除**：`confidence_threshold`（v0.0.16 起 helper 不再识别此参数；v0.0.17 起从 contract.yaml 删除）。当前 P6 状态映射不再用阈值——pass + ext_deps 非空时直接降级为 Prepare（详见 SKILL.md「P6 状态映射」）。
+> P6 状态映射不使用阈值参数——pass + ext_deps 非空时直接降级为 Prepare（详见 SKILL.md「P6 状态映射」）。
 
 ### 1.4 Precondition 校验（CRITICAL，必须执行）
 
@@ -215,7 +215,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/metersphere_helper.py \
 
 此阶段仅在 `mode=execute` 时执行，需要 `forward_verification.json` 输入（来自 requirement-traceability，正向用例中介验证结果）。
 
-> v0.0.7 起改接 `forward_verification.json` 替代旧 `verification_cases.json`——traceability 已经把"用例执行结果"作为自身产物输出，不再需要独立的 verification-test-generation 中间产物。
+> 直接消费 traceability 产出的 `forward_verification.json` 作为执行结果，不引入独立的中间用例文件层。
 
 ### 4.0 冒烟测试报告前置检查
 

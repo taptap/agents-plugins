@@ -25,18 +25,20 @@
 
 仅 MR/PR 模式需要：从链接或预取数据的 `provider` 字段判断代码托管平台（GitLab / GitHub）。
 
-### 1.3 Precondition 校验（CRITICAL，标准模式必须执行）
+### 1.3 Precondition 校验（CRITICAL，所有 mode 必须执行）
 
-仅当本次执行需要走到 Phase 6 写回 MS plan（即非 smoke-test 模式）时检查；smoke-test 模式跳过本节。
+> 1.3 在所有 mode 下执行；smoke-test 模式仅跳过 1.3.a 中的 `mapping sha 一致` 校验项（因为不写 MS）。其余 1.3.a 项 + 1.3.b + 1.3.d 始终执行。
+>
+> 本次修订动因：上一版 smoke-test 模式整段跳过 1.3，导致"无任何用例输入"也不会被拦截，5S.2 verdict 仍硬判 pass/fail。现在 1.3.d 强制把"用例输入完整性"作为前置门控（不 STOP，但置 input_quality 标记），下游 4.6 / 5S.2 据此降级。
 
-> **设计哲学**：硬阻断只针对「无之则后续 phase 完全跑不动」的资源；MS 相关产物（mapping / plan_info）属于「writeback 才用得到」，缺失时让 Phase 6 优雅 skip 即可，不应阻断「只想要 coverage_report」的用户。1.3.b 早期警告 + 6.1.b 优雅 skip 的组合避免 D3 「白跑 4 phase 才发现」的体验问题。
+> **设计哲学**：硬阻断只针对「无之则后续 phase 完全跑不动」的资源；MS 相关产物（mapping / plan_info）属于「writeback 才用得到」，缺失时让 Phase 6 优雅 skip 即可，不应阻断「只想要 coverage_report」的用户。1.3.b 早期警告 + 6.1.b 优雅 skip 的组合避免 D3 「白跑 4 phase 才发现」的体验问题。1.3.d 的 input_quality 也走"早期标记 + 后期降级"路径，不阻断但拒绝硬判决。
 
 #### 1.3.a 硬阻断项（任一不满足 → STOP）
 
-| 项 | 校验 | 失败提示 |
-| --- | --- | --- |
-| `final_cases.json` 存在 | 文件可读、顶层 array 非空 | 先跑 test-case-generation 产出 final_cases |
-| mapping sha 一致（仅当 mapping 存在时校验）| mapping.source_cases_file.sha256 == sha256(final_cases.json) | 跑 `metersphere_helper.py refresh-mapping --diff-only` 查看差异，再 `--apply` 修复 |
+| 项 | 适用 mode | 校验 | 失败提示 |
+| --- | --- | --- | --- |
+| `final_cases.json` 存在 | **仅 traceability 标准模式**（smoke-test 不强制 final_cases，由 1.3.d 评估整体用例输入质量）| 文件可读、顶层 array 非空 | 先跑 test-case-generation 产出 final_cases；smoke-test 模式可改用 change-analysis 产出 supplementary cases |
+| mapping sha 一致（仅当 mapping 存在时校验）| **仅 traceability 标准模式**（smoke-test 不写 MS 故跳过此项）| mapping.source_cases_file.sha256 == sha256(final_cases.json) | 跑 `metersphere_helper.py refresh-mapping --diff-only` 查看差异，再 `--apply` 修复 |
 
 > **mapping sha 一致性是硬阻断**：sha 不匹配意味着 mapping 是过期的，writeback 时会用错的 ms_id 误改 MS 状态——比 mapping 整个不存在更危险。所以「不存在」是软警告（直接 skip），「存在但 sha 错」是硬阻断（必须先修）。
 
@@ -51,7 +53,59 @@
 
 #### 1.3.c 兜底定位提醒
 
-> **Phase 4.6 兜底落盘** 的定位：last-resort 救命，**不应**承担 precondition 缺失的责任。如果走到了 4.6，说明 Phase 3.2 的 forward_verification 产出有 bug，应该回归 3.2 修而不是依赖兜底。
+> **Phase 4.6 兜底落盘** 的定位：last-resort 救命，**不应**承担 precondition 缺失的责任。如果走到了 4.6 且 input_quality != "low"，说明 Phase 3.2 的 forward_verification 产出有 bug，应该回归 3.2 修而不是依赖兜底。input_quality == "low" 时 4.6 是合法兜底路径（详见 1.3.d 与 4.6）。
+
+#### 1.3.d 用例输入完整性检查（CRITICAL，所有 mode 必须执行）
+
+> **目的**：把"用例池能不能支撑可信判决"做成单一权威字段 `input_quality`，让下游 4.6 / 4.5 / 5S.2 都从这一个字段派生降级行为，避免散落判断。无此检查时 smoke-test 在毫无用例输入时仍可能走 4.6 兜底 + 硬判 verdict，给出失实判决（GameJam 漏报根因）。
+
+**步骤**：扫描 `$TEST_WORKSPACE` 是否存在以下任一非空文件：
+
+- `final_cases.json` （上游 test-case-generation 产出）
+- `change_supplementary_cases.json` （上游 change-analysis 产出，详见 [change-analysis PHASES §6](../change-analysis/PHASES.md)）
+- `requirement_points.json` （上游 requirement-clarification 产出）
+
+按下表设置 `input_quality`，并写入 `$TEST_WORKSPACE/_input_quality.json`：
+
+| 检测到 | input_quality | 含义 |
+| --- | --- | --- |
+| `final_cases.json` 非空 | `full` | 用例覆盖完整，3.2.1-3.2.3 用例中介验证可信 |
+| 仅 `change_supplementary_cases.json` 或仅 `requirement_points.json` 非空（无 final_cases） | `medium` | 用例不完整但 ≥ 1 类来源；可追溯但 confidence 上限收紧 |
+| 三者都不存在或都为空 | `low` | 无任何用例输入；只能走 4.6 兜底合成；verdict 必须降级 |
+
+`_input_quality.json` 格式：
+
+```json
+{
+  "input_quality": "full | medium | low",
+  "sources_present": ["final_cases", "change_supplementary_cases", "requirement_points"],
+  "checked_at": "ISO8601 timestamp"
+}
+```
+
+**行为规则**：
+
+- `input_quality != "low"` → 不输出额外警告，正常进 Phase 2
+- `input_quality == "low"` → **不 STOP**，但 chat 必须输出明显警告：
+
+  ```
+  ⚠️ 无任何用例输入（final_cases / change_supplementary_cases / requirement_points 全部缺失）。
+  本次将走 4.6 兜底合成路径，缺陷检出能力受限：
+    - smoke-test 模式 verdict 自动降级为 inconclusive（不会硬判 pass/fail）
+    - 标准模式 confidence 上限封顶 60，risk_level 至少 medium
+
+  建议补齐输入后重跑：
+    1. 跑 change-analysis 产出 change_supplementary_cases.json，或
+    2. 跑 test-case-generation 产出 final_cases.json
+  ```
+
+**绑定下游**：
+
+- §3.1 输入路由表新增 `change_supplementary_cases.json` 优先级 1.5 档（在 final_cases 与 requirement_points 之间）
+- §4.6 兜底合成**仅在 `input_quality == "low"` 时允许触发**；`input_quality != "low"` 但 fv 仍空 → STOP（说明 3.2 有 bug）
+- §4.4 traceability_coverage_report.json 顶层写入 `input_quality` 与 `verification_channel`
+- §4.5 risk_assessment.json：`input_quality == "low"` 时 confidence 上限封顶 60、risk_level 至少 medium
+- §5S.2 verdict 五档：参见 5S.2 计算表
 
 ## 阶段 2: fetch - 数据获取
 
@@ -93,7 +147,7 @@
 
 本阶段主 agent 顺序执行两个通道：先正向（用例中介验证 → `forward_verification.json`），再反向（代码追溯，主 agent 内联到 `code_analysis.md`），在阶段 4 交叉验证。
 
-> **历史变更（v0.0.16 / v0.0.9 清理）**：旧版本曾用 forward-tracer / reverse-tracer 两个独立 sub-agent 并行调度，但实际 AI 跑 skill 时 sub-agent 调度不可靠（46 条用例的实际跑都是手工补的）。当前版本主 agent 顺序内联：正向走用例中介验证（3.2.1-3.2.3），反向走主 agent 直接代码归属（3.3）。原 `agents/requirement-traceability/forward-tracer.md` / `reverse-tracer.md` 已在 v0.0.9 删除，降级 prompt 内联到 3.2.4。
+> **架构选择**：主 agent 顺序内联完成两个通道——正向走用例中介验证（3.2.1-3.2.3），反向走主 agent 直接代码归属（3.3）。不调 Task 工具拆 sub-agent，因为实际跑 skill 时 sub-agent 调度可靠性不够；降级 prompt 内联在 3.2.4。
 
 ### 3.0 准备 diff 数据
 
@@ -119,10 +173,17 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 | 优先级 | 文件 | 来源 | 处理 |
 | --- | --- | --- | --- |
 | 1 | `final_cases.json` | 上游 test-case-generation | 直接消费，`steps[].action` 当 input、`steps[].expected` 当 expected，`case_id` 形如 `M1-TC-01` |
+| **1.5（新增）** | **`change_supplementary_cases.json`** | **上游 change-analysis（详见 [PHASES §6](../change-analysis/PHASES.md)）** | **每条用例推断 `requirement_id`**：从 `case.title` + `case.steps[].action` + `case.preconditions` 的业务语义匹配 `traceability_checklist.md` 中的 FP-N 名称。`module` 字段是 change-analysis 内部的代码风险点标签（命名风格自由，常用代码路径如 `zeus.credit.X`），与 FP-N 业务名无字面对应，**不作为推断依据**。匹配不出时归 `FP-UNMAPPED-{seq}`（seq 从 1 顺序生成）。**(b)** `case_id` 直接复用 change-analysis 的 `TC-{N}`（不重命名，下游引用稳定）。**(c)** 衍生 fv 条目额外标 `case_source: "supplementary"`、`evidence.priority_inherit: <change-analysis 用例 priority>` 供 5S.1 继承 |
 | 2 | `requirement_points.json` | 上游 requirement-clarification 或 test-case-generation 中间产物 | 每条 `acceptance_criteria` 转 1-2 条简化用例（兜底用） |
 | 3 | 都不存在 | — | 从 `traceability_checklist.md` 需求描述自行提取（最弱降级，覆盖面差，应在报告中标注） |
 
-> v0.0.7 起合并原 verification-test-generation 能力。不再消费 `verification_cases.json` 这一层中间产物——直接复用上游测试用例避免重复建模。
+**合并规则**：
+
+- 当 `final_cases.json` + `change_supplementary_cases.json` 同时存在 → **合并消费**而非二选一。两者 case_id 命名空间天然不冲突（final_cases 用 `M{N}-TC-{N}`，supplementary 用纯 `TC-{N}`），合并后总数 = N(final) + N(supp)
+- 合并后任意一类用例缺失都不触发降级；只有合并后**总数为 0** 才进入 §4.6 forward fallback 路径
+- 罕见冲突（同 case_id 出现在两个文件）：以 final_cases 为准，supplementary 中冲突项跳过并在 chat 输出 `⚠️ case_id 冲突：TC-{N} 在两个文件均存在，以 final_cases 为准`
+
+> 直接复用上游 `final_cases.json` 作为正向通道用例，不引入 `verification_cases.json` 这层中间产物。supplementary cases 消费路径覆盖 change-analysis 已生成跨路径一致性用例的场景，避免 GameJam 类漏报。
 
 **ID 映射**（采用编号直接继承策略）：
 
@@ -136,13 +197,11 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 
 > 仅当无上游 FP- 编号（独立使用模式）时，才使用 R- 独立编号。
 
-同时检查 `ui_fidelity_report.json` 是否存在（上游 UI 还原度检查产出）：
-1. 如果存在 → 在 4.4 中直接合并到 traceability_coverage_report.json
-2. 如果不存在且有 design_link → 在 3.4 中触发 UI 还原度检查
+UI 还原度检查由 §3.4 内置触发（`design_link` + `code_dir` 都有时启动），不再支持上游 `ui_fidelity_report.json` 优先消费。
 
-同时检查 `api_contract_report.json` 是否存在（上游 api-contract-validation 产出）：
-1. 如果存在 → 在 4.4 中直接合并到 traceability_coverage_report.json，跳过 3.2.5 的内置检查
-2. 如果不存在且代码变更涉及 API 相关文件 → 在 3.2.5 中触发内置契约感知检查
+同时检查 `api_contract_report.json` 是否存在（上游 api-contract-validation skill 已独立跑过的产出）：
+1. 如果存在 → 在 4.4 中直接合并到 traceability_coverage_report.json，跳过 §3.2.5 的 agent 启动（性能优化）
+2. 如果不存在且代码变更涉及 API 相关文件 → §3.2.5 启动共享 `api-contract-validator` Agent
 
 ### 3.1.5 枚举值覆盖前置检查（条件触发）
 
@@ -165,6 +224,12 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 - 4.6 兜底合成时同样适用：该 FP 的兜底记录 result 不得为 `pass`
 - 5S.1 缺陷提取时，`enum_coverage_gap` 作为独立来源（来源 5）写入 defect_list，priority = P1（用例缺漏不直接是阻断，但需在冒烟报告中显式列出）
 
+**supplementary cases 豁免规则**：
+
+- 在执行 enum gap 扫描后，**额外**扫描 `change_supplementary_cases.json` 中该 FP 关联用例的 `title` / `steps[].action` / `steps[].expected` / `preconditions` 是否含该枚举值字面量
+- 若 supplementary cases 命中某 enum_coverage_gap → 该枚举值视为已覆盖（`covered_by: "supplementary"`），从该 FP 的 `enum_coverage_gap` 列表中移除；该 FP 不再因此项强制降级到 inconclusive
+- 这样避免"change-analysis 已用补充用例覆盖了枚举值，requirement-traceability 仍把代码层真 fail 强降为 inconclusive"——后者会把 P0 漏报变为 P2，是 GameJam 修复链路的关键完整性保证
+
 **为什么前置**：上游 RC 走完 3.2.6 后 `enum_factors` 是已确认的完整枚举集合。如果上游 TCG 漏覆盖某个枚举值（如 `通知类型 = Review` 没有对应用例），traceability 即使代码追踪 pass 也只能保证"该用例覆盖的代码路径正确"，无法保证"未覆盖枚举值的代码路径正确" — 把它强制降级为 inconclusive 是诚实的判定。真实案例：iOS Review 类型菜单 bug，根因之一是 `通知类型 = Review` 这个枚举值在 final_cases.json 里没有任何用例覆盖，traceability 不应给该 FP 判 pass。
 
 ### 3.2 正向通道：用例中介验证
@@ -173,7 +238,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 
 > **历史教训**：旧版本声称 sub-agent 自动并行，实际 AI 跑 skill 时常常变成主 agent 手写——上次跑 46 条用例时主 agent 全程加载所有模块代码，新会话第一次跑非常慢，且容易跑偏。
 >
-> **本次（v0.0.18）开启**：按模块数拆 sub-agent，每个 sub-agent 携带受限上下文（一个模块的 cases + 那个模块涉及的 diff），独立跑完后输出标准 fv 子集，主 agent 合并。**目的不是并行加速，而是减少主 agent 的全量上下文负担**。
+> **按模块拆 sub-agent**：每个 sub-agent 携带受限上下文（一个模块的 cases + 那个模块涉及的 diff），独立跑完后输出标准 fv 子集，主 agent 合并。**目的不是并行加速，而是减少主 agent 的全量上下文负担**。
 
 **决策规则**（基于 `final_cases.json` 中不同 `module` 字段的去重数 = M）：
 
@@ -217,6 +282,71 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 
 为什么前置：避免 AI 在不可靠的代码路径上"硬编"出一个 pass/fail 结论。inconclusive 比错误结论更有价值。
 
+#### 3.2.0a Evidence 完整性约束（output-spec，所有 fv 条目必须满足）
+
+> **设计意图**：上一版协议把"追溯过程"做成显式步骤（"先做 X 再做 Y"），LLM 容易被框住、漏掉跨组件路径（GameJam 漏 Info-Consume 的根因之一就是模型局限在单一文件追溯）。本版改为**约束产出**：模型用任何追溯方式都行，但产出的 fv evidence 必须满足以下 4 条完整性。
+
+校验由 §4.6a `validate-fv` 强制执行（详见 [shared-tools/scripts/metersphere_helper.py](../../shared-tools/scripts/metersphere_helper.py)）。校验失败 → STOP，模型必须修复 evidence 重落盘。
+
+**约束 (A) 数据流闭环**
+
+`trace` 字段必须从 case 的触发起点（用户操作、定时任务、admin 动作、系统事件等）走到 case 的 expected 落地点（UI 元素、API 响应、DB 状态、流水记录等）。
+
+- 形式硬要求：`trace` 至少含 1 个 `→`（即至少 2 hop）
+- 语义硬要求：起点和落地点之间的中间 hop 不允许有不可解释的断链；任何 "..." / "中间略过" / "等等" 类省略词被视为断链
+- 触发 inconclusive 例外：可追踪性评估命中 §3.2.0 硬规则时（如调用链>3 层 / 动态分派）允许 trace 简短，但必须明确标 inconclusive_reason
+
+**约束 (B) 跨边界自然记录**
+
+如果 `trace` 路径跨了仓 / 跨了进程 / 跨了 service / 跨了端（FE↔BE↔admin），`code_location` **必须**分别收集每段实现位置，不允许只标头尾。
+
+- 量化硬要求：当 case.preconditions 或 case.steps[].action 提及 ≥2 类 actor（如同时含 admin/user/job/system 中的多种）时，`code_location` 必须 ≥2 个元素
+- 跨边界识别由模型从代码结构自行判断（如不同子目录、不同语言、不同仓的 diff 都算边界）—— **没有预定义的边界模式清单**
+- 推荐写法：跨仓时 code_location 元素加 `[repo]/path/to/file:N` 前缀以便审计，但**不强制**（schema 不校验前缀）
+
+**自检建议 (C) Expected 逐项对账**（模型自检完成，validator 不机械强制）
+
+`case.steps[].expected` 中的每条断言，evidence 应能指到"这条 expected 的实际产出位置"。这一条由模型在写 fv 时自行检查，**`validate-fv` 不机械校验**——因为机械校验需要交叉读取 case 文件且只能做关键词匹配，易被同义词等绕过，ROI 低。诚实地把它列为模型应自查的部分而不是 validator 强制项。
+
+- 推荐做法：N 条 expected → trace + verification_logic 中能识别 N 个对应的"落地点"描述（可以用 expected 原文关键词、字段名、状态值等任意自然指代）
+- 对账缺口处理：
+  - 找到代码但行为偏离 expected → 该 step `result: "fail"`，`actual` 字段如实记录代码实际行为
+  - 找不到任何对应代码 → 该 step 标 `cross_component_break`（详见 5S.1 来源 7）
+  - 部分 expected 对账上 + 部分缺失 → 整条 case `result: "inconclusive"`，禁止整体 pass
+- pass + conf≥85 写 evidence 时应能逐条出示对账证据，不要笼统说"已验证所有 expected"
+
+> **为什么不入 validator**：自动化对账需要机械加载 case 文件 + 关键词匹配，易被 LLM 用同义词绕过。强行实装会误导用户产生"validator 已经验了 C"的安全感。正视协议边界：A/B/D 由 validator 强制，C 是模型应自检的部分。
+
+**约束 (D) considered_failure_modes 与 trace 路径强相关**
+
+`considered_failure_modes` 不再用预定义清单，由实际追溯到的代码模式驱动。pass + conf≥85 时必须满足：
+
+- trace 路径含跨进程通信（grpc/rpc/http） → modes 必须含 "序列化版本错位 / 字段默认值差异 / 错误码兜底" 至少 1 项
+- trace 路径含 cache（Redis / 内存 cache） → modes 必须含 "缓存陈旧 / 失效时序"
+- trace 路径含 transaction → modes 必须含 "事务回滚 / 隔离级别 / 锁竞争"
+- trace 路径含 async（goroutine / Promise / setTimeout / job） → modes 必须含 "乱序执行 / 超时 / 取消"
+- trace 路径含 FE 状态管理（state / store） → modes 必须含 "缓存陈旧 / 乐观更新 vs 服务端响应不一致"
+- trace 路径含数据库读写 → modes 必须含 "并发更新 / 唯一约束冲突"
+- 路径未命中以上类别但调用链 > 1 hop → 至少 1 项与中间 hop 的具体业务逻辑相关，不允许通用废话（"输入校验"等无 trace 锚点的 mode 不算）
+
+> **关键差异**：D 的判定不靠枚举模式词典，而是看 `considered_failure_modes[].mode` 文字与 `trace` 文字之间的关键词匹配。validator 跑正则启发式（含 "tx"/"transaction"、"cache"、"async"/"goroutine"/"Promise" 等），不是 NLP 严格分类。
+
+**校验失败的统一处理**
+
+`validate-fv` 命中 A / B / D 任一违反 → STOP + stderr 输出结构化错误（C 由模型自检，不进 validator 错误流）：
+
+```json
+{
+  "type": "completeness_violation",
+  "constraint": "A | B | D",
+  "case_id": "TC-11",
+  "diagnosis": "...",
+  "fix_hint": "..."
+}
+```
+
+模型必须修 evidence 后重落盘 + 重跑校验，不允许带 bug fv 进 4.7 / 5S.1。
+
 #### 3.2.1 追踪流程
 
 对每条通过可追踪性评估的用例：
@@ -229,22 +359,34 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
    - 输出匹配预期 → `pass`
    - 输出不匹配预期 → `fail`，记录实际输出
    - 无法确定 → `inconclusive`
-4. **写 evidence**（pass / fail 必须）：每条结论都要带可独立复算的证据。详见 3.2.3 schema。
-   - `code_location`：array of `file:line` 或 `file:start-end`，**文件必须存在、行号必须在文件长度内**（schema 校验时会查）
-   - `verification_logic`：为什么从这段代码能推出 pass/fail 的论证（让另一个人/AI 只看 evidence 就能复算）
-   - `considered_failure_modes`：对抗式自检——列出考虑过但被排除的失败模式（pass + conf≥85 必填，fail 选填）
-5. **「假装这条会 fail」自检清单**（仅 `pass` 必须过一遍，任一答"是"且 evidence 没体现 → conf 上限 80）：
+4. **写 evidence**（pass / fail 必须）：每条结论都要带可独立复算的证据。详见 3.2.3 schema 与 §3.2.0a 完整性约束（A/B/D 由 validator 强制 + C 模型自检）。
+   - `code_location`：array of `file:line` 或 `file:start-end`，**文件必须存在、行号必须在文件长度内**（schema 校验时会查）。**推荐**：跨仓 case 的 code_location 元素加 `[repo]/path/to/file:N` 前缀以便审计（如 `zeus/app/.../event.go:1900-1950`）；schema 不强制前缀但下游 ai-case UI 会按前缀分组展示
+   - `verification_logic`：为什么从这段代码能推出 pass/fail 的论证（让另一个人/AI 只看 evidence 就能复算）。当 case 的 expected 含 N 条断言时，verification_logic 应能逐条对应（自检建议 C，模型自查；validator 不机械校验）
+   - `considered_failure_modes`：对抗式自检——列出考虑过但被排除的失败模式（pass + conf≥85 必填，fail 选填）。modes 内容由 trace 路径驱动，详见 step 5 表 + §3.2.0a 约束 D（validator 强制）
+5. **「假装这条会 fail」自检（trace 路径驱动，详见 §3.2.0a 约束 D）**：
+
+   不再用预定义 5 项固定清单。改为：扫描你刚写完的 `trace` 路径，按下表推断 `considered_failure_modes` 必须含的类别（pass + conf≥85 时强制；fail/inconclusive 选填）：
+
+   | trace 路径含的代码模式 | considered_failure_modes 必须涵盖 |
+   | --- | --- |
+   | 跨进程通信（grpc/rpc/http） | 序列化版本错位 / 字段默认值差异 / 错误码兜底 |
+   | cache（Redis/内存）| 缓存陈旧 / 失效时序 |
+   | transaction | 事务回滚 / 隔离级别 / 锁竞争 |
+   | async（goroutine/Promise/setTimeout/job） | 乱序执行 / 超时 / 取消 |
+   | FE 状态管理（state/store） | 缓存陈旧 / 乐观更新 vs 服务端响应不一致 |
+   | 数据库读写 | 并发更新 / 唯一约束冲突 |
+   | （以上都没命中且 trace 调用链 > 1 hop） | 至少 1 项与中间 hop 业务逻辑相关，禁止通用废话 |
+
+   **保留的通用三项**（无论 trace 路径如何都建议覆盖）：
    - [ ] 涉及空/null/边界条件？代码有防护吗？
-   - [ ] 异步/回调追到完成态了吗？
    - [ ] mock 数据 vs 真实数据区分清楚了吗？
-   - [ ] feature flag / 配置项默认是开的吗？
-   - [ ] 依赖 server / device / 三方行为吗？默认值是验证过的还是假设的？
+   - [ ] 依赖 server / device / 三方行为吗？默认值是验证过的还是假设的？（此项命中必须填 `external_dependencies.types`，详见下方 P12 强约束）
 
    **CRITICAL — external_dependencies 强约束**（P12 教训）：
 
    只要本条 pass 的判定理由涉及任意外部因素（真机 UI 渲染、server 实际返回、第三方 SDK 行为、framework 默认实现、用户操作、特定测试数据、时序等）→ **必须**在 fv 的 `external_dependencies.types` 数组里**结构化填上对应类型**（`device` / `server` / `third_party` / `framework_default` / `user_action` / `data_state` / `timing`），不能只在 `trace` 字段或 MS comment 里写自然语言。
 
-   理由：下游 `writeback-from-fv` 的 P6 状态映射只看 `external_dependencies.types`：非空 → 自动降级 MS Prepare + 自动汇总进 `pass_with_caveats.md` / `pending_external_validation.md`。如果只写 trace 或 comment，**降级不会触发，caveats 报告会是空，QA 漏掉回归**——这正是 v0.0.16 后第一次实战在 TAP-6841255319 上踩的坑：手写 comment 标了 `external_deps=server,device`，但 fv.external_dependencies.types 是空的，11 条 case 全部错标 Pass。
+   理由：下游 `writeback-from-fv` 的 P6 状态映射只看 `external_dependencies.types`：非空 → 自动降级 MS Prepare + 自动汇总进 `pass_with_caveats.md` / `pending_external_validation.md`。如果只写 trace 或 comment，**降级不会触发，caveats 报告会是空，QA 漏掉回归**——TAP-6841255319 实战中曾踩过：手写 comment 标了 `external_deps=server,device`，但 fv.external_dependencies.types 是空的，11 条 case 全部错标 Pass。
 
    **反例 vs 正例**：
 
@@ -359,7 +501,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 
 #### 3.2.4 降级回退（forward fallback，主 agent 内联）
 
-如果代码不可读、diff 信息严重不足（如 fetch 阶段只拿到文件名清单）→ 降级走 forward fallback：跳过用例中介，直接做需求 → 代码模糊映射。本路径主 agent 内联完成（v0.0.9 起原 forward-tracer.md 已删除，prompt 内联在此）。
+如果代码不可读、diff 信息严重不足（如 fetch 阶段只拿到文件名清单）→ 降级走 forward fallback：跳过用例中介，直接做需求 → 代码模糊映射。本路径主 agent 内联完成。
 
 **输入**：
 
@@ -406,40 +548,30 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 
 以上条件均不满足 → 跳过，在 traceability_coverage_report.json 中记录 `api_contract.overall_consistency: "N/A"`。
 
-**上游优先**：如果工作目录已有 `api_contract_report.json`（上游 api-contract-validation 产出）→ 跳过内置检查，在阶段 4 直接合并。
+**上游优先（性能优化）**：如果工作目录已有 `api_contract_report.json`（用户已独立跑过 `test:api-contract-validation`）→ 跳过 agent 启动，直接在阶段 4 合并（节省一次 Task 启动开销）。否则启动共享 Agent。
 
-**内置轻量级检查流程**：
+**启动 Agent**：通过 Task 工具启动 `api-contract-validator` Agent（见 [agents/api-contract-validator.md](../../agents/api-contract-validator.md)），传入：
 
-1. **分类 API 相关变更**：从 diff 中识别以下文件类型
-   - 前端：网络请求路径枚举/常量、API 响应模型（Codable/Decodable/DTO）、请求参数构造
-   - 后端：路由定义、Controller/Handler、响应结构体/序列化器
+- 前端 diff（来自 Phase 2 已获取的 `code_changes` / `local.diff`）
+- 后端 diff（来自 `backend_changes`）或 OpenAPI spec（来自 `openapi_spec` 入参）
 
-2. **提取接口签名**：从 diff 中提取每个涉及的 API 端点的关键信息
-   - 请求路径（URL path）
-   - 请求方法（GET/POST/PUT/DELETE）
-   - 请求参数名和类型
-   - 响应字段名和类型
+Agent 返回 findings JSON（与 api-contract-validation skill 共享同一 agent，输出格式一致）。主 skill 把 Agent 输出合并到 `code_analysis.md`，并在阶段 4.4 映射到 `traceability_coverage_report.json` 的 `api_contract` 字段。
 
-3. **交叉比对**：对每个涉及的端点，在前端和后端的变更之间做一致性检查
-   - **路径一致性**：前端调用路径 vs 后端路由定义
-   - **字段名一致性**：前端模型字段名 vs 后端响应字段名（注意命名风格转换，如 snake_case ↔ camelCase）
-   - **类型一致性**：前端字段类型 vs 后端字段类型（如 String vs Int 不匹配）
-   - **必填字段完整性**：后端标记为必填的请求参数，前端是否都传递了
+**与 §3.2 跨组件追溯协同**：
 
-4. **可选：OpenAPI 基准校验**：如果提供了 `openapi_spec` 参数
-   - 将前端模型和后端实现分别与 OpenAPI 定义比对
-   - 偏离 OpenAPI 定义的一方标记为不一致来源
-
-5. **写入结果**：生成契约检查摘要，追加到 `code_analysis.md`
+- 当 case 的追溯路径跨 FE↔BE 时（按 §3.2.0a 约束 B 判定 code_location 跨边界），消费 Agent 返回的 findings：
+  - 报告中标 `consistent` 的接口 → 该接口段不视为 cross_component_break 风险点，trace 可直接断言契约对齐
+  - 报告中标 `inconsistent` / `partial` 的接口 → 该 case 的 fv condifence 上限封顶 70；若该接口正好是 case 的关键 hop，case result 必须 `fail` + 关联引用 `api_contract_report.endpoints[i].issues[j]`
+- 反过来，§3.2 跨组件追溯发现的"接口口径偏离"（FE 期望字段语义 ≠ BE 实际行为，但字段名/类型对得上）→ 这是 Agent 抓不到的语义级问题，进 5S.1 cross_component_break（详见 §5S.1 来源 7），不进 `api_contract.issues`
 
 **降级**：
 
-- 仅有前端变更无后端变更（或反之）→ 仅检查与 OpenAPI spec 的一致性（如有 spec），否则仅记录 API 相关变更的概要，不做一致性判定
-- diff 信息不足以提取接口签名 → 标记为 `inconclusive`，在报告中注明原因
+- 仅有前端变更无后端变更（或反之）→ Agent 在降级模式运行，仅记录 API 相关变更的概要，`overall_consistency: "N/A"`
+- Agent 启动失败 → 重试 1 次，仍失败则在 `code_analysis.md` 标记 `api_contract.skipped_reason: "agent_failure"`，不影响主流程
 
 ### 3.3 反向通道：直接代码追溯（主 agent 内联，不拆 sub-agent）
 
-> **历史变更说明**：旧版本描述「启动 reverse-tracer sub-agent 并行」，但实际 AI 跑 skill 时 sub-agent 调度不可靠——上次跑 46 条用例的反向部分实际是主 agent 手工补的。当前版本明确：**主 agent 顺序内联完成反向追溯，不调 Task 启动 sub-agent**。原 `agents/requirement-traceability/reverse-tracer.md` 已在 v0.0.9 删除。
+> **执行约束**：主 agent 顺序内联完成反向追溯，不调 Task 工具启动 sub-agent（调度可靠性不足）。
 
 **主 agent 反向追溯流程**（在正向通道完成 3.2 后串行执行）：
 
@@ -465,34 +597,32 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 
 ### 3.4 UI 还原度检查（条件触发）
 
-**触发条件**：需求有 `design_link`（Figma 链接）且前端页面可在浏览器中访问。
+**触发条件**：调用方提供 `design_link`（Figma）+ `code_dir`（前端代码目录或代码文件清单）两者均存在。任一缺失 → 跳过 §3.4，在 `traceability_coverage_report.json` 的 `ui_fidelity` 字段记录 `skipped_reason: "missing design_link or code_dir"`。
 
-如果工作目录已有 `ui_fidelity_report.json`（上游产出）→ 跳过，在阶段 4 直接使用。
+**Figma MCP 可用性探测**（前置）：
 
-否则执行内置 UI 还原度检查：
+- 调用 `get_design_context` 探测，连接失败或工具不存在 → 跳过 §3.4，记录 `skipped_reason: "figma_mcp_unavailable"`
 
-**MCP 可用性探测**（前置）：
+探测通过后执行（**纯静态对比，不依赖运行时浏览器**）：
 
-1. **Figma MCP 探测**：尝试调用 Figma MCP 的 `get_screenshot`，如连接失败或工具不存在 → 跳过整个 UI 还原度检查，在报告中记录降级原因 `figma_mcp_unavailable`
-2. **Browser MCP 探测**：尝试调用 Browser MCP 的 `browser_snapshot`，如连接失败 → 降级为 structural-only 模式（仅对比 Figma 结构化数据 vs 代码样式定义）
+1. 使用 Figma MCP `get_design_context` 获取结构化设计数据（设计令牌、间距、颜色、字体、组件层级）
+2. （可选）使用 Figma MCP `get_screenshot` 获取设计稿截图作辅助参考
+3. 从 `code_dir` 读取相关组件的样式定义代码片段：
+   - Web：`.css` / `.scss` / `.tsx`（含 Tailwind 类名）/ `.vue`
+   - iOS：`.swift`（SwiftUI Modifier / UIKit 属性赋值）
+   - Android：`.kt` / `.xml`（Compose Modifier / XML attribute）
+   - 携带文件路径 + 行号
+4. 通过 Task 工具启动 `ui-fidelity-checker` Agent（见 [agents/ui-fidelity-checker.md](../../agents/ui-fidelity-checker.md)），传入 Figma 数据 + 代码样式片段
+5. Agent 返回 `findings` JSON，主 skill 包装为 `ui_fidelity_report.json`，confidence 上限 60（静态对比无运行时验证）
 
-探测通过后执行：
-
-1. 使用 Figma MCP `get_screenshot` 获取设计稿截图
-2. 使用 Figma MCP `get_design_context` 获取结构化设计数据
-3. 使用 Browser MCP `browser_take_screenshot` 获取实现截图
-4. 使用 Browser MCP `browser_snapshot` 获取 DOM 结构
-5. 启动 ui-fidelity-checker Agent（见 agents/ui-fidelity-checker.md）进行对比
-6. 输出 `ui_fidelity_report.json`
-
-**降级**：页面不可访问时 → 仅对比 Figma 结构化数据 vs 代码中的样式定义，跳过截图对比。
+> 不再支持「页面 URL + Browser MCP visual+structural」模式 — TapTap 多端栈中只有 web 能提供可访问 URL，且大部分场景下页面尚未部署。统一走静态对比让所有端 / 所有阶段都能跑。
 
 ### 3.5 降级回退
 
 - 反向追溯失败（diff 完全无法解析）→ 主 agent 跳过 3.3，仅依赖 3.2 正向通道的结果，在 4.1 交叉验证时标注「reverse 缺失」
 - 正向通道完全失败（无可追踪用例）→ 走 3.2.4 的 forward fallback 降级路径
 
-> 不再有「Task 工具不可用」的降级讨论——本 skill 已经不依赖 Task 工具拆 sub-agent。
+> 反向通道（3.3）由主 agent 内联完成，不依赖 Task sub-agent。正向通道（3.2.dispatch 当 M>3 时）以及 §3.2.5 / §3.4 的 agent 启动**仍然依赖 Task 工具**——其失败处理见各小节自身的降级分支。
 
 ### 3.6 记录中间结果
 
@@ -537,7 +667,12 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 
 在原有覆盖率统计基础上，新增：
 
-- `verification_channel`: 标注使用的验证通道（"dual_channel" | "forward_only" | "reverse_only"）
+- `input_quality`: 来源 `_input_quality.json`（详见 §1.3.d），值域 `"full" | "medium" | "low"`。**所有下游降级行为的单一权威字段**
+- `verification_channel`: 标注实际使用的验证通道，**由本阶段从 fv 内容自动计算**（不允许模型自由填写）：
+  - `dual_channel`：fv 全部条目通过 3.2.1-3.2.3 用例中介验证 + 3.3 反向通道双双确认
+  - `forward_only`：仅正向通道有产出（反向通道失败或跳过）
+  - `reverse_only`：仅反向通道有产出（正向通道失败）
+  - `forward_synthesized`：fv 全部条目带 `source: "synthesized_from_coverage_report"`（即 §4.6 兜底合成路径，用例中介验证未真实执行）。**关键约束**：fv 一旦含任一 synthesized_from_coverage_report 条目，channel 不得标 dual_channel，必须标 forward_synthesized 或 forward_only（按反向通道是否产出区分）。
 - `forward_verification_rate`: 正向用例验证通过率
 - `ui_fidelity`: 如果有 `ui_fidelity_report.json`，按以下字段映射合并 UI 还原度数据：
 
@@ -545,23 +680,19 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 {
   "ui_fidelity": {
     "overall_fidelity": "high | medium | low",
-    "comparison_mode": "visual+structural | structural-only",
     "total_differences": 5,
     "by_severity": { "high": 1, "medium": 2, "low": 2 },
-    "state_coverage_rate": "80%",
-    "source": "ui-fidelity-check | inline"
+    "state_coverage_rate": "80%"
   }
 }
 ```
 
 映射规则：
 1. `overall_fidelity` ← `ui_fidelity_report.json` 顶层 `overall_fidelity`
-2. `comparison_mode` ← `ui_fidelity_report.json` 顶层 `comparison_mode`
-3. `total_differences` ← `differences` 数组长度
-4. `by_severity` ← 按 `differences[].severity` 分组计数
-5. `state_coverage_rate` ← `ui_fidelity_report.json` 的 `states_coverage.coverage_rate`
-6. `source` ← `"ui-fidelity-check"`（上游产出）或 `"inline"`（本 skill 内置检查）
-7. 如无 `ui_fidelity_report.json` 且未执行 UI 检查 → `ui_fidelity` 字段不写入
+2. `total_differences` ← `differences` 数组长度
+3. `by_severity` ← 按 `differences[].severity` 分组计数
+4. `state_coverage_rate` ← `ui_fidelity_report.json` 的 `states_coverage.coverage_rate`
+5. 如未执行 §3.4 UI 检查（缺 design_link 或 code_dir，或 Figma MCP 不可用）→ `ui_fidelity` 字段不写入
 8. 当 `ui_fidelity.by_severity.high > 0` 时，对相关需求点的 `forward_verification.json` 结果追加 `ui_risk_flag: true` 标记。5S.1 缺陷提取时，来源 1 中 `result == "pass"` 但 `ui_risk_flag == true` 的条目，在 `smoke_test_report.json` 的 `notes` 中提示"代码验证通过但存在 UI 还原度高风险差异，建议人工验证"
 
 - `api_contract`: 如果有 `api_contract_report.json`（上游产出）或 3.2.5 内置检查结果，按以下字段映射合并 API 契约数据：
@@ -606,15 +737,36 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo
 - API 契约存在 high 级别不一致（前后端字段/类型/路径不匹配）→ 高风险
 - API 契约存在 medium 级别不一致（命名风格差异、可选字段遗漏等）→ 中风险
 
+**input_quality 降级规则**（标准模式与 smoke-test 模式都生效）：
+
+读 `_input_quality.json`（见 §1.3.d）：
+
+| input_quality | 处理 |
+| --- | --- |
+| `full` | 不调整，正常评估 |
+| `medium` | confidence 上限封顶 80；risk_assessment.summary 末尾追加 "⚠️ 用例输入不完整（仅 supplementary 或 requirement_points），建议补 final_cases 后重跑提高判定可靠度" |
+| `low` | confidence 上限封顶 60；overall_risk 至少 medium；risk_assessment.summary 必须以 "⚠️ 本次评估输入用例残缺（无任何用例文件），confidence 已封顶 60；judgment 仅供参考，不构成可靠判决。建议补 final_cases / supplementary cases 后重跑" 开头 |
+
+> 这一规则确保**标准模式（qa-workflow 主路径）也享受诚实性兜底**——避免出现"qa-workflow 跑出一份 confidence 90% 但实际是 4.6 兜底"的同类陷阱。
+
 ### 4.6 forward_verification.json 兜底落盘（CRITICAL，必须执行）
 
 > **目的**：保证 Phase 6 测试计划回写永远有燃料，无论 Phase 3.2 是否被执行偏离。
+
+> **前置门控**：本步骤的兜底合成路径**仅在 `input_quality == "low"` 时允许触发**——这是修复 GameJam 类漏报的关键。无此门控会导致 supplementary cases 不被消费、3.2 跑空后直接走 4.6 兜底掩盖问题。
+
+**input_quality 门控**（先于下面所有步骤执行）：
+
+读 `_input_quality.json` 的 `input_quality`（见 §1.3.d）：
+
+- `full` 或 `medium` → fv 应由 §3.2 用例追溯产出。如果走到 4.6 时 fv 仍空 → **STOP** 并报：「用例池非空（input_quality={full|medium}）但 §3.2 未产出 fv = 3.2 有 bug。请回归 3.2 排查（检查 case 数量、追踪可达性、external_dependencies），不要依赖兜底掩盖」。**禁止合成兜底**。
+- `low` → 进入下方合成流程，且兜底合成时同时计算 `verification_channel = "forward_synthesized"` 写入 traceability_coverage_report.json（见 §4.4）。
 
 无论 Phase 3.2 是否产出 `forward_verification.json`，本步骤都要执行一次校验：
 
 1. 检查 `$TEST_WORKSPACE/forward_verification.json` 是否存在且非空。
 2. **如已存在且非空** → 跳过本步骤（Phase 3.2 已正确产出，无需兜底）。
-3. **如不存在或为空** → 必须从 `traceability_coverage_report.json` 的 per-FP `verdict` + `confidence` 合成一份兜底版本，每个需求点 1 条记录：
+3. **如不存在或为空且 input_quality == "low"** → 必须从 `traceability_coverage_report.json` 的 per-FP `verdict` + `confidence` 合成一份兜底版本，每个需求点 1 条记录：
 
 合成规则：
 
@@ -722,11 +874,13 @@ Evidence:
 - 缺陷名称 = 关联需求点名称 + 验证用例的场景描述
 - 预期结果 = `expected` 字段原文
 - 实际结果 = 从 `trace` 字段推导（代码执行路径偏离预期的关键分支点或返回值）
-- **优先级判定（D8 教训：兜底合成的 fail 不能直接判 P0/P1）**：
-  - **常态 fail**（fv 条目无 `source` 字段，或 `source != "synthesized_from_coverage_report"`）：confidence ≥ 85 → P0；confidence ≥ 70 → P1
+- **优先级判定（含 supplementary 继承档；D8 教训：兜底合成的 fail 不能直接判 P0/P1）**：
+  - **supplementary 来源 fail**（fv 条目带 `case_source == "supplementary"`，由 §3.1 优先级 1.5 档消费 change-analysis 用例追溯产出）：**直接继承 change-analysis 用例的 priority** 字段（P0/P1/P2/P3），不再用 confidence ≥ 85 推。理由：change-analysis 在生成 supplementary case 时已基于代码层风险标过 priority（如本次 GameJam TC-11 标 P0），requirement-traceability 二次推会把 P0 漏漏报。confidence 仍参与同档下调：change-analysis 标 P0 但本次追溯 confidence < 70 → 降为 P1 + 标 `low_confidence: true`
+  - **常态 fail**（fv 条目无 `source` / `case_source` 字段，或 `source != "synthesized_from_coverage_report"` 且 `case_source != "supplementary"`）：confidence ≥ 85 → P0；confidence ≥ 70 → P1
   - **兜底合成 fail**（`source == "synthesized_from_coverage_report"`，由 4.6 兜底产出，不带用例级 evidence）：**统一标 P2** + 缺陷描述追加 "（降级判定，无用例级粒度，需人工核实是否真为缺陷）"。**绝不判 P0/P1**——兜底合成的 fail 来自 coverage_report 的 `verdict: missing/unimplemented`，置信度本身是文档/启发式推断，不是代码追踪结果，把它直接当 P0 阻断会有大量假阳性
 - `evidence.source` = `"forward_verification"`，`evidence.source_id` = 对应 `case_id`
 - `evidence.synthesized` = `true`（仅当 fv 条目带 `source: "synthesized_from_coverage_report"` 时附加，便于下游审计）
+- `evidence.case_source` = `"supplementary"`（仅当 fv 条目带 `case_source: "supplementary"` 时附加，便于审计 change-analysis → requirement-traceability 链路）
 
 **来源 2：需求实现缺失**
 
@@ -767,6 +921,30 @@ Evidence:
 
 > 真实案例对应：iOS Review 通知 bug，源自 `通知类型 = Review` 枚举值无对应用例 → traceability 应在此处生成一条 P1 缺陷提示"Review 类型代码路径未被任何用例验证，建议补充用例后重跑"。
 
+**来源 7：跨组件数据流断链（由模型按 §3.2.0a 自检建议 C 在追溯过程中识别）**
+
+从 `forward_verification.json` 中提取以下两类条目：
+
+(7a) `result == "fail"` 且 `evidence.cross_component_break == true` 的条目（用例 step 涉及 ≥2 组件，但某中间 hop 在 diff 中找不到对应实现）：
+
+- 缺陷名称 = case 标题 + " - 跨组件数据流断链：{断链 hop 名称}"
+- 预期结果 = case.expected 中该 hop 对应的断言原文
+- 实际结果 = "diff 中找不到 {断链 hop} 的实现，调用链中断"
+- 优先级判定：
+  - 断链 hop 涉及核心数据契约（read 路径与 write 路径之一缺失） → **P0**（数据契约不完整 = 上线阻断）
+  - 断链 hop 仅涉及单端展示 / 非关键路径 → P1
+- `evidence.source` = `"cross_component_break"`，`evidence.broken_hop` = 断链 hop 名称
+- 真实案例对应：GameJam Info-Consume 不一致 ←本来不会被旧协议捕捉，新协议下 TC-11 的 trace 跨 admin TerminateEvent → C 端 GetUserCredit → ConsumeCredit，模型按自检建议 C 对账时会发现"window 期内 Info 仍展示 / Consume 已扣不到"对应的实际行为偏离 expected → fail + cross_component_break
+
+(7b) `result == "fail"` 且 trace 显示 FE↔BE 字段语义偏离（字段名/类型对得上但行为不一致）：
+
+- 这类是 api-contract-validation 抓不到的"语义级契约偏离"
+- 缺陷名称 = "字段语义偏离：{字段名} - FE 期望 {期望行为} / BE 实际 {实际行为}"
+- 优先级判定：默认 P1；若涉及金额/积分/权限等敏感字段 → P0
+- `evidence.source` = `"cross_component_break"`，`evidence.semantic_field` = 字段名
+
+> **来源 7 设计动因**：5S.1 来源 1（fv fail）只能抓单 hop 偏离，跨多 hop 数据流断链类 bug（如 GameJam）会被分散为多个独立的 confidence 不确定 fv 条目，无法聚合为缺陷。来源 7 让"跨组件断链"成为一类显式缺陷，与单 hop 失败的 confidence 判定路径解耦。
+
 **排除规则（MR 流程状态）**：
 
 以下情况不提取为缺陷，仅在 `smoke_test_report.json` 的 `excluded_items` 中记录：
@@ -801,18 +979,36 @@ Evidence:
    > ⚠️ 禁止「本报告由 QA AI 助手...」署名，用元数据「分析方式：AI 静态分析 + 实机验证补充」替代。
    > ⚠️ §3.2 末尾未追溯变更必须明确表述（如「本次 MR 所有变更文件都映射到 R1-R7」），禁止"无范围蔓延"含糊文案。
 
-4. **P0 门控判定**：
-   - `defect_list.json` 中 `priority == "P0"` 的缺陷数 > 0 → `verdict: "fail"`，`fail_reason` 列出 P0 缺陷摘要
-   - P0 缺陷数 == 0 → `verdict: "pass"`
+4. **P0 门控判定（input_quality × P0 二维计算表）**：
+
+   读 `_input_quality.json` 的 `input_quality`（见 §1.3.d）+ 统计 `defect_list.json` 中 `priority == "P0"` 的缺陷数：
+
+   | input_quality | P0 count | verdict | 含义 |
+   | --- | --- | --- | --- |
+   | `full` | 0 | `pass` | 用例完整、无 P0 → 可放心上线 |
+   | `full` | > 0 | `fail` | 用例完整、有 P0 → 阻断上线 |
+   | `medium` | 0 | `pass-with-degraded-input` | 用例不完整、未发现 P0 → 不能保证无 bug，仅说明在已有用例下未触发 P0 |
+   | `medium` | > 0 | `fail-with-degraded-input` | 用例不完整、已发现 P0 → 阻断上线（degraded 不影响 P0 阻断决心） |
+   | `low` | * | `inconclusive` | 无任何用例输入 → 引擎裸奔，verdict 不可信，必须先补输入再重跑 |
+
+   **fail_reason 写法**：
+   - `pass` / `fail` 沿用现状
+   - `pass-with-degraded-input` / `fail-with-degraded-input` → fail_reason 必须以 "⚠️ 用例输入不完整（仅 {sources_present 列表}），" 开头，再列 P0 缺陷摘要（fail-with-degraded-input）或建议（pass-with-degraded-input）
+   - `inconclusive` → fail_reason 必须为："本次冒烟测试无任何用例输入（final_cases / change_supplementary_cases / requirement_points 全部缺失），verdict 不可信。请补 final_cases.json（跑 test-case-generation）或 change_supplementary_cases.json（跑 change-analysis）后重跑。"
+
 5. **Chat 输出冒烟测试结论**：
 
 ```
 冒烟测试结论：{verdict}
+- 输入质量：{input_quality}（{sources_present_count}/3 类用例输入存在）
 - 验证点：{total_points} 个（通过 {passed}，失败 {failed}，待定 {inconclusive}）
 - 缺陷：{total_defects} 个（P0: {p0}, P1: {p1}, P2: {p2}）
 {如有排除项: "- 排除项：{excluded_count} 个（MR 流程状态相关，不计入缺陷）"}
-{如 verdict == "fail": "P0 缺陷列表：\n" + 逐条列出 P0 缺陷名称}
+{如 verdict ∈ {"fail", "fail-with-degraded-input"}: "P0 缺陷列表：\n" + 逐条列出 P0 缺陷名称}
+{如 verdict ∈ {"*-with-degraded-input", "inconclusive"}: "⚠️ 输入质量降级原因：{说明缺哪类用例 + 补救建议}"}
 ```
+
+> **五档 verdict 设计动因**（GameJam 漏报根因）：二元 verdict（pass/fail）即使在 `input_quality == "low"`（无任何用例输入、走 4.6 兜底）时仍会硬判 fail/pass，给出失实判决。五档让 verdict 与输入质量挂钩，引擎诚实承认能力边界。
 
 ## 阶段 5: loop - 回溯自循环（条件触发）
 

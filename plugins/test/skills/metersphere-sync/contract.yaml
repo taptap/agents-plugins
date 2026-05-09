@@ -14,7 +14,7 @@ input:
       from_upstream: test-case-generation
     supplementary_cases:
       type: file
-      description: 补充用例文件。v0.0.10 起按上游 skill 区分文件名以避免撞名 — change-analysis 产出 change_supplementary_cases.json，test-case-review 产出 review_supplementary_cases.json。本字段接受任一文件路径
+      description: 补充用例文件。按上游 skill 区分文件名以避免撞名 — change-analysis 产出 change_supplementary_cases.json，test-case-review 产出 review_supplementary_cases.json。本字段接受任一文件路径
       from_upstream: [change-analysis, test-case-review]
   optional:
     forward_verification:

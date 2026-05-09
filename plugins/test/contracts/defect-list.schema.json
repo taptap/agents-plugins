@@ -30,12 +30,12 @@
             "description": "缺陷名称（canonical 字段名，参见 requirement-traceability/TEMPLATES.md）。注意 schema 显式 ban `title`——尽管 JIRA / TAPD 等行业习惯用 title，marketplace 内部约定用 name，schema ban 是为了让规约可 enforce"
           },
           "priority": {
-            "enum": ["P0", "P1", "P2"],
-            "description": "缺陷优先级，requirement-traceability TEMPLATES.md 仅定义 P0-P2 判定规则"
+            "enum": ["P0", "P1", "P2", "P3"],
+            "description": "缺陷优先级。v0.0.13 扩展加入 P3：requirement-traceability §5S.1 supplementary 来源直接继承 ca 用例的 priority，ca 实际产物含 P3 用例（如 TC-30 ExpireUserEvents 大批过期回归、TC-31 admin remark 解析等次要场景）。P0/P1/P2 仍按 5S.1 既有判定规则；P3 仅可能来自 supplementary 继承"
           },
           "category": {
             "type": "string",
-            "description": "缺陷类型，常见值：implementation_missing / logic_error / api_inconsistency / ui_deviation"
+            "description": "缺陷类型，常见值：implementation_missing / logic_error / api_inconsistency / ui_deviation / cross_component_break。v0.0.14 新增 cross_component_break——按 §5S.1 来源 7 派生的跨组件数据流断链或字段语义偏离（如 GameJam Info-Consume 不一致）；与 api_inconsistency 互斥（后者是字段名/类型/路径表面契约不一致，前者是字段对得上但行为偏离）"
           },
           "description": {
             "type": "string",

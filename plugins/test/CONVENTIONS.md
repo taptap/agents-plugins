@@ -507,7 +507,7 @@ requirement-clarification → clarified_requirements.json (functional_point.conf
 - `RP-` 是用例生成 / 评审阶段从需求文档自行提炼的验证点（仅当无上游 `requirement_points.json` 时才产出）
 - `R-` 是追溯阶段从需求中提取的映射锚点（有上游 FP- 时直接继承作为主键，R- 作为别名）
 
-> v0.0.7 起合并 verification-test-generation：traceability 直接消费 `final_cases.json`（`case_id` 形如 `M1-TC-01`），不再独立生成 `VC-` 编号的中间用例。
+> traceability 直接消费 `final_cases.json`（`case_id` 形如 `M1-TC-01`）作为正向通道用例输入，不引入 `VC-` 编号的中间用例层。
 
 下游 skill 消费上游的 `requirement_points.json` 时，按内容重新编号，不继承上游前缀。
 

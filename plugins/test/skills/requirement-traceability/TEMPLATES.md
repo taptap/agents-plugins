@@ -63,6 +63,8 @@
 
 ```json
 {
+  "input_quality": "full | medium | low",
+  "verification_channel": "dual_channel | forward_only | reverse_only | forward_synthesized",
   "requirement_coverage": { ... },
   "code_traceability": { ... },
   "tracing_metadata": { ... },
@@ -73,6 +75,7 @@
 ```
 
 > `api_contract` 和 `ui_fidelity` 为条件字段，仅在对应检查触发时写入。
+> `input_quality` 与 `verification_channel` 为必填字段，承载诚实性兜底，含义见 §smoke_test_report.json 同名字段说明。standard 模式与 smoke-test 模式都必须写入。
 
 ### requirement_coverage（需求覆盖率）
 
@@ -179,8 +182,9 @@
 | 路径 | 来源 PHASES 步骤 | `case_id` 命名 | 必有字段 |
 | --- | --- | --- | --- |
 | 用例中介验证（常态） | 3.2.3 | 上游 `final_cases.json` 的 `case_id`（如 `M1-TC-01`） | `case_id` / `requirement_id` / `result` / `confidence` + 按 result 分支必填 evidence / actual / inconclusive_reason |
+| **supplementary 用例追溯** | 3.1 优先级 1.5 + 3.2.3 | 直接复用 ca 的 `TC-{N}` | 同常态，**额外**字段：`case_source: "supplementary"`、`requirement_id` 可为 `FP-UNMAPPED-{N}`、5S.1 优先级继承使用 ca 用例的 priority |
 | 正向降级 / forward fallback | 3.2.4 | `FORWARD-TRACER-{requirement_id}` | 同上 |
-| coverage-report 兜底合成 | 4.6 | `FORWARD-TRACER-FP-{N}` | `case_id` / `requirement_id` / `requirement_name` / `result` / `confidence` / `trace` / `source: "synthesized_from_coverage_report"`；兜底版 evidence 可缺，但下游 4.6a schema 校验会要求补 |
+| coverage-report 兜底合成 | 4.6（仅 input_quality == "low" 时） | `FORWARD-TRACER-FP-{N}` | `case_id` / `requirement_id` / `requirement_name` / `result` / `confidence` / `trace` / `source: "synthesized_from_coverage_report"`；兜底版 evidence 可缺，但下游 4.6a schema 校验会要求补 |
 
 落盘后必须跑 `metersphere_helper.py validate-fv` 校验。
 
@@ -381,13 +385,15 @@ UI 还原度检查报告（条件产出）。
 
 ## smoke_test_report.json
 
-冒烟测试报告（smoke-test 模式条件产出）。汇总验证统计和缺陷统计，包含 pass/fail 判定。
+冒烟测试报告（smoke-test 模式条件产出）。汇总验证统计和缺陷统计，包含 verdict 五档判定。
 
 ### 完整结构
 
 ```json
 {
-  "verdict": "pass | fail",
+  "verdict": "pass | fail | pass-with-degraded-input | fail-with-degraded-input | inconclusive",
+  "input_quality": "full | medium | low",
+  "verification_channel": "dual_channel | forward_only | reverse_only | forward_synthesized",
   "fail_reason": "发现 1 个 P0 缺陷：用户注册时密码强度校验缺失",
   "verification_summary": {
     "total_points": 20,
@@ -436,11 +442,31 @@ UI 还原度检查报告（条件产出）。
 }
 ```
 
-`verdict` 判定规则：
-- `fail` — `defect_summary.by_priority.P0 > 0`
-- `pass` — `defect_summary.by_priority.P0 == 0`
+`verdict` 判定规则（input_quality × P0 二维计算表，详见 PHASES §5S.2）：
 
-`fail_reason`：仅当 `verdict == "fail"` 时填写，列出 P0 缺陷名称摘要。
+| input_quality | P0 count | verdict |
+| --- | --- | --- |
+| `full` | 0 | `pass` |
+| `full` | > 0 | `fail` |
+| `medium` | 0 | `pass-with-degraded-input` |
+| `medium` | > 0 | `fail-with-degraded-input` |
+| `low` | * | `inconclusive` |
+
+`input_quality` 取值（来源 `_input_quality.json`，详见 PHASES §1.3.d）：
+- `full`：`final_cases.json` 存在且非空
+- `medium`：仅 `change_supplementary_cases.json` 或 `requirement_points.json` 存在（无 final_cases）
+- `low`：以上三类用例文件全部缺失，引擎走 4.6 兜底合成路径
+
+`verification_channel` 取值（由 §4.4 自动计算，禁止模型自由填）：
+- `dual_channel`：fv 全部条目通过 3.2 用例中介验证 + 3.3 反向通道双双确认
+- `forward_only`：仅正向通道有产出
+- `reverse_only`：仅反向通道有产出
+- `forward_synthesized`：fv 含 `source: "synthesized_from_coverage_report"` 条目（即 4.6 兜底，验证未真实执行）
+
+`fail_reason` 写法：
+- `pass` / `fail` 沿用现状（fail 时列 P0 摘要）
+- `pass-with-degraded-input` / `fail-with-degraded-input` → 必须以 "⚠️ 用例输入不完整（仅 {sources_present 列表}），" 开头
+- `inconclusive` → 必须为："本次冒烟测试无任何用例输入（final_cases / change_supplementary_cases / requirement_points 全部缺失），verdict 不可信。请补 final_cases.json（跑 test-case-generation）或 change_supplementary_cases.json（跑 change-analysis）后重跑。"
 
 `low_confidence_items`：forward_verification 中 `result == "fail"` 但 `confidence < 70` 的条目，未纳入 defect_list.json 但需关注。
 

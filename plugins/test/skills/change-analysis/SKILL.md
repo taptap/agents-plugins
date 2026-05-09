@@ -44,7 +44,10 @@ description: >
 
 ## 与其他 skill 的关系
 
-- **requirement-traceability**：专注需求与代码的双通道追溯矩阵。本 skill 的 Story 场景侧重影响面和测试覆盖，追溯矩阵请使用 requirement-traceability
+- **requirement-traceability**：专注需求与代码的双通道追溯矩阵。本 skill 的 Story 场景侧重影响面和测试覆盖，追溯矩阵请使用 requirement-traceability。**下游消费契约**：requirement-traceability（标准 traceability 模式 + smoke-test 模式均适用）会通过 PHASES §3.1 优先级 1.5 档**自动消费**本 skill 产出的 `change_supplementary_cases.json` 作为补充用例池：
+  - `case_id` 命名空间 `TC-{N}` 保持稳定，requirement-traceability 不重命名，下游引用安全
+  - `priority` 字段会被 requirement-traceability §5S.1 直接继承用于缺陷优先级判定（不再用 confidence 二次推），请确保本 skill 在生成用例时如实标注 priority（GameJam TC-11 标 P0 才能在下游 smoke-test 中正确进 P0 defect_list）
+  - `module` 字段：本 skill 内部使用，主要作为生成阶段的代码风险点标签，便于人类阅读。**下游不强依赖**：requirement-traceability 主要从 `title` + `steps` + `preconditions` 的业务语义匹配 FP-N（详见其 PHASES §3.1）；metersphere-sync 在 change_analysis 路径下 flatten 进单一 wrapper 模块，不按 module 分组（详见 ai-case 后端 `metersphere_import.py` 的 `flatten_into_wrapper=True`）。因此 module 命名风格自由，无需强行对齐功能点名
 - **test-case-generation**：本 skill 的补充用例是针对变更覆盖缺口的补充，完整的需求驱动用例生成请使用 test-case-generation
 
 ## 分析原则

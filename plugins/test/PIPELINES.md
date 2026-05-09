@@ -95,19 +95,23 @@
 
 ## 链路 D — 需求回溯增强
 
+UI 还原度由 requirement-traceability §3.4 隐式触发（`design_link` + `code_dir` 都透传时），不再需要单独 skill。API 契约校验仍可由独立 skill 预生成产出供 traceability 优先消费。
+
 ```
-[ui-fidelity-check]  (条件：有 Figma 设计稿)
+[api-contract-validation]  (可选：前后端协调时单独跑，预生成深度报告)
     │
-    └─→ ui_fidelity_report.json
+    └─→ api_contract_report.json
         │
         ▼
 [requirement-traceability]
     │  消费: final_cases.json (链路 A 产出，正向通道用例输入)
-    │       ui_fidelity_report.json (UI 还原度合并)
-    │       api_contract_report.json (条件：上游 api-contract-validation 产出)
+    │       design_link + code_dir → §3.4 内置启动 ui-fidelity-checker Agent，
+    │                                产出 ui_fidelity_report.json
+    │       api_contract_report.json (优先消费上游产出；缺则 §3.2.5 内置启动
+    │                                 api-contract-validator Agent)
     │
     ├─→ forward_verification.json（内嵌正向用例中介验证结果）
-    └─→ traceability_coverage_report.json（含正向验证率 + UI 还原度）
+    └─→ traceability_coverage_report.json（含正向验证率 + UI 还原度 + API 契约）
 ```
 
 ### 数据流映射
@@ -115,8 +119,7 @@
 | 上游 Skill | 输出文件 | 下游 Skill | 输入参数 |
 |---|---|---|---|
 | test-case-generation | `final_cases.json` | requirement-traceability | `final_cases`（正向通道用例输入，优先消费） |
-| ui-fidelity-check | `ui_fidelity_report.json` | requirement-traceability | `ui_fidelity_report` |
-| api-contract-validation | `api_contract_report.json` | requirement-traceability | `api_contract_report` |
+| api-contract-validation | `api_contract_report.json` | requirement-traceability | `api_contract_report`（可选；缺则内置 agent） |
 
 ---
 
@@ -219,11 +222,12 @@ Phase 1: 需求分析
     → 暂停等编码
 
 Phase 2: 代码验证（用户回来后）
-[change-analysis] ──────────┐
-[ui-fidelity-check]  ───────┘ 条件：有设计稿（与 change-analysis 并行）
-[api-contract-validation]     条件：前后端协调
+[change-analysis] ──────────────┐
+[api-contract-validation]  ─────┘ 条件：前后端协调（与 change-analysis 并行）
     ↓
-[requirement-traceability]（内嵌正向用例中介验证，消费上游 final_cases.json）
+[requirement-traceability]（内嵌正向用例中介验证，消费上游 final_cases.json；
+                          §3.4 在有 design_link + code_dir 时启动 ui-fidelity-checker Agent；
+                          §3.2.5 在缺 api_contract_report 时启动 api-contract-validator Agent）
     → [metersphere-sync mode=execute]
     → 暂停等人工验证
 
@@ -263,7 +267,7 @@ work_dir/
 ├── review_result.json             (test-case-review)
 ├── tc_review_detail.md            (test-case-review)
 ├── api_contract_report.json       (api-contract-validation)
-├── ui_fidelity_report.json        (ui-fidelity-check)
+├── ui_fidelity_report.json        (requirement-traceability §3.4)
 ├── failure_analysis.json          (test-failure-analyzer)
 ├── action_plan.md                 (test-failure-analyzer)
 ├── ms_case_mapping.json           (metersphere-sync)

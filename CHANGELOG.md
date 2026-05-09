@@ -1,5 +1,134 @@
 # Changelog
 
+## 0.1.46
+
+### Test Plugin (0.0.14)
+
+#### ui-fidelity-check skill removed; UI/API checks consolidated into traceability via shared agents
+
+Two architectural changes shipped together in 0.0.14, driven by user observation that `ui-fidelity-check` and `requirement-traceability §3.4` had drifted into duplication, and that `api-contract-validation` had a "lite inline + full upstream" two-path design that confused users.
+
+**ui-fidelity-check (deleted)**
+
+- `plugins/test/skills/ui-fidelity-check/` directory removed entirely. UI fidelity check is now exclusively triggered inside `requirement-traceability §3.4`
+- `agents/ui-fidelity-checker.md` retained and simplified: dropped Browser MCP inputs (browser_take_screenshot / browser_snapshot); now compares Figma structured design data vs static code style declarations only (CSS / SCSS / Tailwind / SwiftUI Modifiers / Compose Modifiers). Confidence cap 60 (no runtime validation)
+- Rationale: TapTap multi-platform stack rarely has a deployed `page_url` available — most scenarios are static code + design draft. Removing the page_url path and unifying on structural-only mode covers all platforms / all dev phases. With page_url gone, ui-fidelity-check and traceability §3.4 became truly equivalent (same agent, same input, same output) → standalone skill no longer justified
+- `traceability/contract.yaml`: added `code_dir` input (frontend code dir for §3.4); removed `ui_fidelity_report` upstream input + `from_upstream: ui-fidelity-check`
+- `traceability/PHASES.md §3.4`: trigger changed from "design_link + browser-accessible page" to "design_link + code_dir both present"; Browser MCP probe removed; visual+structural mode dropped; `ui-fidelity-checker` agent launched via Task tool
+- Cascade cleanup: `qa-workflow` step #6 removed (renumbered downstream steps); `WORKFLOW_DEFS.md` qa-full / qa-lite / verify-only templates updated; `PIPELINES.md` 链路 D rewritten; `known-collisions.yaml` ui_fidelity_report entry deleted (sole owner now); `_shared/TRACEABILITY_PROTOCOL.md` UI section rewritten
+
+**api-contract-validation (kept) + shared agent extraction**
+
+- `agents/api-contract-validator.md` (new): extracted from `api-contract-validation/PHASES.md §3` (signature extraction + 4-dim cross-comparison + breaking change + naming normalization). Stateless calc unit, returns findings JSON, no side effects
+- `api-contract-validation/PHASES.md §3` rewritten: now launches `api-contract-validator` agent via Task tool; §4 wraps agent output into `api_contract_report.json` (schema unchanged for backward compat)
+- `traceability/PHASES.md §3.2.5` rewritten: dropped "lite inline + upstream-first" two-path; now launches the same `api-contract-validator` agent. Upstream-first kept as performance optimization (if `api_contract_report.json` exists in workspace from prior `test:api-contract-validation` run, skip agent launch)
+- `traceability/SKILL.md §API 契约感知`: rewritten to describe shared-agent model + the two entry points (standalone skill = PR pre-merge gate / standalone use; traceability §3.2.5 = auto-triggered副产物)
+- Rationale for keeping standalone skill: API contract validation is a distinct user job (no requirement doc needed; FE↔BE alignment, not requirement-code mapping). Standalone entry serves PR pre-merge gates / contract review where running full traceability is overkill. Shared agent eliminates code duplication between the two callers
+
+**Why ui-fidelity deleted but api-contract kept**
+
+- ui-fidelity: traceability §3.4 + standalone skill have identical user job (need design + code) → consolidation simplifies
+- api-contract: standalone skill serves a distinct user job (no requirement, just FE↔BE diff) → keeping it preserves a real entry point. AI agent skill selection benefits from distinct skill descriptions; collapsing into traceability would muddy "需求回溯 + UI + API 契约" semantics
+
+#### requirement-traceability — output-spec evidence completeness (A/B/D enforced + C self-check), cross-component data flow tracing, cross_component_break defect source
+
+Continuation of the GameJam-class fix. The 0.0.12 release closed silent fallback by routing input via `input_quality`. This release tackles the next-layer问题: even when supplementary cases ARE consumed, single-component追溯 still misses cross-end data flow bugs (frontend↔backend, admin↔C-end, read-path↔write-path). The fix is **output-spec validation, not process-spec prompts** — the model picks any tracing strategy, but produced evidence must satisfy 4 completeness constraints, validated mechanically.
+
+- `requirement-traceability/PHASES.md`:
+  - **§3.2.0a (NEW)**: Evidence completeness contract — A/B/D mechanically validated, C is honest self-check (validator can't enforce without false safety). (A) Data-flow closure: pass + conf>=70 trace must contain ≥1 → / -> (≥2 hops). (B) Cross-boundary natural recording: pass + conf>=85 + multi-actor trace → code_location ≥2 entries distributed across ≥2 directory roots. (C) Per-expected reconciliation: model self-check that each case.steps[].expected has a recognizable landing point — validator does NOT mechanically check (would need case file cross-ref + keyword match, easily defeated, would create false safety). (D) considered_failure_modes path-driven: trace contains grpc/cache/transaction/async/state-mgmt/db patterns → modes must contain matching keywords (no generic "input validation" filler).
+  - **§3.2.1 step 4/5**: rewrote evidence guidance to reference §3.2.0a; replaced fixed-5 self-check list with trace-pattern → mode-keyword table. The kept-3 universal items now point at structured external_dependencies for "depends on server/device/3rd party".
+  - **§3.2.5**: added explicit协同 rules between built-in cross-component tracing and `api_contract_report.json` upstream — contract-consistent interfaces become safe hop assumptions; contract-inconsistent interfaces cap fv confidence at 70 + force fail when on critical path.
+  - **§5S.1 source 7 (NEW)**: cross_component_break defect source. (7a) Trace covers ≥2 components but a hop has no implementation in diff → P0 if hop touches data contract (read/write asymmetry like GameJam Info-Consume), P1 otherwise. (7b) FE↔BE field semantic divergence (names/types match but behavior diverges) — captures the class api-contract-validation can't catch.
+- `_shared/scripts/metersphere_helper.py validate-fv`: implements A/B/D mechanical checks. New `_validate_completeness()` runs after schema + boundary checks. Synthesized entries (4.6 fallback) skip A/B/D as schema already exempts their evidence. Each violation produces `schema_path: completeness/{A|B|D}` with case_id and structured fix hint. C is honest self-check — explicitly NOT in validator to avoid creating false safety from easily-gamed keyword matching.
+- `contracts/defect-list.schema.json`: documented `cross_component_break` as new category value (additive — schema is permissive on category).
+- `tests/validate.sh`: new Check N+2 builds 4 synthetic fv entries (3 violations + 1 fail-path compliant) and asserts validator produces ≥1 of each A/B/D error class. Regression-locks the validator behavior.
+
+**Why output-spec instead of process-spec**
+
+Earlier draft proposed extracting structured `actors` / `components` / `assertions` from cases as a preprocessing step. This was rejected as over-engineering: enumerating extraction patterns is fragile and limits LLM strengths. Output-spec lets the model trace however it sees fit; the validator catches "obvious incompleteness" mechanically. Trade-off: validator is heuristic (regex keyword matching), not semantic — it will sometimes miss subtle violations and sometimes produce false positives on creative trace prose. Net judgment: false positives are easy to fix in prompt; false negatives are the bug we're paying to prevent.
+
+**TC-11 verification path**
+
+With A/B/D mechanically validated + C as model self-check, TC-11 trace ("admin TerminateEvent → grpc → service.event → repo UpdateBalanceAndStatus + service.credit.GetUserCredit (loadActiveEvents) ⟂ ConsumeCredit (ListActiveByUserIdForUpdate)") would:
+- Trigger A check (passes — multiple → arrows)
+- Trigger B check (admin + user actors → requires ≥2 code_location across roots — passes if model collects zeus + cupid + maker locations)
+- Trigger D check (trace has grpc + transaction + repo → modes must cover serialization + transaction + concurrency — passes if model has done the cross-boundary thinking)
+
+Failures in any of A/B/D push fv condifence down or block pass entirely, surfacing the under-traced case before 5S.1 defect extraction. The Info-Consume divergence becomes a `cross_component_break` defect (P0, source 7a) instead of getting lost.
+
+## 0.1.45
+
+### Test Plugin (0.0.13)
+
+**README ↔ AI_CODING_BEST_PRACTICES dedup — clarify doc boundary**
+
+The two docs had drifted into overlap: README had a 6-step "AI coding workflow" diagram + a 链路 A "功能测试全流程" data flow that both duplicated the BP's 5-phase SOP. README is now scoped strictly to *catalog* (what skills exist / how to pick / where files live / how to configure / version history); BP owns the *task-driven SOP* (Quickstart, copy-paste prompts, anti-patterns, troubleshooting, glossary).
+
+- `plugins/test/README.md` 「场景二：AI coding 工作流编排」: dropped the 6-step pipeline diagram, replaced with a single-line link to `AI_CODING_BEST_PRACTICES.md`
+- `plugins/test/README.md` 「链路 A — 功能测试全流程」: dropped the data flow box, kept a one-sentence summary + link to BP
+- `plugins/test/README.md` 「链路 D — 需求回溯增强」: stripped the duplicate phase-4 narrative; kept the `traceability + ui-fidelity-check` data-flow contract that BP doesn't cover
+- `plugins/test/README.md` 「环境变量」段: corrected the misleading "有默认值" claim on 4 `MS_*` rows (these have no built-in defaults — same bug already fixed in SKILL.md and BP at 0.0.12). Replaced 4 rows with a single `MeterSphere` block pointing to the Feishu config doc + lazy-path note (paste config to AI on first failure)
+
+## 0.1.44
+
+### Test Plugin (0.0.12)
+
+**MeterSphere config — fixed misleading "zero-config" claim**
+
+- `metersphere-sync/SKILL.md` and `AI_CODING_BEST_PRACTICES.md` previously claimed MS credentials were "built-in / zero-config / 已内置". This was false: `metersphere_helper.py` reads from `plugins/test/skills/shared-tools/scripts/.env`, and only `MS_DEFAULT_MAINTAINER` (admin) / `MS_DEFAULT_STAGE` (smoke) actually have built-in defaults. The other 11 `MS_*` vars cause runtime failures when missing
+- Both docs now describe the actual lazy-path UX: don't pre-configure; on first run the script throws `missing required environment variables`, at which point user pastes the Feishu config block (`https://xd.feishu.cn/wiki/K4Cxw8HE5itR16kFFYicSctAnrc`) to the AI agent, which writes it into `.env`. Same end state as manual config but no upfront friction
+- `metersphere-sync/SKILL.md` "环境变量" table expanded from 6 to 11 rows; 默认值 column corrected (most rows changed from "已内置" / "AI 工作流模块" to "无（缺失时报错）"); added `MS_WORKSPACE_ID` and 4 `MS_FIELD_ID_*` rows that were missing
+- Troubleshooting in `AI_CODING_BEST_PRACTICES.md`: revised MS 401/403 + MS 404 entries (previously blamed "默认凭据被 export 覆盖", which can't happen since there were no default credentials); added a new entry for `missing required environment variables` startup failure pointing to the Feishu config doc
+
+**Smoke-test honest-verdict overhaul — close GameJam-class silent fallback**
+
+Root cause discovered via forensic review of session 311/312 artifacts: when smoke-test ran without any test case input (no `final_cases.json` / `change_supplementary_cases.json` / `requirement_points.json`), it silently fell back to coverage-report synthesis (PHASES §4.6) and still emitted a hard `verdict: fail`. In one real case (GameJam project), change-analysis had already produced a supplementary case (`TC-11`) precisely targeting an Info-vs-Consume cross-path consistency bug, but smoke-test's input router never consumed it.
+
+This release introduces a single authoritative field `input_quality` (full/medium/low) and routes all downstream degradation behavior through it.
+
+- `requirement-traceability/PHASES.md`:
+  - **§3.1**: input router now has 4 priority tiers; new tier 1.5 consumes `change_supplementary_cases.json`. Cases inherit ca's `case_id` (`TC-{N}`), reuse-friendly downstream. `module` reverse-lookups `traceability_checklist.md` for `requirement_id`; falls back to `FP-UNMAPPED-{N}` when no match. Each derived fv entry tagged `case_source: "supplementary"` for §5S.1 priority inheritance.
+  - **§1.3**: applies in all modes (smoke-test no longer skips entire 1.3); only the `mapping_sha` check is mode-gated. New §1.3.d "case input integrity check" sets `input_quality` and writes `_input_quality.json` for downstream consumption. Loud chat warning on `input_quality == "low"` explaining degradation and remediation.
+  - **§3.1.5**: enum_coverage_gap now exempts gaps covered by supplementary cases — prevents real fail from being downgraded to inconclusive when ca had filled the gap.
+  - **§4.4**: `traceability_coverage_report.json` now writes `input_quality` and `verification_channel`. The latter is auto-computed from fv content (e.g., `forward_synthesized` when fv contains synthesized entries) — model is no longer free to label it `dual_channel` for cosmetic reasons.
+  - **§4.5**: `risk_assessment.json` confidence cap when `input_quality == "low"` (60) or `medium` (80); standard mode now also gets honest degradation, not just smoke-test.
+  - **§4.6**: bottom-out synthesis only triggers when `input_quality == "low"`. If fv is empty but `input_quality != "low"` → STOP and surface "§3.2 has a bug, don't mask via fallback" — eliminates the silent-bypass class entirely.
+  - **§5S.1**: new priority inheritance for supplementary cases — directly inherits ca's `priority` (P0/P1/P2/P3) instead of confidence-based bumping. GameJam TC-11 P0 now correctly enters defect_list.
+  - **§5S.2**: verdict expanded from binary (pass/fail) to five-tier table by `input_quality × P0 count`: `pass` / `fail` / `pass-with-degraded-input` / `fail-with-degraded-input` / `inconclusive`. Engine refuses hard verdict on degraded input.
+- `requirement-traceability/SKILL.md`: mode dispatch table updated; new `case_id` namespace row for supplementary; new `requirement_id` rule for `FP-UNMAPPED-{N}`.
+- `requirement-traceability/TEMPLATES.md`: `forward_verification.json` path table adds supplementary tier; `smoke_test_report.json` schema adds `input_quality`, `verification_channel`, expands `verdict` enum and replaces binary verdict rule with the five-tier table; `traceability_coverage_report.json` adds `input_quality` and `verification_channel` as required fields.
+- `_shared/schemas/forward_verification.schema.json`: `requirement_id.pattern` relaxed to `^(FP-\d+|FP-UNMAPPED-\d+)$`; new optional `case_source` enum field.
+- `_shared/TRACEABILITY_PROTOCOL.md`: field table updated for `case_source` and `FP-UNMAPPED-{N}`.
+- `contracts/smoke-test-report.schema.json`: `verdict.enum` expanded to five values; new `input_quality` and `verification_channel` enums. **Downstream impact**: ai-case backend's frontend mapping needs to handle the 3 new verdict values (display degraded/inconclusive notices).
+- `change-analysis/SKILL.md`: explicit downstream consumption contract for `change_supplementary_cases.json` (case_id namespace stable, priority should be set accurately, module field affects requirement_id lookup).
+- `qa-workflow/PHASES.md` §2.3: clarifies qa-workflow only invokes traceability **standard mode** (never smoke-test); new §2.3.0 pre-check warns if all upstream case artifacts are missing.
+
+**Verification path** (against real artifacts at `/Users/xiaojunhe/Downloads/311` + `/Users/xiaojunhe/Downloads/312`):
+
+- Replay 312 with the original 33 supplementary cases present → fv must contain TC-11 entry, defect_list must include Info-Consume cross-path P0 defect, verdict still `fail` (not `inconclusive`).
+- Replay 312 without supplementary cases (and no other case input) → verdict must be `inconclusive` (not `fail`), report must surface degraded-input warning prominently.
+- Run `bash tests/validate.sh` for plugin/marketplace/schema consistency.
+
+## 0.1.43
+
+### Test Plugin (0.0.11)
+
+**`AI_CODING_BEST_PRACTICES.md` — engineer-perspective rewrite**
+
+- Added "按问题查" entry table at the top so half-flow readers can jump directly to the section they need (Quickstart / phase / troubleshooting / glossary / RACI / anti-patterns)
+- New §0 Quickstart (5 steps to launch): plugin install command, `TEST_WORKSPACE` env setup, MS credential pointer, copy-paste first prompt, navigation hint
+- Each phase gains a copy-paste prompt template (fillable variables) replacing the abstract "用 X skill 帮我..." phrasings
+- Phase 3 walkthrough expanded with concrete plan-mode 三段式: design prompt template, review checklist (影响面 / 分步顺序 / 回滚成本) as a 3-row table with what-to-ask-AI and remediation, implementation discipline (compile per task)
+- Phase 3 dropped the inline `change-analysis` reference per workflow owner; moved to 选读 section
+- Phase 4a / 4b / 5 prompts updated; Phase 5 explicitly notes `git:code-reviewing` runs **in parallel** with the PR creation rather than after
+- New 「反模式」 section with 6 anti-patterns (skipping clarification, sparse context, treating Pass-with-caveats as Pass, premature unit-test-design, monolithic plan-mode accept, skipping MS sync on errors)
+- New Troubleshooting table (8 common failure modes: install / workspace / MS 401-403 / MS 404 / inconclusive verdicts / off-topic AI / clarification loop / stale skill cache)
+- New 术语小词典 (11 entries: MS, TEST_WORKSPACE, FP, E2E, traceability, verdict, confidence, Prepare, Failure, plan mode, 冒烟测试)
+- 进一步阅读 split into 必读 (5 entries) vs 选读 (5 entries including `change-analysis`); added relative-link anchors
+- Mermaid graph: removed dashed parallel `🔁 独立 AI review` node (now folded into Phase 5 description), simpler linear flow
+- Unified visual callouts: 💡 原则 / ⚠️ 坑 / ✅ 产出 / 📥 输入 — replaces inconsistent bold-inline labels
+- **Team-internal content moved to Feishu** (`https://xd.feishu.cn/wiki/PgRLwgQj2iUkiGk0Xm8ctGMWnTb`): iOS TAP-6841255319 case study, 裸需求 scenario diff table, 角色分工 (RACI), internal contacts. Repo doc now points to the Feishu supplement via a single line in 「按问题查」 + a short pointer section. Rationale: case study uses internal ticket/PR IDs; RACI assumes a specific org structure (工程师/Tech Owner/PM/QA) — neither generalizes for an open marketplace plugin
+
 ## 0.1.42
 
 ### Test Plugin (0.0.10)

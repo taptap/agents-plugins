@@ -177,7 +177,7 @@ description: >
 | 4 | generate | 代码生成、出口断言扫描、项目集成 | 零断言检查通过 |
 | 5 | verify | 独立断言审计 + 语义质量检查 | 审计表无 BLOCKED 项 |
 
-> v0.0.15 起 5 阶段细节从 SKILL.md 拆出到 PHASES.md，与 unit-test-design 风格对齐。
+> 5 阶段细节见 PHASES.md（与 unit-test-design 风格对齐）。
 
 ## 输出格式
 

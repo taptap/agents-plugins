@@ -127,16 +127,20 @@ exit 2 → 入参/校验非法，stderr 同上
 
 ## 环境变量
 
-脚本内置默认值，零配置即可使用。环境变量存在时覆盖默认值：
+脚本从 `plugins/test/skills/shared-tools/scripts/.env` 读取配置。不用提前手动配——首次使用时如果 `.env` 没配齐，脚本会报 `missing required environment variables`，把飞书 [MeterSphere 配置 (.env)](https://xd.feishu.cn/wiki/K4Cxw8HE5itR16kFFYicSctAnrc) 里的配置块整段粘给 AI，让它写入 `.env` 即可。
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
-| `MS_BASE_URL` | MeterSphere 地址 | `https://metersphere.tapsvc.com` |
-| `MS_ACCESS_KEY` | API 认证 key | 已内置 |
-| `MS_SECRET_KEY` | AES 签名 key | 已内置 |
-| `MS_PROJECT_ID` | 项目 UUID | 已内置 |
-| `MS_DEFAULT_NODE_ID` | 用例库父模块 ID | AI 工作流模块 |
-| `MS_PLAN_NODE_ID` | 测试计划分类节点 ID | AI 工作流分类 |
+| `MS_ACCESS_KEY` | API 认证 key | 无（必填，缺失时脚本启动报错） |
+| `MS_SECRET_KEY` | AES 签名 key | 无（必填，缺失时脚本启动报错） |
+| `MS_BASE_URL` | MeterSphere 地址 | 无（运行时报错，建议填 `https://metersphere.tapsvc.com`） |
+| `MS_PROJECT_ID` | 项目 UUID | 无（运行时报错） |
+| `MS_WORKSPACE_ID` | 工作空间 UUID | 无（创建测试计划时必需） |
+| `MS_DEFAULT_NODE_ID` | 用例库父模块 ID | 无（导入用例时必需） |
+| `MS_PLAN_NODE_ID` | 测试计划分类节点 ID | 无（创建计划时必需） |
+| `MS_FIELD_ID_MAINTAINER` / `_PRIORITY` / `_STATUS` / `_AUTOMATED` | 自定义字段 ID（4 个） | 无（写入用例时必需） |
+| `MS_DEFAULT_MAINTAINER` | 默认负责人 | `admin` |
+| `MS_DEFAULT_STAGE` | 默认测试计划阶段 | `smoke` |
 
 ## P6 状态映射（execute 模式）
 
@@ -149,7 +153,7 @@ writeback-from-fv 内部按下面规则把 fv 写回 MS plan：
 | `fail` | — | **Failure** | `AI 判定不通过 (conf={c}) — evidence: {first_loc} — 失败原因: {actual_brief}` |
 | `inconclusive` | — | **Prepare** | `AI 无法判定 — 原因: {inconclusive_reason}` |
 
-> **关键变更（vs v0.0.15）**：旧版本基于 `confidence_threshold`（默认 90）判定 Pass/Failure/Prepare。v0.0.16 起不再用阈值——pass + ext_deps 非空时**直接降级为 Prepare**（不是「Pass + caveat 评论」），保证 MS Pass 语义不掺水。conf 仅作为 schema 校验门槛（pass 必须 conf≥70）和 comment 显示。v0.0.17 起 `confidence_threshold` 字段从 contract.yaml 删除（之前作为 deprecated 占位）。
+> **设计原则**：pass + ext_deps 非空时**直接降级为 Prepare**（不是「Pass + caveat 评论」），保证 MS Pass 语义不掺水。conf 不作为状态判定阈值，仅作为 schema 校验门槛（pass 必须 conf≥70）和 comment 显示。
 
 被降级为 Prepare 的条目通过 `pass_with_caveats.md` + `pending_external_validation.md` 单独汇总，给 QA 做回归清单。
 

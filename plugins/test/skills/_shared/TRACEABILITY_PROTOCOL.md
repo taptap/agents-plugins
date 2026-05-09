@@ -13,11 +13,11 @@ requirement-traceability 采用双通道追溯：
 
 **正向通道**用具体的测试用例作为中介——AI 拿用例的"操作步骤 + 预期结果"逐条对照代码推理"代码是否真能实现这条用例"。按优先级消费：① 上游 `final_cases.json`（test-case-generation 产出）→ ② `requirement_points.json` 的 `acceptance_criteria` → ③ 兜底从需求描述提取。详见 [requirement-traceability/PHASES.md](../requirement-traceability/PHASES.md) 3.1-3.2 节。
 
-**反向通道**主 agent 内联完成（v0.0.16 起不再调 Task sub-agent，详见 `requirement-traceability/PHASES.md` 3.3）：从代码变更出发寻找需求对应，结果直接写进 `code_analysis.md` 的「反向追溯输出（主 agent 内联）」节。
+**反向通道**主 agent 内联完成（不调 Task sub-agent，详见 `requirement-traceability/PHASES.md` 3.3）：从代码变更出发寻找需求对应，结果直接写进 `code_analysis.md` 的「反向追溯输出（主 agent 内联）」节。
 
 两个通道由主 agent 顺序执行（先正向，再反向），结果在 output 阶段交叉验证。
 
-> v0.0.7 起合并 verification-test-generation 能力到 traceability 内嵌步骤，不再独立生成中间验证用例文件。
+> traceability 内嵌正向用例中介验证，不引入独立的中间验证用例文件层。
 
 ## 影响范围分析约定
 
@@ -90,18 +90,19 @@ AI 分类标准：
 
 ## UI 还原度检查约定
 
-当需求有 Figma 设计稿链接时，requirement-traceability 或独立的 ui-fidelity-check skill 执行 UI 还原度对比。
+当调用方提供 `design_link`（Figma）+ `code_dir`（前端代码目录）时，requirement-traceability §3.4 通过 Task 工具启动 `ui-fidelity-checker` Agent 执行 UI 还原度对比。**纯静态对比**，不依赖运行时浏览器。
 
 **工具链**：
 
 | 工具 | 用途 |
 | --- | --- |
-| Figma MCP `get_screenshot` | 获取设计稿截图 |
-| Figma MCP `get_design_context` | 获取结构化设计数据 |
-| Browser MCP `browser_take_screenshot` | 获取实现截图 |
-| Browser MCP `browser_snapshot` | 获取 DOM 结构 |
+| Figma MCP `get_design_context` | 获取结构化设计数据（设计令牌、间距、颜色、字体、组件层级） |
+| Figma MCP `get_screenshot` | （可选）获取设计稿截图作辅助参考 |
+| Read（本地代码） | 读取 `code_dir` 中相关组件的样式定义代码片段（CSS / SCSS / Tailwind / SwiftUI / Compose） |
 
-**对比维度**：布局结构、间距与尺寸、颜色与样式、字体排版、状态完整性、交互行为。
+**对比维度**：布局结构、间距与尺寸、颜色与样式、字体排版、状态完整性（仅静态可见的部分）、交互行为（仅 className / 条件渲染层面）。
+
+**置信度上限 60**：静态对比无运行时验证，所有 finding confidence 上限 60。
 
 **还原度评级标准**：
 
@@ -111,7 +112,7 @@ AI 分类标准：
 | medium | high severity 差异 <= 1，或 medium 差异 3-5 |
 | low | high severity 差异 >= 2，或 medium 差异 > 5 |
 
-**降级**：页面不可访问时 → structural-only 模式（仅对比设计数据 vs 代码样式定义，跳过截图对比）。
+**跳过条件**：缺 `design_link` 或 `code_dir` 任一 → 跳过 §3.4，在报告中记录 `skipped_reason`。
 
 ## forward_verification.json 格式（v2）
 
@@ -146,8 +147,8 @@ requirement-traceability 正向通道的产出。**权威 schema 在 `_shared/sc
 
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `case_id` | string | 是 | 用例编号。来自上游 `final_cases.json`（如 `M1-TC-01`）；降级路径形如 `FORWARD-TRACER-FP-1` |
-| `requirement_id` | string | 是 | 对应需求功能点编号（FP- 前缀） |
+| `case_id` | string | 是 | 用例编号。来自上游 `final_cases.json`（如 `M1-TC-01`）；supplementary 路径直接复用 change-analysis 的 `TC-{N}`；降级路径形如 `FORWARD-TRACER-FP-1` |
+| `requirement_id` | string | 是 | 对应需求功能点编号（FP- 前缀）；`FP-UNMAPPED-{N}` 用于 supplementary 用例语义匹配不到 FP 时的兜底 |
 | `requirement_name` | string | 否 | 需求点名称（用于 caveats 报告展示） |
 | `result` | enum | 是 | `pass` / `fail` / `inconclusive` |
 | `confidence` | number \| null | 是 | 0-100 置信度；降级模式（无代码可验证）时为 `null`。**pass 且 conf<70 schema 拒绝**（强制降为 inconclusive） |
@@ -158,6 +159,7 @@ requirement-traceability 正向通道的产出。**权威 schema 在 `_shared/sc
 | `evidence` | object | **pass / fail 必填** | 见下 |
 | `external_dependencies` | object | 否（pass 但需外部验证时必填） | 见下；下游 P6 状态映射会把非空 types 的 pass 降为 MS Prepare |
 | `source` | string | 否 | 兜底标记，例如 `synthesized_from_coverage_report` |
+| `case_source` | enum | 否 | 用例来源：`primary` / `supplementary` / `synthesized`。供 5S.1 优先级判定与下游审计使用。详见 `requirement-traceability/PHASES.md §3.1` |
 | `ms_id` | string | 否 | MeterSphere 用例 UUID。由 P3 writeback 在 lookup 后回写进 `forward_verification.enriched.json`，下次跑 writeback 可跳过 lookup |
 
 ### evidence 子字段

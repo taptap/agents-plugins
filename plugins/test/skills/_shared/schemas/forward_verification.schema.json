@@ -16,8 +16,12 @@
       },
       "requirement_id": {
         "type": "string",
-        "pattern": "^FP-\\d+",
-        "description": "对应的需求功能点编号（FP-N）"
+        "pattern": "^(FP-\\d+|FP-UNMAPPED-\\d+|R-\\d+)$",
+        "description": "对应的需求功能点编号。v0.0.13 修订：支持三种格式：(1) FP-N（来自上游 clarified_requirements/requirement_points，主键）；(2) FP-UNMAPPED-N（v0.0.12 新增，supplementary cases 语义匹配不到 FP 时的兜底归类）；(3) R-N（独立使用模式，无上游 FP 来源时本地编号——SKILL.md ID 体系表已声明）"
+      },
+      "case_source": {
+        "enum": ["primary", "supplementary", "synthesized"],
+        "description": "用例来源（v0.0.12 新增）：primary=final_cases.json/requirement_points.json 主流路径；supplementary=由 §3.1 优先级 1.5 档消费 change_supplementary_cases.json 产出；synthesized=由 §4.6 兜底合成（与同条 source: synthesized_from_coverage_report 配套）。供 5S.1 优先级判定与下游审计使用"
       },
       "requirement_name": {
         "type": "string"

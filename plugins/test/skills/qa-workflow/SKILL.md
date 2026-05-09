@@ -20,8 +20,8 @@ description: >
 ## 核心能力
 
 - **自动编排** — 按正确顺序调用 test 插件的各 skill，处理参数传递和数据流
-- **条件分支** — 根据需求特征自动判断是否需要 UI 还原度检查、API 契约校验
-- **并行执行** — change-analysis、ui-fidelity-check（有设计稿时）并行执行
+- **条件分支** — 根据需求特征自动判断是否需要 API 契约校验；UI 还原度由 requirement-traceability §3.4 隐式触发（design_link + code_dir 同时存在时）
+- **并行执行** — change-analysis、api-contract-validation（前后端协调时）并行执行
 - **状态持久化** — `workflow_state.json` 记录进度，支持中断恢复
 - **多种代码变更来源** — MR/PR 链接、本地 git diff、用户指定代码目录
 - **工作流模板** — qa-full（完整）、qa-lite（无 MS）、verify-only（仅验证）
@@ -38,19 +38,18 @@ Phase 1: 需求分析与用例准备（自动执行）
 
 Phase 2: 代码验证（用户回来后自动执行）
   触发：用户提供 MR 链接 / 说"代码写完了" / 说"帮我 review 并提 MR"
-  #5  change-analysis ──────────┐
-  #6  [条件] ui-fidelity-check ─┘ 有设计稿时（与 #5 并行）
-  #7  [条件] api-contract-validation  前后端协调时
-  #8  requirement-traceability → 需求还原度（内嵌正向用例中介验证 + Phase 6 自动回写 MS 测试计划）
-  #9  [等待] 人工验证低置信度用例
+  #5  change-analysis ─────────────────────┐
+  #6  [条件] api-contract-validation ──────┘ 前后端协调时（与 #5 并行）
+  #7  requirement-traceability → 需求还原度（内嵌正向用例中介验证 + §3.4 UI 还原度静态对比 + Phase 6 自动回写 MS 测试计划）
+  #8  [等待] 人工验证低置信度用例
 
 Phase 3: 收尾（人工验证后）
-  #10 git:code-reviewing → 代码审查
-  #11 git:commit-push-pr → 提 PR（可选）
+  #9  git:code-reviewing → 代码审查
+  #10 git:commit-push-pr → 提 PR（可选）
   → 生成 qa_summary.md
 ```
 
-> 步骤编号与 [WORKFLOW_DEFS.md](WORKFLOW_DEFS.md) 的 qa-full 模板 ID 一致。#4 和 #9 为用户交互等待点。MS 测试计划回写已下沉到 #8 requirement-traceability 的 Phase 6 writeback，编排不再单独列 metersphere-sync execute 步骤。
+> 步骤编号与 [WORKFLOW_DEFS.md](WORKFLOW_DEFS.md) 的 qa-full 模板 ID 一致。#4 和 #8 为用户交互等待点。MS 测试计划回写已下沉到 #7 requirement-traceability 的 Phase 6 writeback，编排不再单独列 metersphere-sync execute 步骤。
 
 ## 条件分支判定
 
@@ -58,8 +57,8 @@ Phase 3: 收尾（人工验证后）
 
 | 信号 | 来源字段 | 触发步骤 |
 |------|----------|----------|
-| 有设计稿 | 用户提供 `design_link` | #6 ui-fidelity-check |
-| 前后端协调 | `platform_scope.coordination_needed == true` | #7 api-contract-validation |
+| 前后端协调 | `platform_scope.coordination_needed == true` | #6 api-contract-validation |
+| 有设计稿 | 用户提供 `design_link` + `code_dir` | 不再单独列步骤；由 #7 requirement-traceability §3.4 隐式触发 |
 
 ## 代码变更来源
 
