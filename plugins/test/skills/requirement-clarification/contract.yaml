@@ -1,8 +1,8 @@
 name: requirement-clarification
-version: "2.0"
+version: "2.1"
 description: >
-  当收到新需求（链接、文档、口述或碎片化信息）时，通过多维度结构化问答
-  与用户拉齐对需求的理解，输出结构化澄清结果和编号功能点清单。
+  当收到新需求（链接、文档、口述或碎片化信息）时，通过单 Agent 强推理（假设/反例/结论 + 原文引用）
+  和多维度结构化问答与用户拉齐对需求的理解，输出结构化澄清结果和编号功能点清单。
 
 input:
   one_of:
@@ -76,12 +76,6 @@ output:
     coordination_needed:
       type: boolean
       description: 是否需要多端/前后端协调
-    analysis_mode:
-      type: string
-      description: 分析模式（single-agent | multi-perspective）
-    perspective_agreement_rate:
-      type: string
-      description: 多视角一致率（仅 multi-perspective 模式）
     impact_scope_available:
       type: boolean
       description: 是否进行了影响范围分析

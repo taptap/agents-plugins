@@ -36,7 +36,7 @@ handoffs:
 
 - 多形态输入处理 — 支持链接、文档、自由文本、对话碎片等多种输入形式
 - 需求文档深度解析 — 识别功能边界、状态流转、业务规则、数据约束
-- 多视角并行分析 — 复杂需求时启动功能/异常/用户 3 个视角 Agent 并行分析，交叉验证提升置信度
+- 单 Agent 强推理 — 每维度强制走「假设 → 反例搜索 → 结论」三步并要求原文引用，用结构化推理替代多 Agent 并行的视角多样性
 - 结构化问题生成 — 按 12 个维度生成针对性的澄清问题
 - 交互式确认 — 通过 AskUserQuestion 工具渐进式确认，记录人工回答
 - 结构化输出 — 产出可被下游 skill 直接消费的 JSON 数据
@@ -101,9 +101,7 @@ handoffs:
 
 | 任务 | 推荐模型 | 理由 |
 | --- | --- | --- |
-| 需求文档解析和澄清 | Opus | 需求理解是整个 pipeline 质量天花板 |
-| 多视角分析 Agent（功能/异常） | Opus | 遗漏隐含需求的代价极高 |
-| 多视角分析 Agent（用户） | Sonnet | 用户体验分析风险较低 |
+| 需求文档解析和澄清 | Opus | 需求理解是整个 pipeline 质量天花板；单 Agent 强推理模式（假设/反例/结论）对模型推理深度要求高 |
 
 ## 可用工具
 
@@ -262,8 +260,8 @@ handoffs:
       "category": "错别字 | 术语 | 易读性 | 文案一致性 | 单位",
       "evidence": "PRD 原文摘录（用『』圈出关键片段）",
       "suggestion": "建议改写或 null",
-      "severity": "blocking | concern",
-      "resolution": "仅 blocking 项有值；记录用户在 3.3 渐进式确认中的决策原文，concern 项为 null"
+      "severity": "阻断 | 关注",
+      "resolution": "仅『阻断』项有值；记录用户在 3.3 渐进式确认中的决策原文，『关注』项为 null"
     }
   ]
 }
@@ -271,7 +269,7 @@ handoffs:
 
 字段按实际澄清结果填写，未涉及的维度留空数组或 null，不需要强制填充。探索模式下 `confidence_level` 通常为 `medium` 或 `low`，下游 skill 据此调整容忍度。
 
-`functional_points[].confidence`（0-100）：功能点级别的置信度。多视角模式下为交叉验证后的合并评分（2+ Agent 确认 +20 加成）；单 Agent 模式下基于文档明确度评分。下游 test-case-generation 据此调整用例生成的激进程度。
+`functional_points[].confidence`（0-100）：功能点级别的置信度。按 [PHASES.md 3.2.1 confidence 评分规则](PHASES.md#321-confidence-评分规则单-agent) 的可重复规则计算（基础分 + 边界明确/验收标准/核心维度有原文/反例命中等加分项 + assumption 占比/unconfirmed 减分项），不依赖 LLM 主观打分。下游 test-case-generation 据此调整用例生成的激进程度。
 
 `qa_pairs` 中 `source` 为 `assumption` 表示 AI 提出的默认假设被用户确认。
 

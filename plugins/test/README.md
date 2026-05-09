@@ -222,8 +222,11 @@ api-contract-validation（接口签名提取 + 交叉比对）
 
 本插件借鉴 quality/review 插件的多 Agent 设计模式，持续引入以下架构能力：
 
-### 多视角并行分析
-复杂需求时启动功能/异常/用户 3 个视角 Agent 并行分析，交叉验证提升置信度。适用于 requirement-clarification 和 test-case-generation。
+### 单 Agent 强推理（需求侧）
+requirement-clarification 和 requirement-review 采用「假设 → 反例搜索 → 结论」三步强推理 + 强制原文引用，用结构化推理替代多 Agent 并行的视角多样性。对应业界 2025 推荐的 single-agent + structured reasoning 模式。详见各 skill 的 PHASES.md。
+
+### 多视角并行分析（用例侧）
+test-case-generation 在 review 阶段使用冗余对模式 — 2 个独立 Agent 并行评审同一内容，共识发现自动加成置信度 +20。适用于产出大量 artifact 后的质量复核场景。
 
 ### 冗余对评审
 test-case-generation（review 阶段）和 requirement-traceability 使用冗余对模式 — 2 个独立 Agent 并行分析同一内容，共识发现自动加成置信度 +20。不确定的评审问题抛给用户确认，避免评审幻觉。
@@ -263,7 +266,6 @@ plugins/test/
 │   │   ├── review-agent-1.md   # 覆盖度视角评审 Agent
 │   │   └── review-agent-2.md   # 质量视角评审 Agent
 │   ├── ui-fidelity-checker.md  # UI 还原度检查 Agent
-│   ├── requirement-understanding/  # 需求理解多视角 Agent
 │   └── requirement-traceability/   # 需求追溯（仅 case-tracer）
 ├── skills/
 │   ├── _shared/                    # 共享协议和框架文件

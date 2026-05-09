@@ -128,21 +128,26 @@ rr = load('rr-summary')
 assert_valid('rr-summary ok', rr, {
     'verdict': 'ready_with_conditions',
     'issue_count': 2,
+    'confidence': 65,
     'blocking_issues': [{'title': 'PRD 缺异常分支', 'category': '完整性'}],
 })
 for label, data in [
     ('rr-summary 缺 required',
      {'verdict': 'ready'}),
+    ('rr-summary 缺 confidence',
+     {'verdict': 'ready', 'issue_count': 0, 'blocking_issues': []}),
+    ('rr-summary confidence 越界',
+     {'verdict': 'ready', 'issue_count': 0, 'confidence': 150, 'blocking_issues': []}),
     ('rr-summary verdict enum',
-     {'verdict': 'go', 'issue_count': 0}),
+     {'verdict': 'go', 'issue_count': 0, 'confidence': 80, 'blocking_issues': []}),
     ('rr-summary 拼错 result',
-     {'verdict': 'ready', 'issue_count': 0, 'result': 'ok'}),
+     {'verdict': 'ready', 'issue_count': 0, 'confidence': 80, 'blocking_issues': [], 'result': 'ok'}),
     ('rr-summary 拼错 conclusion',
-     {'verdict': 'ready', 'issue_count': 0, 'conclusion': 'ok'}),
+     {'verdict': 'ready', 'issue_count': 0, 'confidence': 80, 'blocking_issues': [], 'conclusion': 'ok'}),
     ('rr-summary 拼错 issues_count',
-     {'verdict': 'ready', 'issue_count': 0, 'issues_count': 1}),
+     {'verdict': 'ready', 'issue_count': 0, 'confidence': 80, 'blocking_issues': [], 'issues_count': 1}),
     ('rr-summary 拼错 blockers',
-     {'verdict': 'ready', 'issue_count': 0, 'blockers': []}),
+     {'verdict': 'ready', 'issue_count': 0, 'confidence': 80, 'blocking_issues': [], 'blockers': []}),
 ]:
     assert_invalid(label, rr, data)
 

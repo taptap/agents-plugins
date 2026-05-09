@@ -151,41 +151,34 @@ python3 $SKILLS_ROOT/shared-tools/scripts/fetch_feishu_doc.py \
 
 差异列表纳入 3.3 渐进式确认的问题池，优先级等同于功能边界维度。
 
-### 3.2 按维度分析每个功能点（支持多视角并行）
+### 3.2 按维度分析每个功能点（单 Agent 强推理）
 
-**复杂度判断**：如果功能点 >= 3 个且需求文本 > 2000 字 → 启动多视角并行分析；否则 → 单 Agent 分析。
+对每个功能点，逐一检查 [CHECKLIST.md](CHECKLIST.md) 中的 12 个维度。每个维度**必须**走完三步推理（不允许省略任一步）：
 
-#### 3.2.1 多视角并行分析（复杂需求）
+1. **假设**：基于已有信息（需求文档、设计稿、对话历史）的什么内容做出该维度判断？必须包含**原文摘录**（用 `『』` 圈出关键片段）；信息缺失时显式写「未在已有信息中找到」。
+2. **反例搜索**：是否有场景会推翻假设？显式列出 1-2 个潜在反例（如"用户切换设备时该状态如何同步？"、"高并发下该约束是否仍成立？"）；确无反例时显式写「无反例」。反例搜索是单 Agent 模拟"异常视角 + 功能视角"的关键。
+3. **结论**：根据假设 + 反例搜索结果，按以下分支处理：
+   - 信息明确 + 无反例 → 记录答案，标记 `source: "document"`（文档模式）或 `source: "human"`（探索模式首轮已确认），confidence 按 [3.2.1 评分规则](#321-confidence-评分规则单-agent) 计算
+   - 信息有歧义或反例可能命中 → 生成具体的澄清问题（不允许"建议关注 X"这种模糊表述）
+   - 信息缺失但可提合理默认 → 生成带默认值的确认问题，标记 `source: "assumption"`
 
-在**单条消息**中同时发送 3 个 Task 调用，使用 [agents/requirement-understanding/](../../agents/requirement-understanding/) 下的 Agent 定义：
+**为什么强制三步**：单 Agent 模式下若直接下结论，容易把"我没注意到"误判为"没问题"。强制原文引用 + 反例搜索是业界 2025 推荐的"single-agent + structured reasoning"模式的关键 — 用结构化推理替代多 Agent 并行带来的视角多样性，成本低、可重复、可审计。
 
-- **functional-perspective**（Opus）：分析功能边界、输入输出、状态流转、数据约束
-- **exception-perspective**（Opus）：分析错误路径、边界条件、异常场景、容错机制
-- **user-perspective**（Sonnet）：分析用户场景、交互流程、可用性、多角色行为
+#### 3.2.1 confidence 评分规则（单 Agent）
 
-每个 Agent 接收完整需求文档，独立输出 findings（含 confidence 评分）。
+每个功能点的 `confidence`（0-100）按以下**可重复规则**计算，不依赖模型主观打分：
 
-**交叉验证**（由主 Agent 在收到 3 个 Task 结果后执行）：
+| 条件 | 加分 |
+| --- | --- |
+| 基础分 | 50 |
+| 该功能点的功能边界（in_scope/out_of_scope）已明确，且有原文引用 | +15 |
+| 该功能点的验收标准（acceptance_criteria）非空，且来源 `document` 或 `human` | +15 |
+| 该功能点至少 2 个核心维度（功能边界/状态流转/异常处理/数据约束）来源 `document` 或 `human`（非 `assumption`） | +10 |
+| 反例搜索环节命中风险且已转化为澄清问题 | +5 |
+| 该功能点存在 `unconfirmed` 状态的核心维度 | -10 |
+| 该功能点 `assumption` 来源占比 > 50% | -10 |
 
-1. 收集三个 Agent 的 findings 数组
-2. **结构化匹配**：要求各视角 Agent 在 findings 中标注 `target_id`（关联的 FP-N 编号）。合并时先按 `target_id + category` 做初步分组，同一分组内再做语义去重（相似描述合并）
-3. 同一发现被 2+ 个 Agent 独立识别 → confidence += 20（封顶 100）
-4. 合并后的 findings 按 confidence 排序：
-   - ≥80：标记为已确认的需求缺口，直接写入功能点的对应维度
-   - 60-79：转化为需向用户提出的澄清问题
-   - <60：记录但不主动提问
-5. 为每个功能点计算 `confidence` 分数：已确认维度占比 × 100
-
-**降级回退**：Task 工具不可用 → 单 Agent 逐维度分析（下方 3.2.2 流程）。
-
-#### 3.2.2 单 Agent 分析（简单需求或降级模式）
-
-对每个功能点，逐一检查 [CHECKLIST.md](CHECKLIST.md) 中的 12 个维度。对每个维度：
-
-1. 在已有信息中搜索相关内容
-2. 如果已明确说明 → 记录答案，标记 `source: "document"`（文档模式）或 `source: "human"`（探索模式首轮已确认）
-3. 如果未说明或存在歧义 → 生成具体的澄清问题
-4. 如果该维度可提出合理默认假设 → 生成带默认值的确认问题，标记待确认为 `source: "assumption"`
+最低 0、最高 100。这套规则同时避免了"LLM 拍脑袋打分"和"非多 Agent 不可量化"两个极端。下游 `test-case-generation` 据此调整用例生成激进度。
 
 ### 3.2.3 影响范围分析（条件触发）
 
@@ -274,13 +267,13 @@ python3 $SKILLS_ROOT/shared-tools/scripts/fetch_feishu_doc.py \
 
 执行规则：
 1. 仅基于 PRD 原文判定，每条发现必须含**原文摘录**（用 `『』` 圈出）；找不到原文 = 不写这条
-2. 所有发现先在内存中暂存，按 `severity` 区分后续处理：
-   - `blocking`（错别字、数字单位歧义、占位符不一致）→ 必须在 3.3 渐进式确认中通过 AskUserQuestion 单独提问（option 提供「按建议修正 / 维持原文 / PM 线下确认」三个元操作，`evidence_tag = derived`，`evidence_ref` 必须包含 PRD 原文摘录）；用户答复后将决策合并到该条的 `resolution` 字段
-   - `concern`（术语漂移、易读性）→ 不主动追问，直接进入 4.1 consolidate 阶段
-3. 4.1 consolidate 阶段把所有发现（含 blocking 决策结果）写入 `clarified_requirements.json` 的 `doc_quality_issues` 数组
+2. 所有发现先在内存中暂存，按 `severity` 区分后续处理（中文枚举，详见 [_shared/REQUIREMENT_DIMENSIONS.md 术语映射](../_shared/REQUIREMENT_DIMENSIONS.md#术语映射)）：
+   - `阻断`（错别字、数字单位歧义、占位符不一致）→ 必须在 3.3 渐进式确认中通过 AskUserQuestion 单独提问（option 提供「按建议修正 / 维持原文 / PM 线下确认」三个元操作，`evidence_tag = derived`，`evidence_ref` 必须包含 PRD 原文摘录）；用户答复后将决策合并到该条的 `resolution` 字段
+   - `关注`（术语漂移、易读性）→ 不主动追问，直接进入 4.1 consolidate 阶段
+3. 4.1 consolidate 阶段把所有发现（含『阻断』决策结果）写入 `clarified_requirements.json` 的 `doc_quality_issues` 数组
 4. 该步骤无条件触发，不允许跳过；若 PRD 完全无文案问题，仍须在 4.1 写入 `doc_quality_issues: []`
 
-`doc_quality_issues` 每条字段：`category`（错别字/术语/易读性/文案一致性/单位）、`evidence`（PRD 原文摘录）、`suggestion`（建议改写或 `null`）、`severity`（`blocking` / `concern`）、`resolution`（仅 blocking 项有值，用户决策原文）。
+`doc_quality_issues` 每条字段：`category`（错别字/术语/易读性/文案一致性/单位）、`evidence`（PRD 原文摘录）、`suggestion`（建议改写或 `null`）、`severity`（`阻断` / `关注`）、`resolution`（仅『阻断』项有值，用户决策原文）。
 
 ### 3.2.6 分类变量的正向枚举（必做）
 
@@ -378,7 +371,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/fetch_feishu_doc.py \
 
 **中间轮（维度深挖）**：
 - 按优先级逐维度提问：功能边界 + 平台范围 → 交互与 UI 规则 → 依赖关系（含 API 契约） → 状态流转 → 验收标准 → 异常处理 → 影响范围 → 其他
-- 每次调用 AskUserQuestion 工具控制在 1-4 个问题
+- **每次调用 AskUserQuestion 工具仅 1 个问题**（CRITICAL，避免序列化抖动；详见平台 system prompt 中的 AskUserQuestion 契约说明）。需要问多个时依次发起多次调用，等用户答复一个再发起下一个
 - 每个问题必须提供选项或默认值
 
 **条件触发：多变体一致性追问**（CRITICAL — 类继承 / 父组件级联防御）
@@ -484,7 +477,7 @@ clarify 阶段结束后，**必须立即进入阶段 4: consolidate**。
 
 字段按实际澄清结果填写，未涉及的维度留空数组或 null，不强制填充。
 
-`doc_quality_issues` 字段从 3.2.5 阶段暂存的发现回填，blocking 项需带上用户在 3.3 给出的决策（写入 `resolution` 字段）。无发现时写入空数组 `[]`，**禁止**省略该字段。
+`doc_quality_issues` 字段从 3.2.5 阶段暂存的发现回填，『阻断』项需带上用户在 3.3 给出的决策（写入 `resolution` 字段）。无发现时写入空数组 `[]`，**禁止**省略该字段。
 
 `enum_factors` 字段从 3.2.6 阶段的 lint 与改写结果回填到每个功能点。功能点若不涉及分类变量需写入空数组 `[]` 显式声明，**禁止**省略。每条 `enum_factors` 元素须含 `id` / `name` / `values[]` / `open_set` / `source`；`open_set: true` 时必须有非空的 `default_behavior`；`covered_by_rules` 反向引用本功能点中已展开该枚举的规则索引（用于下游 traceability / test-case-generation 做覆盖检查）。
 

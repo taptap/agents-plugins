@@ -1,8 +1,8 @@
 name: requirement-review
-version: "1.0"
+version: "1.1"
 description: >
   在需求评审会前，对需求文档做质量把关。输入飞书 Story 链接或需求文档链接，
-  通过 12 维度评审框架和可选的多视角并行分析，
+  通过 12 维度评审框架（单 Agent 强推理：假设/反例/结论 + 原文引用），
   输出 Go-No-Go 评审结论、结构化 Checklist 和各职能待确认问题清单。
 
 input:
@@ -34,10 +34,6 @@ dependencies:
   scripts:
     - shared-tools/scripts/fetch_feishu_doc.py
     - shared-tools/scripts/gitlab_helper.py  # 条件触发
-  agents:
-    - requirement-understanding/functional-perspective  # 多视角模式
-    - requirement-understanding/exception-perspective    # 多视角模式
-    - requirement-understanding/user-perspective         # 多视角模式
   env_vars:
     - FEISHU_APP_ID
     - FEISHU_APP_SECRET

@@ -14,6 +14,61 @@
 | "帮我评审需求" | requirement-review | — |
 | 不确定用哪个 | 看目的：**拉齐理解**→clarification，**质量检查**→review | — |
 
+## 术语映射
+
+两个 skill 共享 12 维度框架，但状态/严重性/置信度的载体（JSON vs Markdown）和粒度（功能点级 vs 维度级）不同。本节是**统一对照表**，所有新 skill 加入或两个 skill 的产物互转时**必须**遵循。
+
+### 严重性（severity）— 统一中文二档 + report.md 工程化别名 P0/P1
+
+| 中文术语 | report.md 别名 | 何时使用 | 出现位置 |
+|---|---|---|---|
+| `阻断` | `P0` | 影响功能可行性或评审前必须解决 | review_checklist.md / clarified_requirements.json `doc_quality_issues[].severity` / rr_summary.json `blocking_issues[]` / report.md §3 各职能问题列表前缀 |
+| `关注` | `P1` | 后续开发/测试中跟进即可，不阻断评审/澄清通过 | 同上 |
+
+**规则**：
+- JSON 字段（如 `severity`）的 value 直接写中文 `"阻断"` / `"关注"`，不再使用 `blocking` / `concern`（旧值已废弃）
+- **report.md §3「各职能待确认问题列表」用 `P0` / `P1` 工程化别名前缀**（如 `**P0** PM-1：...`）—— 飞书文档场景下读者多为研发/PM 混合，P0/P1 比中文"阻断/关注"更易扫读，但语义和上述二档**完全等价**，1:1 映射
+- review 旧版 chat 输出统计中的"待确认"**不是**严重性，是状态值（见下表），不要混入严重性维度
+- 旧版报告四档优先级 `阻断/高/中/低` 已废弃，统一改为 P0/P1 二档（"高/中/低"在评审会场景区分价值低，评审会只关心"今天必须拍 vs 不必须拍"）
+
+### 状态（status）— 两套粒度并存，按场景选用
+
+两个 skill 的状态枚举**故意不同**，因为粒度不一样：
+
+| Skill | 字段 | 粒度 | 取值 | 含义 |
+|---|---|---|---|---|
+| clarification | `functional_points[].clarification_status` | **功能点级**（汇总该 FP 所有维度的整体状态） | `confirmed` / `partial` / `unconfirmed` | 该 FP 整体是否澄清完毕 |
+| review | review_checklist.md 表格 `状态` 列 | **维度级**（每个 FP × 每个维度独立状态） | `[已确认]` / `[需关注]` / `[待确认]` / `[不适用]` | 该维度对该 FP 是否已确认/需追问 |
+
+**互转映射**（review→clarification 汇总场景使用）：
+
+| review 维度级状态 | clarification 功能点级状态推导规则 |
+|---|---|
+| 全部维度 `[已确认]` 或 `[不适用]` | `confirmed` |
+| 至少一个维度 `[需关注]` 或 `[待确认]`，但核心维度（功能边界/验收标准）已确认 | `partial` |
+| 核心维度（功能边界 / 平台范围 / 验收标准）出现 `[需关注]` 或 `[待确认]` | `unconfirmed` |
+
+**禁止**：在 review 的 `状态` 列写 `confirmed`/`partial` 等英文值，或在 clarification 的 `clarification_status` 写 `[已确认]` 等带方括号的值。
+
+### 评审整体判定（verdict / confidence / confidence_level）
+
+| Skill | 字段 | 取值 | 备注 |
+|---|---|---|---|
+| review | rr_summary.json `verdict` | `ready` / `ready_with_conditions` / `not_ready` | 报告级 Go-No-Go 三档；与 confidence 之间有硬规则约束 |
+| review | rr_summary.json `confidence` | 0-100 整数 | 评审置信度，按 [PHASES.md 5.1.5.1 评分规则](../requirement-review/PHASES.md#5151-confidence-评分规则) 计算 |
+| clarification | `confidence_level` | `high` / `medium` / `low` | 整体澄清置信度 |
+| clarification | `functional_points[].confidence` | 0-100 整数 | 功能点级量化置信度，按 [PHASES.md 3.2.1 评分规则](../requirement-clarification/PHASES.md#321-confidence-评分规则单-agent) 计算 |
+
+**对应关系**（review ↔ clarification 互转参考）：
+
+| review verdict | review confidence 范围 | 对应 clarification confidence_level | 对应 clarification 功能点 confidence 平均 |
+|---|---|---|---|
+| `ready` | ≥ 80 且阻断项=0 | `high` | ≥ 80 |
+| `ready_with_conditions` | 50-79 或阻断项 1-5 | `medium` | 50-79 |
+| `not_ready` | < 50 或阻断项 > 5 | `low` | < 50 |
+
+**评分规则一致性**：review 5.1.5.1 和 clarification 3.2.1 同构（基础分 + 已确认/source=document 占比 + 反例命中 + 核心维度补强 + 阻断/assumption 扣分），但因 review 是维度级、clarification 是功能点级，加权项的具体权重不同。新 skill 加入时应复用其中之一。
+
 ## 1. 功能边界
 
 **检查点**：
@@ -233,7 +288,7 @@
 
 **为什么单独拎出来**：错别字、术语漂移会原样传染到端上文案、UI 标签和测试用例（真实案例：PRD 写「该贴」→ Android/iOS 复制为「该贴」→ 上线后才发现应为「帖」）。AI 阅读 PRD 时只关注语义不易察觉这类问题，需要显式触发一遍校对。
 
-**严重性术语映射**：本节正文使用中文 `阻断 / 关注`；写入 JSON 字段（如 `doc_quality_issues[].severity`）时映射为 `blocking / concern`。两套术语等价，仅渲染层（人读 vs 机读）不同。
+**严重性术语**：统一使用中文 `阻断` / `关注`，包括 JSON 字段值（如 `doc_quality_issues[].severity` 直接写 `"阻断"` / `"关注"`）。详见本文件「术语映射」章节。旧版 `blocking` / `concern` 已废弃。
 
 **检查点**：
 
