@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.1.48
+
+### Test Plugin (0.0.16)
+
+**Code-review fixups (PR #61 third-round)**
+
+- `test-case-generation/PHASES.md §2.4` rewritten as single-Agent multi-dimension strong-reasoning (functional / exception / user dimensions executed serially in main Agent context); removed all `Read agents/requirement-understanding/...` / `Task` calls that referenced the deleted perspective subagent files. Aligns with the §0.1.42 single-agent rewrite of `requirement-review` / `requirement-clarification`
+- `_shared/AGENT_PROTOCOL.md` directory tree and naming convention list updated to drop the deleted `requirement-understanding/` directory; added a note explaining the consolidation
+- `metersphere-sync/PHASES.md §4.0` smoke-test prelude now handles all five `verdict` enum values (`fail` / `fail-with-degraded-input` / `inconclusive` / `pass` / `pass-with-warnings`) rather than only `fail` vs `pass`. `fail-with-degraded-input` and `inconclusive` both trigger the same Prepare downgrade as `fail`; comment text now includes the actual verdict so reviewers can distinguish honest degraded fails from clean fails
+- README and README.en updated: root插件表 test 0.0.10 → 0.0.16
+
+## 0.1.47
+
+### Test Plugin (0.0.15)
+
+**`test-case-generation/contract.yaml` input/output 修订**
+
+- `clarified_requirements` 和 `requirement_points` 从 `optional` 移到 `required`（两者成对出现，任一存在即可启动 session）
+- 新增 `final_cases.json` 输出条目（output 阶段的最终用例集，对外可入库）
+- `test_cases.json` 标 optional，描述改为 review 前快照，已被 `final_cases.json` 覆盖
+
 ## 0.1.46
 
 ### Test Plugin (0.0.14)
@@ -9,6 +30,46 @@
 - Skill name and directory renamed from `shared-tools` to `test-shared-tools`; the original name was too generic and risked colliding with downstream repos installing this plugin alongside other "shared tools" skills
 - Synced all references across plugin docs (`README.md`, `CONTRACT_SPEC.md`, `AI_CODING_BEST_PRACTICES.md`), every consumer skill (`SKILL.md`/`PHASES.md`/`contract.yaml` for change-analysis, requirement-clarification/review/traceability, test-case-generation/review, metersphere-sync, api-contract-validation, qa-workflow), agent prompts (`case-tracer.md`, `codex-change-analyzer.md`), `_shared/TRACEABILITY_PROTOCOL.md`, `tests/validate.sh`, and `.pre-commit-config.yaml`
 - No script-internal logic changes; only path/name updates so all `$SKILLS_ROOT/shared-tools/...` invocations now resolve as `$SKILLS_ROOT/test-shared-tools/...`
+
+## 0.1.45
+
+### Test Plugin (0.0.13)
+
+**Smoke-test source 8 (SEARCH-A/B/C) for low input quality**
+
+Empirical: GameJam case (session 253) recall 0/3 against QA-tracked P1/P2 bugs in low-input-quality mode; same input under new source 8 (session 254) recall 3/3.
+
+- `requirement-traceability/PHASES.md §5S.1 source 8` — low-input-quality compensation searches (CRITICAL, fires only when `input_quality == "low"`):
+  - **SEARCH-A**: new data-source coverage check (new tables/fields ↔ all read aggregation paths)
+  - **SEARCH-B**: time-field boundary check (`StartTime`/`EndTime`/`ExpiresTime` ↔ consume/display paths missing `now ⋛ boundary` guard)
+  - **SEARCH-C**: batch-operation bounds (for-range / batch SQL / loop-write ↔ `batch_size` / field-range / transaction boundaries)
+- Execution constraint to avoid N×3 full-repo greps: classify diff hunks once into 3 buckets, then run each search once per bucket; grep scoped to diff-affected packages first, widen only on miss
+- `contracts/defect-list.schema.json`: `evidence.search_id` added (string, pattern `^S[ABC]-\d+$`); `if/then` enforces `search_id` required when `evidence.source ∈ {search-a, search-b, search-c}` — verified with 6 fixtures (4 reject / 2 accept)
+- Removed redundant "(注意是 X 不是 Y)" tails from `description`/`expected_result`/`actual_result` in TEMPLATES (TEMPLATES.md naming hard-constraints table is canonical)
+- `TEMPLATES.md`: new defects naming hard-constraints table (`title→name`, `desc→description`, `expected→expected_result`, `actual→actual_result`) above defects example; defects example shows `evidence.source` enum including `search-a/b/c` and `search_id` field
+
+## 0.1.44
+
+### Test Plugin (0.0.12)
+
+**MeterSphere helper: lazy credential check (CI-friendly)**
+
+- `metersphere_helper.py` `_check_ms_credentials(cmd)` runs at `main()` dispatch time, before any subcommand handler. `validate-fv` (and any future local-only subcommand) skips the check via `_LOCAL_ONLY_COMMANDS` allowlist
+- Allowlist is "local only" rather than "MS only" so future MS-bound subcommands inherit the check by default — safer than the inverse
+- Replaces the prior `tests/validate.sh` workaround that wrapped Check N+2 with `MS_*` ci_dummy env exports (no longer needed since the helper now skips the check at root)
+
+## 0.1.43
+
+### Test Plugin (0.0.11)
+
+**Smoke-test honest verdict + cross-component evidence completeness + ui-fidelity/api-contract consolidation**
+
+GameJam-class漏报 root-cause fix (`input_quality` + supplementary cases routing) plus output-spec evidence completeness and architectural consolidation.
+
+- **Smoke-test honest verdict**: `requirement-traceability/PHASES.md §1.3.d` introduces `input_quality` (full/medium/low) as single source of truth for all degradation behavior; §3.1 priority 1.5 tier consumes `change_supplementary_cases.json`; §4.6 fallback synthesis only when `input_quality=low` (non-low + empty fv → STOP, no more silent fallback masking); §5S.2 verdict expanded from binary to 5 tiers (`pass` / `fail` / `pass-with-degraded-input` / `fail-with-degraded-input` / `inconclusive`); §5S.1 supplementary defects inherit ca priority directly
+- **Output-spec evidence completeness §3.2.0a**: A (data-flow closure) + B (cross-boundary recording) + D (path-driven failure modes) mechanically validated by `validate-fv`; C (per-expected reconciliation) is honest model self-check, NOT in validator (mechanical keyword match would create false safety); new `cross_component_break` defect source (5S.1 source 7); `forward_verification.schema` `requirement_id` pattern supports `FP-N | FP-UNMAPPED-N | R-N`; `case_source` enum added; `smoke-test-report.schema` `verdict` 5-tier + `input_quality` + `verification_channel` as required fields; `defect-list.schema` `P3` added for supplementary inheritance
+- **ui-fidelity-check skill consolidated**: standalone skill removed; check exclusively triggered inside `requirement-traceability §3.4` via shared `ui-fidelity-checker` agent. `agents/api-contract-validator.md` (new) extracted from `api-contract-validation/PHASES.md §3` for stateless reuse
+- **CI hardening**: new `tests/validate.sh` Check N+2 builds 4 synthetic fv entries (3 violations + 1 fail-path compliant) and asserts validator produces ≥1 of each A/B/D error class — regression-locks the validator behavior
 
 ## 0.1.42
 

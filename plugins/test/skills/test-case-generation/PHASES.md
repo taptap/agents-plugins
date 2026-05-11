@@ -182,39 +182,25 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 使用 Glob 工具确认 `sufficiency_assessment.json` 存在且非空。`user_decision == "aborted"` 时停止 skill。
 
-### 2.4 多视角并行分析（条件启动）
+### 2.4 单 Agent 多维度强推理（条件启动）
 
 > 仅当无上游 `clarified_requirements.json` 且需求复杂（>= 3 个功能点 + 文本 > 2000 字）时启动。
-> 上游已通过 requirement-clarification 做过多视角分析时跳过。
+> 上游已通过 requirement-clarification 做过澄清时跳过。
 
-在**单条消息**中同时发送 3 个 Task 调用，使用 [agents/requirement-understanding/](../../agents/requirement-understanding/) 下的 Agent 定义。
+主 Agent 在自身上下文中按以下三个维度顺序执行结构化推理（与 requirement-review/clarification 的单 Agent 强推理路线对齐，不再使用并行 sub-agent）：
 
-**Task prompt 示例**（以 functional-perspective 为例，其余两个结构相同）：
+1. **功能视角** — 列出每个功能点的核心流程、依赖前置条件、状态转换；标记隐含规则
+2. **异常视角** — 对每个功能点搜索：边界值、并发、网络/超时、权限拒绝、上游失败、数据缺失/脏数据；明确「假设/反例搜索/结论」三段式
+3. **用户视角** — 站在终端用户角度列出可观察行为差异、错误反馈路径、可恢复性
 
-```
-你是功能视角分析 Agent。请先 Read agents/requirement-understanding/functional-perspective.md 获取你的完整角色定义和输出格式要求。
-
-## 需求文档
-请 Read ./requirement_doc.md 获取完整需求文档。
-
-## 任务
-按角色定义中的「分析重点」逐项分析，输出 JSON 格式的 findings。
-每条 finding 必须包含 confidence 评分（0-100）。
-```
-
-- **functional-perspective**：指定 `model="opus"`
-- **exception-perspective**：指定 `model="opus"`
-- **user-perspective**：指定 `model="sonnet"`
-
-主 Agent 在收到 3 个 Task 结果后执行合并：
-1. 收集三个 Agent 的 findings 数组
-2. 按 `category` 分组，比对 — 相同功能点 + 相似描述 → 同一发现，confidence += 20
-3. 合并后的 findings 作为 decompose 阶段的补充输入，交叉验证的发现（2+ Agent 确认，confidence ≥ 80）在拆解时优先考虑
+每个维度产出 `findings` 数组（含 `category`、`description`、`confidence` 0-100）。三个维度完成后执行合并：
+1. 按 `category` 分组，相同功能点 + 相似描述 → 同一发现，confidence += 20（自一致性加成）
+2. confidence ≥ 80 直接进入 decompose 阶段补充输入，60-79 标记待确认，<60 丢弃
+3. 把合并结果与 `sufficiency_assessment` 一并交给 decompose 阶段
 
 **降级回退**：
-- 需求简单（< 3 功能点**且**文本 ≤ 2000 字**且** `sufficiency_assessment.overall == "sufficient"`）→ 跳过多视角 Agent 调用，但主 Agent 仍执行单视角快速分析（功能 + 异常两个维度，各 3-5 条 findings），作为 decompose 阶段的补充输入
-- 需求简单但 `sufficiency_assessment.overall != "sufficient"` → 不跳过，执行完整多视角分析（信息不足的需求需要更多交叉验证）
-- Task 工具不可用 → 在主 Agent 中顺序执行三个视角的分析（功能→异常→用户），不跳过
+- 需求简单（< 3 功能点**且**文本 ≤ 2000 字**且** `sufficiency_assessment.overall == "sufficient"`）→ 跳过本阶段，仅在主 Agent 中做功能 + 异常两个维度的快速扫描（各 3-5 条 findings）
+- 需求简单但 `sufficiency_assessment.overall != "sufficient"` → 不跳过，执行完整三维度推理（信息不足的需求需要更多交叉视角）
 
 ## 阶段 3: decompose - 功能拆解
 

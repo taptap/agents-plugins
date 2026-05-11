@@ -13,10 +13,6 @@ agents/
 ├── AGENT_TEMPLATE.md                 # 统一模板（无 frontmatter，不会被 agent loader 注册，仅作为新建 Agent 的复制起手参考）
 ├── test-case-writer.md               # 测试用例生成 Agent
 ├── ui-fidelity-checker.md            # UI 还原度检查 Agent
-├── requirement-understanding/        # 需求理解多视角 Agent
-│   ├── functional-perspective.md
-│   ├── exception-perspective.md
-│   └── user-perspective.md
 ├── test-case-generation/              # 测试用例生成评审冗余对
 │   ├── review-agent-1.md
 │   └── review-agent-2.md
@@ -25,6 +21,8 @@ agents/
 └── change-analysis/                  # 变更分析交叉验证 Agent
     └── codex-change-analyzer.md      # Codex CLI 独立分析（与主 Agent 交叉验证）
 ```
+
+> 注：`requirement-understanding/`（functional/exception/user-perspective）已并入主 Agent 单 Agent 强推理路线，不再作为独立 sub-agent。test-case-generation §2.4、requirement-review、requirement-clarification 全部通过主 Agent 在单上下文中按多维度顺序产出 findings，避免并行 sub-agent 的上下文/共识抖动。
 
 ### 模板结构
 
@@ -44,7 +42,7 @@ agents/
 
 - Agent 文件使用 kebab-case：`{角色描述}.md`
 - 冗余对使用数字后缀：`review-agent-1.md` / `review-agent-2.md`
-- 按功能域分目录：`requirement-understanding/`、`test-case-generation/`、`requirement-traceability/`
+- 按功能域分目录：`test-case-generation/`、`requirement-traceability/`
 
 ## 多 Agent 并行执行
 

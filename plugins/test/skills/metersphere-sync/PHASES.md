@@ -219,17 +219,26 @@ python3 $SKILLS_ROOT/test-shared-tools/scripts/metersphere_helper.py \
 
 ### 4.0 冒烟测试报告前置检查
 
-读取 `smoke_test_report.json`（如存在）。若文件存在且 `verdict == "fail"`：
+读取 `smoke_test_report.json`（如存在）。verdict 五档枚举（与 `contracts/smoke-test-report.schema.json` 对齐）：
+
+| verdict | 处理 |
+|---|---|
+| `fail` | 全量降级 Prepare（见下） |
+| `fail-with-degraded-input` | 全量降级 Prepare（见下），评论中额外注明输入质量降级 |
+| `inconclusive` | 全量降级 Prepare（见下），评论中注明判定不确定，需人工补充证据 |
+| `pass` | 继续正常流程（4.1-4.4），将 `traceability_summary` 追加到回写评论 |
+| `pass-with-warnings` | 继续正常流程（4.1-4.4），评论中追加 `warnings` 摘要 |
+| 文件不存在 | 继续正常流程（4.1-4.4），不追加 smoke 摘要 |
+
+**全量降级流程**（适用于 `fail` / `fail-with-degraded-input` / `inconclusive` 三档）：
 
 1. 提取 P0 缺陷摘要：`defect_summary.by_priority.P0` 数量 + `fail_reason`
-2. **全量降级**：跳过正常 VC 判定逻辑（4.3-4.4），将计划中**所有用例**标记为 `Prepare`：
+2. 跳过正常 VC 判定逻辑（4.3-4.4），将计划中**所有用例**标记为 `Prepare`：
 ```bash
 python3 $HELPER update-case-result <plan_case_id> Prepare \
-  --comment "冒烟测试未通过（P0 缺陷 {N} 个：{fail_reason}），需人工验证"
+  --comment "冒烟测试 verdict={verdict}（P0 缺陷 {N} 个：{fail_reason}），需人工验证"
 ```
 3. 降级完成后直接跳到 4.5
-
-若文件不存在或 `verdict == "pass"`，继续正常流程（4.1-4.4）。Pass 时将 `traceability_summary` 追加到回写评论中作为补充信息。
 
 ### 4.1 一站式回写（推荐路径）
 
