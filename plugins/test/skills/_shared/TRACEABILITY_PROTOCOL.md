@@ -183,7 +183,7 @@ requirement-traceability 正向通道的产出。**权威 schema 在 `_shared/sc
 落盘后强制跑：
 
 ```bash
-python3 $SKILLS_ROOT/shared-tools/scripts/metersphere_helper.py \
+python3 $SKILLS_ROOT/test-shared-tools/scripts/metersphere_helper.py \
   validate-fv $TEST_WORKSPACE/forward_verification.json
 ```
 

@@ -118,9 +118,9 @@ output:
 
 dependencies:
   scripts:
-    - shared-tools/scripts/fetch_feishu_doc.py
-    - shared-tools/scripts/gitlab_helper.py  # 条件触发：获取技术文档涉及代码时
-    - shared-tools/scripts/github_helper.py  # 条件触发：获取技术文档涉及代码时
+    - test-shared-tools/scripts/fetch_feishu_doc.py
+    - test-shared-tools/scripts/gitlab_helper.py  # 条件触发：获取技术文档涉及代码时
+    - test-shared-tools/scripts/github_helper.py  # 条件触发：获取技术文档涉及代码时
   env_vars:
     - FEISHU_APP_ID
     - FEISHU_APP_SECRET

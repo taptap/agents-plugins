@@ -55,7 +55,7 @@ api-contract-validation → api_contract_report.json
 
 ## 可用工具
 
-共享脚本（飞书/GitLab/GitHub）用法见 [shared-tools/SKILL.md](../shared-tools/SKILL.md)。以下为本 skill 特有工具：
+共享脚本（飞书/GitLab/GitHub）用法见 [test-shared-tools/SKILL.md](../test-shared-tools/SKILL.md)。以下为本 skill 特有工具：
 
 ### OpenAPI spec 解析
 

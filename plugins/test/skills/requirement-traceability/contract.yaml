@@ -166,11 +166,11 @@ output:
 
 dependencies:
   scripts:
-    - shared-tools/scripts/fetch_feishu_doc.py
-    - shared-tools/scripts/gitlab_helper.py
-    - shared-tools/scripts/github_helper.py
-    - shared-tools/scripts/search_mrs.py
-    - shared-tools/scripts/search_prs.py
+    - test-shared-tools/scripts/fetch_feishu_doc.py
+    - test-shared-tools/scripts/gitlab_helper.py
+    - test-shared-tools/scripts/github_helper.py
+    - test-shared-tools/scripts/search_mrs.py
+    - test-shared-tools/scripts/search_prs.py
   env_vars:
     - FEISHU_APP_ID
     - FEISHU_APP_SECRET

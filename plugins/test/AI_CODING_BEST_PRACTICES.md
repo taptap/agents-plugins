@@ -48,7 +48,7 @@ mkdir -p $TEST_WORKSPACE
 
 **3. MS 凭据 + 项目元数据**
 
-不用提前手动配。第一次跑 `metersphere-sync` 报 `missing required environment variables` 时，打开飞书 [MeterSphere 配置 (.env)](https://xd.feishu.cn/wiki/K4Cxw8HE5itR16kFFYicSctAnrc) 把配置块整段粘给 AI，让它写入 `plugins/test/skills/shared-tools/scripts/.env` 即可。
+不用提前手动配。第一次跑 `metersphere-sync` 报 `missing required environment variables` 时，打开飞书 [MeterSphere 配置 (.env)](https://xd.feishu.cn/wiki/K4Cxw8HE5itR16kFFYicSctAnrc) 把配置块整段粘给 AI，让它写入 `plugins/test/skills/test-shared-tools/scripts/.env` 即可。
 
 > ⚠️ `.env` 在 `.gitignore` 里，**不要**把 key 贴到 PR / 群聊 / 公开 issue。
 

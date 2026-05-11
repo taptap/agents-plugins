@@ -44,12 +44,12 @@
 **路径 C：在线获取**
 
 **预检**（首次调用脚本前执行）：
-1. 确认 `FEISHU_APP_ID` 和 `FEISHU_APP_SECRET` 已设置。脚本会自动从 `.env` 文件加载（参见 [env.example](../shared-tools/scripts/env.example)），但若 shell 环境和 `.env` 均未配置，需提示用户并停止
+1. 确认 `FEISHU_APP_ID` 和 `FEISHU_APP_SECRET` 已设置。脚本会自动从 `.env` 文件加载（参见 [env.example](../test-shared-tools/scripts/env.example)），但若 shell 环境和 `.env` 均未配置，需提示用户并停止
 2. 确保输出目录已创建（`mkdir -p`）
 
 ```bash
 mkdir -p "$OUTPUT_DIR"
-python3 $SKILLS_ROOT/shared-tools/scripts/fetch_feishu_doc.py \
+python3 $SKILLS_ROOT/test-shared-tools/scripts/fetch_feishu_doc.py \
   --url "<需求文档链接>" --output-dir "$OUTPUT_DIR" 2>"$OUTPUT_DIR/fetch_meta.json"
 ```
 

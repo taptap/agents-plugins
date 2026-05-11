@@ -8,7 +8,7 @@
    - 不可用 → 提示用户 `pip install pycryptodome`，**停止**
 2. 执行连通性检查：
    ```bash
-   python3 $SKILLS_ROOT/shared-tools/scripts/metersphere_helper.py ping
+   python3 $SKILLS_ROOT/test-shared-tools/scripts/metersphere_helper.py ping
    ```
    - 返回 `status: ok` → 继续
    - 失败 → **停止**，输出错误信息（helper 失败 stderr 已是结构化 JSON，参见 SKILL.md「Helper Commands」节）
@@ -45,7 +45,7 @@
 execute 模式校验示例：
 
 ```bash
-python3 $SKILLS_ROOT/shared-tools/scripts/metersphere_helper.py \
+python3 $SKILLS_ROOT/test-shared-tools/scripts/metersphere_helper.py \
   validate-fv $TEST_WORKSPACE/forward_verification.json
 # 失败 → exit 2 + stderr {type: validation, errors: [...]}
 ```
@@ -61,7 +61,7 @@ mapping 不存在或 sha 不匹配 → 提示用户先跑 `refresh-mapping`，**
 调用 `import-cases` 一次性完成模块创建、用例导入、**mapping 文件落盘**：
 
 ```bash
-python3 $SKILLS_ROOT/shared-tools/scripts/metersphere_helper.py \
+python3 $SKILLS_ROOT/test-shared-tools/scripts/metersphere_helper.py \
   import-cases <parent_module_id> <cases_file> \
   [--requirement <需求名>] [--tags 'AI 变更分析'] [--mapping-out PATH]
 ```
@@ -177,7 +177,7 @@ python3 $HELPER rebuild-mapping --plan-id <new_plan_id> --cases-path final_cases
 ### 3.1 查找或创建计划
 
 ```bash
-python3 $SKILLS_ROOT/shared-tools/scripts/metersphere_helper.py \
+python3 $SKILLS_ROOT/test-shared-tools/scripts/metersphere_helper.py \
   find-or-create-plan "<plan_name>" --stage smoke
 ```
 
@@ -189,7 +189,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/metersphere_helper.py \
 从 `ms_case_mapping.json` 的 `entries[].ms_id` 提取所有 ms_id，关联到计划：
 
 ```bash
-python3 $SKILLS_ROOT/shared-tools/scripts/metersphere_helper.py \
+python3 $SKILLS_ROOT/test-shared-tools/scripts/metersphere_helper.py \
   add-cases-to-plan <plan_id> --case-ids <ms_id1>,<ms_id2>,...
 ```
 
@@ -236,7 +236,7 @@ python3 $HELPER update-case-result <plan_case_id> Prepare \
 execute 模式的全部回写工作通过一个命令完成：
 
 ```bash
-python3 $SKILLS_ROOT/shared-tools/scripts/metersphere_helper.py \
+python3 $SKILLS_ROOT/test-shared-tools/scripts/metersphere_helper.py \
   writeback-from-fv \
   --plan-id <plan_id> \
   --fv-path $TEST_WORKSPACE/forward_verification.json \

@@ -62,7 +62,7 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 - 如 `requirement_doc.md` 已预下载：直接 Read
 - 如未预下载，使用脚本获取：
   ```bash
-  python3 $SKILLS_ROOT/shared-tools/scripts/fetch_feishu_doc.py \
+  python3 $SKILLS_ROOT/test-shared-tools/scripts/fetch_feishu_doc.py \
     --url "<需求文档链接>" --output-dir . 2>fetch_meta.json
   ```
 - 需求文档链接为空且无上游输入和本地文件时停止并报告错误

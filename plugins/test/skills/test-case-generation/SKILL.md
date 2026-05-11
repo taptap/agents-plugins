@@ -87,11 +87,11 @@ description: >
 
 ## 可用工具
 
-共享脚本（飞书/GitLab/GitHub）用法见 [shared-tools/SKILL.md](../shared-tools/SKILL.md)。以下为本 skill 特有工具：
+共享脚本（飞书/GitLab/GitHub）用法见 [test-shared-tools/SKILL.md](../test-shared-tools/SKILL.md)。以下为本 skill 特有工具：
 
 ### 1. Figma MCP
 
-当用户提供 Figma 链接时使用，按分级协议获取，详见 [shared-tools/SKILL.md](../shared-tools/SKILL.md#figma-设计稿获取)。
+当用户提供 Figma 链接时使用，按分级协议获取，详见 [test-shared-tools/SKILL.md](../test-shared-tools/SKILL.md#figma-设计稿获取)。
 
 ### 2. 子 Agent: test-case-writer
 

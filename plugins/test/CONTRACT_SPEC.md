@@ -2,7 +2,7 @@
 
 本文件定义 test 插件中 `contract.yaml` 的结构和编写规则。每个 skill 目录下必须包含一个 `contract.yaml`，声明该 skill 的输入输出接口，供编排层和开发者使用。
 
-> **受众**：新增 / 修改 skill 的开发者；contract.yaml 一致性自动校验工具（`shared-tools/scripts/validate_contracts.py`，由 `tests/validate.sh` Check 14 在 CI 强制执行）的依据。
+> **受众**：新增 / 修改 skill 的开发者；contract.yaml 一致性自动校验工具（`test-shared-tools/scripts/validate_contracts.py`，由 `tests/validate.sh` Check 14 在 CI 强制执行）的依据。
 > 撞名输出（多个 skill 声明同名文件）会被 Check 14 直接 fail；设计认可的"primary + fallback"或"共享 helper"模式可加入 [contracts/known-collisions.yaml](contracts/known-collisions.yaml) 白名单，须附 `reason` + `enforcement` 说明。
 
 ## 与 SKILL.md 的关系
@@ -49,9 +49,9 @@ output:
 
 dependencies:
   skills:                       # 可选：依赖的其他 skill（目录名）
-    - shared-tools
+    - test-shared-tools
   scripts:                      # 依赖的脚本列表（相对于 skills/ 目录）
-    - shared-tools/scripts/fetch_feishu_doc.py
+    - test-shared-tools/scripts/fetch_feishu_doc.py
   env_vars:                     # 必需的环境变量
     - FEISHU_APP_ID
     - FEISHU_APP_SECRET
@@ -79,7 +79,7 @@ dependencies:
 使用 `validate_contracts.py` 脚本验证所有 contract.yaml 的格式正确性：
 
 ```bash
-python3 plugins/test/skills/shared-tools/scripts/validate_contracts.py plugins/test/skills/
+python3 plugins/test/skills/test-shared-tools/scripts/validate_contracts.py plugins/test/skills/
 ```
 
 脚本检查：name 与目录名一致、required/one_of/any_of 字段类型合法、output.files 格式正确、from_upstream 引用的 skill 存在。

@@ -43,14 +43,14 @@ Opus
 
 ```bash
 # GitLab MR diff
-python3 $SKILLS_ROOT/shared-tools/scripts/gitlab_helper.py mr-diff <project_path> <mr_iid>
+python3 $SKILLS_ROOT/test-shared-tools/scripts/gitlab_helper.py mr-diff <project_path> <mr_iid>
 
 # GitHub PR diff
-python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-diff <owner/repo> <pr_number>
+python3 $SKILLS_ROOT/test-shared-tools/scripts/github_helper.py pr-diff <owner/repo> <pr_number>
 
 # 获取源文件上下文（按需）
-python3 $SKILLS_ROOT/shared-tools/scripts/gitlab_helper.py file-content <project_path> <file_path>
-python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py file-content <owner/repo> <file_path>
+python3 $SKILLS_ROOT/test-shared-tools/scripts/gitlab_helper.py file-content <project_path> <file_path>
+python3 $SKILLS_ROOT/test-shared-tools/scripts/github_helper.py file-content <owner/repo> <file_path>
 ```
 
 ## 执行方式（环境感知，按优先级尝试）
@@ -75,7 +75,7 @@ DIFF
 如果 Codex CLI 不可用，通过 Bash 调用 `codex_agent.py`（需要 `OPENAI_API_KEY` 环境变量）：
 
 ```bash
-python3 $SKILLS_ROOT/shared-tools/scripts/codex_agent.py \
+python3 $SKILLS_ROOT/test-shared-tools/scripts/codex_agent.py \
   --prompt "Analyze this code diff for risks, breaking changes, missing error handling, and call chain impacts. Output structured JSON findings.
 
 === DIFF START ===

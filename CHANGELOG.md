@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.46
+
+### Test Plugin (0.0.14)
+
+**Rename `shared-tools` → `test-shared-tools` (avoid cross-plugin name collision)**
+
+- Skill name and directory renamed from `shared-tools` to `test-shared-tools`; the original name was too generic and risked colliding with downstream repos installing this plugin alongside other "shared tools" skills
+- Synced all references across plugin docs (`README.md`, `CONTRACT_SPEC.md`, `AI_CODING_BEST_PRACTICES.md`), every consumer skill (`SKILL.md`/`PHASES.md`/`contract.yaml` for change-analysis, requirement-clarification/review/traceability, test-case-generation/review, metersphere-sync, api-contract-validation, qa-workflow), agent prompts (`case-tracer.md`, `codex-change-analyzer.md`), `_shared/TRACEABILITY_PROTOCOL.md`, `tests/validate.sh`, and `.pre-commit-config.yaml`
+- No script-internal logic changes; only path/name updates so all `$SKILLS_ROOT/shared-tools/...` invocations now resolve as `$SKILLS_ROOT/test-shared-tools/...`
+
 ## 0.1.42
 
 ### Test Plugin (0.0.10)

@@ -23,7 +23,7 @@ repos:
       - id: validate-contracts
         name: Validate contract.yaml schema
         description: 调用 marketplace 自带的 validate_contracts.py 校验所有 contract.yaml 格式
-        entry: python3 plugins/test/skills/shared-tools/scripts/validate_contracts.py plugins/test/skills/
+        entry: python3 plugins/test/skills/test-shared-tools/scripts/validate_contracts.py plugins/test/skills/
         language: system
         pass_filenames: false
         files: ^plugins/.+/contract\.yaml$

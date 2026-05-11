@@ -51,8 +51,8 @@ output:
 
 dependencies:
   scripts:
-    - shared-tools/scripts/gitlab_helper.py
-    - shared-tools/scripts/github_helper.py
+    - test-shared-tools/scripts/gitlab_helper.py
+    - test-shared-tools/scripts/github_helper.py
   env_vars:
     - GITLAB_URL
     - GITLAB_TOKEN

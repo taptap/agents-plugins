@@ -40,9 +40,9 @@ MR/PR 模式下：
 
 ```bash
 # GitLab
-python3 $SKILLS_ROOT/shared-tools/scripts/gitlab_helper.py mr-diff <project_path> <mr_iid>
+python3 $SKILLS_ROOT/test-shared-tools/scripts/gitlab_helper.py mr-diff <project_path> <mr_iid>
 # GitHub
-python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-diff <owner/repo> <pr_number>
+python3 $SKILLS_ROOT/test-shared-tools/scripts/github_helper.py pr-diff <owner/repo> <pr_number>
 ```
 
 ### 2.2 获取后端 diff（可选）

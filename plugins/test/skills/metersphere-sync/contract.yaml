@@ -91,7 +91,7 @@ output:
 
 dependencies:
   scripts:
-    - shared-tools/scripts/metersphere_helper.py
+    - test-shared-tools/scripts/metersphere_helper.py
   env_vars:
     - MS_BASE_URL
     - MS_ACCESS_KEY

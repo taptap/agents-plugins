@@ -46,7 +46,7 @@
 > **设计稿评审模式 / 描述评审模式**：当 prompt 顶部出现这两个模式标记之一时，跳过本节，直接以 prompt 中注入的「Story 描述」和/或「设计稿链接」作为需求输入源进入 2.3 / understand 阶段。
 
 1. **已预下载**（prompt 显示「需求文档已预下载」）→ 用 Read 工具依次读取主文档 `requirement_doc.md` 和所有子文档 `requirement_doc_sub_*.md`（按 prompt 中列出的文件名顺序）
-2. **预下载失败或未预下载** → 手动调用 `fetch_feishu_doc.py --with-children` 获取（用法见 [shared-tools](../shared-tools/SKILL.md)）
+2. **预下载失败或未预下载** → 手动调用 `fetch_feishu_doc.py --with-children` 获取（用法见 [test-shared-tools](../test-shared-tools/SKILL.md)）
 3. **文档获取失败** → **立即停止**，提示用户提供需求文档的飞书链接，等待回复后继续
 4. **子文档被截断**（prompt 提示子文档数量超过上限）→ 在 chat 中告知用户并建议补充关键子文档链接
 5. **读取文档中的图片**（prompt 显示图片数量 > 0 时必须执行）：
@@ -72,7 +72,7 @@
 
 ### 2.3 获取设计稿（条件触发，非阻断）
 
-当 Story 预取数据中包含设计稿链接，或用户在补充信息中提供了 Figma 链接时，按 [shared-tools Figma 分级协议](../shared-tools/SKILL.md#figma-设计稿获取) 获取设计稿数据：
+当 Story 预取数据中包含设计稿链接，或用户在补充信息中提供了 Figma 链接时，按 [test-shared-tools Figma 分级协议](../test-shared-tools/SKILL.md#figma-设计稿获取) 获取设计稿数据：
 
 1. `figma_metadata(url)` — 获取页面结构树，识别功能区块
 2. `figma_extract(url, 文本提取脚本)` — 提取 UI 文案和标签文本
@@ -88,7 +88,7 @@
 如果需求文档中明确提到了具体的代码模块、功能模块或文件路径，可通过 GitLab 脚本查看现有代码实现：
 
 ```bash
-python3 $SKILLS_ROOT/shared-tools/scripts/gitlab_helper.py file-content <project_path> <file_path> [--ref master]
+python3 $SKILLS_ROOT/test-shared-tools/scripts/gitlab_helper.py file-content <project_path> <file_path> [--ref master]
 ```
 
 **触发条件**（满足任一即触发）：

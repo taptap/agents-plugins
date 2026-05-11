@@ -1,5 +1,5 @@
 ---
-name: shared-tools
+name: test-shared-tools
 description: >
   数据获取共享脚本集合：飞书文档获取、GitLab MR/文件、GitHub PR/文件、MR/PR 搜索。
   触发：默认由其他 skill 间接引用，不直接触发。
@@ -27,7 +27,7 @@ description: >
 ## 飞书文档获取
 
 ```bash
-FETCH=$SKILLS_ROOT/shared-tools/scripts/fetch_feishu_doc.py
+FETCH=$SKILLS_ROOT/test-shared-tools/scripts/fetch_feishu_doc.py
 
 # 从 URL 获取（自动识别 wiki/docx/docs 链接）
 python3 $FETCH --url "https://xxx.feishu.cn/wiki/AbCdEfG" --output-dir . 2>tmp.log
@@ -48,7 +48,7 @@ python3 $FETCH --url "..." --output-dir . --skip-images
 ## GitLab 辅助脚本
 
 ```bash
-GITLAB=$SKILLS_ROOT/shared-tools/scripts/gitlab_helper.py
+GITLAB=$SKILLS_ROOT/test-shared-tools/scripts/gitlab_helper.py
 
 # MR diff
 python3 $GITLAB mr-diff <project_path> <mr_iid>
@@ -63,7 +63,7 @@ python3 $GITLAB file-content <project_path> <file_path> [--ref main]
 ## GitHub 辅助脚本
 
 ```bash
-GITHUB=$SKILLS_ROOT/shared-tools/scripts/github_helper.py
+GITHUB=$SKILLS_ROOT/test-shared-tools/scripts/github_helper.py
 
 # PR diff
 python3 $GITHUB pr-diff <owner/repo> <pr_number>
@@ -79,10 +79,10 @@ python3 $GITHUB file-content <owner/repo> <file_path> [--ref main]
 
 ```bash
 # 搜索 Story/Bug 关联的 GitLab MR
-python3 $SKILLS_ROOT/shared-tools/scripts/search_mrs.py <story_id>
+python3 $SKILLS_ROOT/test-shared-tools/scripts/search_mrs.py <story_id>
 
 # 搜索 Story/Bug 关联的 GitHub PR
-python3 $SKILLS_ROOT/shared-tools/scripts/search_prs.py <work_item_id>
+python3 $SKILLS_ROOT/test-shared-tools/scripts/search_prs.py <work_item_id>
 ```
 
 输出 JSON 到 stdout，包含关联的已合并+进行中 MR/PR 列表。
@@ -210,7 +210,7 @@ return JSON.stringify(collectLayout(target, 0));
 ## Codex Agent（代码分析交叉验证）
 
 ```bash
-CODEX=$SKILLS_ROOT/shared-tools/scripts/codex_agent.py
+CODEX=$SKILLS_ROOT/test-shared-tools/scripts/codex_agent.py
 
 # 分析代码变更风险
 python3 $CODEX --prompt "Analyze this diff for risks..." --work-dir "$(pwd)"

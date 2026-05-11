@@ -40,7 +40,7 @@ description: >
 所有 MS 操作通过 `metersphere_helper.py` 脚本执行：
 
 ```bash
-HELPER="$SKILLS_ROOT/shared-tools/scripts/metersphere_helper.py"
+HELPER="$SKILLS_ROOT/test-shared-tools/scripts/metersphere_helper.py"
 
 # 连通性检查
 python3 $HELPER ping
@@ -127,7 +127,7 @@ exit 2 → 入参/校验非法，stderr 同上
 
 ## 环境变量
 
-脚本从 `plugins/test/skills/shared-tools/scripts/.env` 读取配置。不用提前手动配——首次使用时如果 `.env` 没配齐，脚本会报 `missing required environment variables`，把飞书 [MeterSphere 配置 (.env)](https://xd.feishu.cn/wiki/K4Cxw8HE5itR16kFFYicSctAnrc) 里的配置块整段粘给 AI，让它写入 `.env` 即可。
+脚本从 `plugins/test/skills/test-shared-tools/scripts/.env` 读取配置。不用提前手动配——首次使用时如果 `.env` 没配齐，脚本会报 `missing required environment variables`，把飞书 [MeterSphere 配置 (.env)](https://xd.feishu.cn/wiki/K4Cxw8HE5itR16kFFYicSctAnrc) 里的配置块整段粘给 AI，让它写入 `.env` 即可。
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|

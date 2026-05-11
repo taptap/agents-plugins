@@ -89,13 +89,13 @@ description: >
 
 ## 可用工具
 
-共享脚本（飞书/GitLab/GitHub）用法见 [shared-tools/SKILL.md](../shared-tools/SKILL.md)。以下为本 skill 特有工具：
+共享脚本（飞书/GitLab/GitHub）用法见 [test-shared-tools/SKILL.md](../test-shared-tools/SKILL.md)。以下为本 skill 特有工具：
 
 ### 1. MR/PR 搜索脚本
 
 ```bash
-python3 $SKILLS_ROOT/shared-tools/scripts/search_mrs.py <story_id>
-python3 $SKILLS_ROOT/shared-tools/scripts/search_prs.py <story_id>
+python3 $SKILLS_ROOT/test-shared-tools/scripts/search_mrs.py <story_id>
+python3 $SKILLS_ROOT/test-shared-tools/scripts/search_prs.py <story_id>
 ```
 
 自动搜索所有仓库中关联的 MR/PR，输出 JSON 到 stdout。
@@ -103,22 +103,22 @@ python3 $SKILLS_ROOT/shared-tools/scripts/search_prs.py <story_id>
 ### 2. GitLab 辅助脚本
 
 ```bash
-python3 $SKILLS_ROOT/shared-tools/scripts/gitlab_helper.py mr-diff <project_path> <mr_iid>
-python3 $SKILLS_ROOT/shared-tools/scripts/gitlab_helper.py mr-detail <project_path> <mr_iid>
-python3 $SKILLS_ROOT/shared-tools/scripts/gitlab_helper.py file-content <project_path> <file_path> [--ref master]
+python3 $SKILLS_ROOT/test-shared-tools/scripts/gitlab_helper.py mr-diff <project_path> <mr_iid>
+python3 $SKILLS_ROOT/test-shared-tools/scripts/gitlab_helper.py mr-detail <project_path> <mr_iid>
+python3 $SKILLS_ROOT/test-shared-tools/scripts/gitlab_helper.py file-content <project_path> <file_path> [--ref master]
 ```
 
 ### 3. GitHub 辅助脚本
 
 ```bash
-python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-diff <owner/repo> <pr_number>
-python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-detail <owner/repo> <pr_number>
-python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py file-content <owner/repo> <file_path> [--ref main]
+python3 $SKILLS_ROOT/test-shared-tools/scripts/github_helper.py pr-diff <owner/repo> <pr_number>
+python3 $SKILLS_ROOT/test-shared-tools/scripts/github_helper.py pr-detail <owner/repo> <pr_number>
+python3 $SKILLS_ROOT/test-shared-tools/scripts/github_helper.py file-content <owner/repo> <file_path> [--ref main]
 ```
 
 ### 4. Figma MCP
 
-仅当 fetch 阶段发现 Figma 链接时使用（设计稿在变更分析中优先级低），按分级协议获取，详见 [shared-tools/SKILL.md](../shared-tools/SKILL.md#figma-设计稿获取)。
+仅当 fetch 阶段发现 Figma 链接时使用（设计稿在变更分析中优先级低），按分级协议获取，详见 [test-shared-tools/SKILL.md](../test-shared-tools/SKILL.md#figma-设计稿获取)。
 
 ## 按需扩展模块
 

@@ -93,7 +93,7 @@ handoffs:
 
 ## 可用工具
 
-共享脚本（飞书/GitLab/GitHub）用法见 [shared-tools/SKILL.md](../shared-tools/SKILL.md)。以下为本 skill 特有工具：
+共享脚本（飞书/GitLab/GitHub）用法见 [test-shared-tools/SKILL.md](../test-shared-tools/SKILL.md)。以下为本 skill 特有工具：
 
 ### 1. 飞书文档导出
 
@@ -104,14 +104,14 @@ handoffs:
 当需求文档中提到具体模块/功能时，可通过 GitLab 脚本查看现有代码实现：
 
 ```bash
-python3 $SKILLS_ROOT/shared-tools/scripts/gitlab_helper.py file-content <project_path> <file_path> [--ref master]
+python3 $SKILLS_ROOT/test-shared-tools/scripts/gitlab_helper.py file-content <project_path> <file_path> [--ref master]
 ```
 
 环境变量 `GITLAB_URL` 和 `GITLAB_TOKEN` 已在运行环境中预配置。
 
 ### 3. Figma MCP（条件触发）
 
-当用户提供设计稿链接或 Story 中包含设计稿链接时，按分级协议获取，详见 [shared-tools/SKILL.md](../shared-tools/SKILL.md#figma-设计稿获取)。
+当用户提供设计稿链接或 Story 中包含设计稿链接时，按分级协议获取，详见 [test-shared-tools/SKILL.md](../test-shared-tools/SKILL.md#figma-设计稿获取)。
 
 ## 各阶段详细操作
 
@@ -148,7 +148,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/gitlab_helper.py file-content <project
 
 ## 注意事项
 
-- 飞书工具选择和禁用项见 [shared-tools/SKILL.md](../shared-tools/SKILL.md) 的「工具选择快速参考」和「禁用工具」
+- 飞书工具选择和禁用项见 [test-shared-tools/SKILL.md](../test-shared-tools/SKILL.md) 的「工具选择快速参考」和「禁用工具」
 - **每个阶段结束时必须输出进度统计**
 - 回读中间文件等通用约定见 [CONVENTIONS](../../CONVENTIONS.md)
 - 阻断项确认通过调用 AskUserQuestion 工具完成，见 [CONVENTIONS.md](../../CONVENTIONS.md#askuserquestion-交互式提问) 和 [PHASES.md](PHASES.md) 阶段 4.4
@@ -213,6 +213,6 @@ Skill(skill: "test:test-case-generation")
 - **可操作性** — 输出的问题必须具体、可回答，禁止模糊的"需要注意"
 - **按职能分组** — 问题按 PM/Dev/QA/Design 分组，使用 P0/P1 二档优先级（P0=severity 阻断、P1=severity 关注，对齐 review_checklist.md 与 rr_summary.json）
 - **阻断项比例** — 阻断项通常不超过总问题数的 20%；若超过须在评审结论中说明
-- **飞书工具约束** — 禁止使用 WebFetch 获取飞书文档或 Figma 设计稿，见 [shared-tools 通用约定](../shared-tools/SKILL.md#禁用工具)
+- **飞书工具约束** — 禁止使用 WebFetch 获取飞书文档或 Figma 设计稿，见 [test-shared-tools 通用约定](../test-shared-tools/SKILL.md#禁用工具)
 - **中间文件回读** — 后续阶段引用前序数据必须通过 Read 工具回读文件，不依赖上下文记忆
 - **语言** — Chat 输出和报告使用中文；技术术语、文件路径保持原样

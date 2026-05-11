@@ -67,7 +67,7 @@ Opus（代码路径追踪需要深度推理）
 落盘后 sub-agent **必须**自跑校验，校验通过才能向主 agent 返回成功：
 
 ```bash
-python3 $SKILLS_ROOT/shared-tools/scripts/metersphere_helper.py \
+python3 $SKILLS_ROOT/test-shared-tools/scripts/metersphere_helper.py \
   validate-fv {output_path} --repo-root {repo_root}
 ```
 

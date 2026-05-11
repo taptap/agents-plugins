@@ -1296,12 +1296,12 @@ fi
 
 # ============================================================
 # 14. [test 插件] contract.yaml 跨 skill 一致性 + 输出文件名冲突
-# 委托给 plugins/test/skills/shared-tools/scripts/validate_contracts.py
+# 委托给 plugins/test/skills/test-shared-tools/scripts/validate_contracts.py
 # 含白名单（plugins/test/contracts/known-collisions.yaml）豁免设计认可的共享 helper 输出
 # ============================================================
 echo "=== Check 14: [test] contract.yaml cross-skill consistency ==="
 
-CONTRACT_VALIDATOR="${REPO_ROOT}/plugins/test/skills/shared-tools/scripts/validate_contracts.py"
+CONTRACT_VALIDATOR="${REPO_ROOT}/plugins/test/skills/test-shared-tools/scripts/validate_contracts.py"
 COLLISION_ALLOWLIST="${REPO_ROOT}/plugins/test/contracts/known-collisions.yaml"
 if [[ ! -f "$CONTRACT_VALIDATOR" ]]; then
   fail "validate_contracts.py not found at ${CONTRACT_VALIDATOR}"
@@ -1347,7 +1347,7 @@ fi
 # Check N+2: validate-fv A/B/D completeness constraints (C is model self-check, not validated mechanically)
 # ============================================================
 echo "=== Check N+2: validate-fv A/B/D completeness ==="
-HELPER="${REPO_ROOT}/plugins/test/skills/shared-tools/scripts/metersphere_helper.py"
+HELPER="${REPO_ROOT}/plugins/test/skills/test-shared-tools/scripts/metersphere_helper.py"
 if [[ ! -f "$HELPER" ]]; then
   fail "metersphere_helper.py not found at ${HELPER}"
 elif ! command -v python3 >/dev/null 2>&1; then
