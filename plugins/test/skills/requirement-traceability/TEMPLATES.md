@@ -331,6 +331,16 @@ UI 还原度检查报告（条件产出）。
 
 ### defects
 
+> **字段命名硬约束**（schema 显式 ban，违反将被 Write 守门拦截重写）：
+> | ❌ 行业习惯（JIRA / TAPD / Bugzilla 风） | ✅ 本 schema 必须用 |
+> | --- | --- |
+> | `title` | `name` |
+> | `desc` | `description` |
+> | `expected` | `expected_result` |
+> | `actual` | `actual_result` |
+>
+> 写 defect 前先停一拍 —— LLM 训练先验默认会写左列；本 marketplace 为了让规约可 enforce 选了右列。第一遍就写对，不要让 schema 守门替你纠错。权威定义见 `_shared/schemas/defect-list.schema.json`。
+
 ```json
 {
   "id": "DEFECT-1",
@@ -341,11 +351,12 @@ UI 还原度检查报告（条件产出）。
   "expected_result": "密码长度小于 8 位时应拒绝注册并提示'密码长度不足'",
   "actual_result": "代码中 validatePassword() 未检查长度限制，任意长度密码均可通过校验",
   "evidence": {
-    "source": "forward_verification | coverage_gap | api_contract | ui_fidelity",
+    "source": "forward_verification | coverage_gap | api_contract | ui_fidelity | search-a | search-b | search-c",
     "source_id": "VC-3",
     "requirement_ref": "R3",
     "code_location": "src/service/user.py:42",
-    "confidence": 85
+    "confidence": 85,
+    "search_id": "SA-1 | SB-2 | SC-3 (仅 source ∈ {search-a, search-b, search-c} 时必填，schema 强制；详见 PHASES.md §5S.1 来源 8)"
   },
   "related_mr": "project/path!123"
 }

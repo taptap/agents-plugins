@@ -945,6 +945,44 @@ Evidence:
 
 > **来源 7 设计动因**：5S.1 来源 1（fv fail）只能抓单 hop 偏离，跨多 hop 数据流断链类 bug（如 GameJam）会被分散为多个独立的 confidence 不确定 fv 条目，无法聚合为缺陷。来源 7 让"跨组件断链"成为一类显式缺陷，与单 hop 失败的 confidence 判定路径解耦。
 
+**来源 8：低质量补偿性静态搜索（CRITICAL，仅 `input_quality == "low"` 触发）**
+
+> **设计动因**：input_quality=="low" 时正向通道全部走 4.6 兜底合成，fv 全是文档级判断而非代码级追溯，5S.1 来源 1 几乎抓不到真缺陷（low 模式下大概率空转）。本来源是 low 模式的**主力检出通道**，不是补充。**实证**：GameJam 案例（session 253）在仅有来源 1-7 时漏检 100%（QA 实测 3 个 P1/P2 bug 一个没报）。加来源 8 三类静态搜索后，同一输入下（session 254）3/3 命中。
+
+**执行约束（避免 N×3 全仓扫）**：
+
+1. 先**一次性遍历 diff** 把所有 hunk 分类到 `{新增数据源, 时间字段, 批量操作}` 三个桶
+2. 每个桶各做**一轮** SEARCH（不要每个 hunk 各跑 3 次）
+3. 每轮 SEARCH 的 grep **优先限定在 diff 涉及的包/模块内**；命中 0 条或需要追跨包调用链时再扩展全仓
+4. 候选缺陷的 `evidence.search_id` 必填（schema 强制），不允许凭"灵感"补一条
+
+**SEARCH-A 新增数据源覆盖检查**
+
+1. 列出 diff 新增的所有 table / 字段 / 数据源，重点是承载用户可见状态的（余额、积分、状态、计数、可用性、配额）
+2. 对每个新增源，全仓 grep 所有读取该用户聚合数据的代码路径（关键词模式：`Balance` / `Get*Credit` / `Sum*` / `Aggregate*` / `List*Balance` / `total*` 等）
+3. 检查每个读路径在本次 diff 中是否被同步更新以纳入新源；未同步即生成缺陷候选
+- 缺陷名称 = "{读路径名} 未同步累加 {新增源}"
+- 优先级判定：涉及余额/金额/积分/配额聚合 → P1；其他 → P2
+- `evidence.source` = `"search-a"`，`evidence.search_id` = `"SA-{N}"`，`evidence.code_location` = 读路径文件:行
+
+**SEARCH-B 时间字段边界校验**
+
+1. 列出 diff 中引入或修改的所有时间字段（`StartTime` / `EndTime` / `ExpiresTime` / `*_at` / `valid_from` / `valid_to` / `effective_*`）
+2. 对每个时间字段，全仓 grep 所有引用点
+3. 在 consume / display / 可用性判断 路径上检查是否有 `now ⋛ 边界` 校验；缺失即生成缺陷候选
+- 缺陷名称 = "{字段名} 在 {路径名} 缺 now-vs-边界 校验"
+- 优先级判定：涉及可用性/扣款/权限放行 → P1；仅展示偏差 → P2
+- `evidence.source` = `"search-b"`，`evidence.search_id` = `"SB-{N}"`，`evidence.code_location` = 引用点文件:行
+
+**SEARCH-C 批量操作边界**
+
+1. 列出 diff 中所有 for-range / batch SQL（`UPDATE ... WHERE id IN (...)` / `LIMIT N`）/ 分页清理 / loop-write 操作
+2. 对每个操作，检查 batch_size 上限、单次写入数量上限、字段类型范围（DECIMAL 精度 / INT 边界）、事务边界
+3. 任一缺失或可疑即生成缺陷候选
+- 缺陷名称 = "{操作名} 未限制 {batch_size|字段范围|事务边界}"
+- 优先级判定：会导致数据丢失/截断/超时 → P1；仅性能/审计延迟 → P2；纵深防护建议 → P3
+- `evidence.source` = `"search-c"`，`evidence.search_id` = `"SC-{N}"`，`evidence.code_location` = 操作位置文件:行
+
 **排除规则（MR 流程状态）**：
 
 以下情况不提取为缺陷，仅在 `smoke_test_report.json` 的 `excluded_items` 中记录：

@@ -19,6 +19,26 @@
             {"required": ["title"]}
           ]
         },
+        "if": {
+          "type": "object",
+          "properties": {
+            "evidence": {
+              "type": "object",
+              "required": ["source"],
+              "properties": {
+                "source": {"enum": ["search-a", "search-b", "search-c"]}
+              }
+            }
+          },
+          "required": ["evidence"]
+        },
+        "then": {
+          "properties": {
+            "evidence": {
+              "required": ["search_id"]
+            }
+          }
+        },
         "properties": {
           "id": {
             "type": "string",
@@ -39,15 +59,15 @@
           },
           "description": {
             "type": "string",
-            "description": "完整描述（注意是 description 不是 desc）"
+            "description": "完整描述"
           },
           "expected_result": {
             "type": "string",
-            "description": "预期结果（注意是 expected_result 不是 expected）"
+            "description": "预期结果"
           },
           "actual_result": {
             "type": "string",
-            "description": "实际结果（注意是 actual_result 不是 actual）"
+            "description": "实际结果"
           },
           "evidence": {
             "type": "object",
@@ -58,7 +78,12 @@
               "source_id": {"type": "string"},
               "requirement_ref": {"type": "string"},
               "code_location": {"type": "string"},
-              "confidence": {"type": "number"}
+              "confidence": {"type": "number"},
+              "search_id": {
+                "type": "string",
+                "pattern": "^S[ABC]-\\d+$",
+                "description": "low quality 模式 5S.1 来源 8 静态搜索的命中编号，格式 S{A|B|C}-N（如 SA-1 / SB-2 / SC-3）。当 evidence.source ∈ {search-a, search-b, search-c} 时 schema 强制要求；目的是把 SEARCH 检出与 'agent 凭灵感写 defect' 区分开，让每条 search 来源 defect 都能挂回 PHASES.md §5S.1 来源 8 的某条 pattern"
+              }
             }
           },
           "related_mr": {
