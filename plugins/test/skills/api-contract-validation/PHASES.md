@@ -79,7 +79,7 @@ python3 $SKILLS_ROOT/test-shared-tools/scripts/github_helper.py pr-diff <owner/r
 
 ## 阶段 3: analyze - 启动 api-contract-validator Agent
 
-通过 Task 工具启动 `api-contract-validator` Agent（真源见 [test-shared-tools/agents/api-contract-validator.md](../test-shared-tools/agents/api-contract-validator.md)，Claude 注册入口为 `agents/api-contract-validator.md` 软链），把签名提取、4 维度交叉比对、Breaking Change 检测、命名风格归一全部委托给 Agent。这个 Agent 是无副作用的纯计算单元，同时被 `requirement-traceability` §3.2.5 复用，避免逻辑重复实现。
+通过 Task 工具启动 `api-contract-validator` Agent（Agent 定义见 [test-shared-tools/agents/api-contract-validator.md](../test-shared-tools/agents/api-contract-validator.md)），把签名提取、4 维度交叉比对、Breaking Change 检测、命名风格归一全部委托给 Agent。这个 Agent 是无副作用的纯计算单元，同时被 `requirement-traceability` §3.2.5 复用，避免逻辑重复实现。
 
 ### 3.1 启动 Agent
 

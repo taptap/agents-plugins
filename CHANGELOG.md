@@ -4,9 +4,9 @@
 
 ### Test Plugin (0.0.11)
 
-- Moved reusable Agent prompt definitions into their owning skill `agents/` directories as the single source of truth, while keeping `plugins/test/agents/**` as Claude Code registration symlinks.
+- Moved reusable Agent prompt definitions into their owning skill `agents/` directories as the single source of truth and removed the misleading legacy `plugins/test/agents/**` pseudo-registration layer.
 - Moved shared `CONVENTIONS.md` and contract schemas into `skills/commons/` so Codex skill-only installs can resolve them; kept `plugins/test/CONVENTIONS.md` and `plugins/test/contracts` as compatibility symlinks.
-- Documented the cross-runtime protocol: Claude Code may launch registered custom Agents through the symlink layer; Codex reads the skill-local Agent definition and runs it inline or, when explicitly delegated, via built-in `default` / `explorer` / `worker` sub-agents.
+- Documented the cross-runtime protocol: Claude Code and Codex both read the skill-local Agent definition; Claude uses a generic Task agent, while Codex runs inline or, when explicitly delegated, via built-in `default` / `explorer` / `worker` sub-agents.
 - Updated requirement-traceability, test-case-generation, api-contract-validation, and shared Agent protocol references to use skill-local Agent prompt paths.
 
 ## 0.1.42
@@ -160,7 +160,7 @@ Continuation of the GameJam fix — even when supplementary cases ARE consumed, 
 - Added `re_entry_phase` + `requirement_change_summary` optional inputs to `qa-workflow` for "rerun after requirement change" scenarios, passthrough to `test-case-generation`
 - Updated README selection guide to surface the demand-driven (tcg) vs change-driven (ca) split; dropped stale "v0.0.10+" version gates from architecture features section
 - Added quickstart note in `requirement-clarification/SKILL.md` clarifying that `output/*.json` files are pre-shipped format samples, not runtime artifacts
-- Added inline annotation in `agents/` tree (README + `_shared/AGENT_PROTOCOL.md`) explaining why files in `plugins/test/agents/` are not auto-registered as Claude/Codex subagents (no YAML frontmatter; loaded explicitly via Task tool calls inside skills)
+- Added inline annotation in the legacy `plugins/test/agents/` tree (README + `_shared/AGENT_PROTOCOL.md`) explaining why those files are not auto-registered as Claude/Codex subagents (no YAML frontmatter; loaded explicitly via Task tool calls inside skills)
 
 **Test plugin audit + CI hardening**
 

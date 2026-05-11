@@ -1,1 +1,0 @@
-../skills/test-shared-tools/agents/api-contract-validator.md

@@ -95,11 +95,11 @@ description: >
 
 ### 2. 子 Agent: test-case-writer
 
-通过 Task 工具调用，为单个功能模块生成测试用例。Agent 定义真源位于 [agents/test-case-writer.md](agents/test-case-writer.md)；Claude 注册入口 `.claude/agents/test-case-writer.md` 是软链。decompose 阶段生成 `context_summary.md` 后，Task prompt 中只需包含模块需求片段和一行 Read 指令指向 `context_summary.md`，子 Agent 自行读取全局上下文。Codex 环境不注册自定义 agent 类型，默认由主 Agent 读取定义后内联执行；用户明确要求并行/子 agent 时，才用内置 `worker` 并嵌入该定义。
+通过 Task 工具调用，为单个功能模块生成测试用例。Agent 定义真源位于 [agents/test-case-writer.md](agents/test-case-writer.md)。decompose 阶段生成 `context_summary.md` 后，Task prompt 中只需包含模块需求片段和一行 Read 指令指向 `context_summary.md`，子 Agent 自行读取全局上下文。Codex 环境不注册自定义 agent 类型，默认由主 Agent 读取定义后内联执行；用户明确要求并行/子 agent 时，才用内置 `worker` 并嵌入该定义。
 
 ### 3. 冗余对 Agent: review-agent-1/2
 
-通过 Task 工具并行调用，独立评审生成的用例。Agent 定义真源见 [agents/review-agent-1.md](agents/review-agent-1.md) / [agents/review-agent-2.md](agents/review-agent-2.md)；Claude 注册入口 `.claude/agents/test-case-generation/*` 是软链。两个 Agent 侧重不同维度（覆盖度 vs 质量），合并结果时应用共识加成。Codex 环境不注册自定义 agent 类型，默认由主 Agent 读取定义后顺序内联执行；用户明确要求并行/子 agent 时，才用内置 `worker` 并嵌入对应定义。
+通过 Task 工具并行调用，独立评审生成的用例。Agent 定义真源见 [agents/review-agent-1.md](agents/review-agent-1.md) / [agents/review-agent-2.md](agents/review-agent-2.md)。两个 Agent 侧重不同维度（覆盖度 vs 质量），合并结果时应用共识加成。Codex 环境不注册自定义 agent 类型，默认由主 Agent 读取定义后顺序内联执行；用户明确要求并行/子 agent 时，才用内置 `worker` 并嵌入对应定义。
 
 ## 阶段流程
 

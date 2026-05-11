@@ -12,7 +12,7 @@ Opus
 
 ## 执行时机
 
-**条件性启动**：变更文件 > 3 个时，与主 Agent 的阶段 3-5 并行执行。由主 Agent 在阶段 3 开始前通过 Agent 工具启动。
+**条件性启动**：变更文件 > 3 个时，与主 Agent 的阶段 3-5 并行执行。由主 Agent 在阶段 3 开始前通过通用 Task agent 启动，并要求子 Agent 先读取本文件。
 
 ## 分析重点
 
@@ -34,21 +34,16 @@ Opus
 
 ## 输入
 
-1. **MR/PR 标识列表**：由主 Agent 在 Agent prompt 中提供（如 `GitLab MR: cps/zeus !19967`）
-2. **不包含 diff 内容**：子 Agent 自己用辅助脚本获取 diff
+1. **MR/PR 标识列表**：由主 Agent 在 Task prompt 中提供（如 `GitLab MR: cps/zeus !19967`）
+2. **diff 内容**：由主 Agent 嵌入 Task prompt，或由子 Agent 根据 MR/PR 标识自行获取
 
 ## 数据获取
 
-子 Agent 使用 Bash 调用辅助脚本自行获取 diff 和源文件：
+子 Agent 可使用 Bash 调用辅助脚本自行获取 diff 和源文件：
 
 ```bash
-# GitLab MR diff
 python3 $SKILLS_ROOT/test-shared-tools/scripts/gitlab_helper.py mr-diff <project_path> <mr_iid>
-
-# GitHub PR diff
 python3 $SKILLS_ROOT/test-shared-tools/scripts/github_helper.py pr-diff <owner/repo> <pr_number>
-
-# 获取源文件上下文（按需）
 python3 $SKILLS_ROOT/test-shared-tools/scripts/gitlab_helper.py file-content <project_path> <file_path>
 python3 $SKILLS_ROOT/test-shared-tools/scripts/github_helper.py file-content <owner/repo> <file_path>
 ```

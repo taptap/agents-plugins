@@ -153,16 +153,16 @@
 
 ### 阶段 3.5: cross-validation — Codex 交叉验证（可选）
 
-> 触发条件：变更文件 > 3 个 且 `codex-change-analyzer` Agent 可用。不满足条件时跳过本阶段。
+> 触发条件：变更文件 > 3 个 且 [agents/codex-change-analyzer.md](agents/codex-change-analyzer.md) 可读。不满足条件时跳过本阶段。
 
 #### 启动时机
 
-**推荐**：在阶段 3 开始前，与阶段 3 并行启动 `codex-change-analyzer` Agent（通过 Task 工具），使 Codex 分析与主分析同时进行，不增加总耗时。
+**推荐**：在阶段 3 开始前，与阶段 3 并行启动通用 Task agent，并要求它先读取 [agents/codex-change-analyzer.md](agents/codex-change-analyzer.md)，使 Codex 分析与主分析同时进行，不增加总耗时。
 
 ```
 # 在单条消息中同时发出两个 Task：
-Task(subagent_type="codex-change-analyzer", description="Codex 独立分析代码变更",
-     prompt="分析以下代码变更的风险...\n\n=== DIFF START ===\n{完整 diff}\n=== DIFF END ===")
+Task(subagent_type="generalPurpose", description="Codex 独立分析代码变更",
+     prompt="先 Read $SKILLS_ROOT/change-analysis/agents/codex-change-analyzer.md 获取完整角色定义和输出格式要求。\n\n分析以下代码变更的风险...\n\n=== DIFF START ===\n{完整 diff}\n=== DIFF END ===")
 ```
 
 将完整 diff 内容嵌入 Task prompt（子 Agent 无法访问主 Agent 上下文）。

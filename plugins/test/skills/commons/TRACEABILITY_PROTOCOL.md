@@ -90,7 +90,7 @@ AI 分类标准：
 
 ## UI 还原度检查约定
 
-当调用方提供 `design_link`（Figma）+ `code_dir`（前端代码目录）时，requirement-traceability §3.4 通过 `test-shared-tools/agents/ui-fidelity-checker.md` 定义的 Agent 执行 UI 还原度对比。Claude 可通过 `.claude/agents` 软链注册入口启动；Codex 先读取该定义，默认内联执行，必要时用内置 `worker` 模拟。**纯静态对比**，不依赖运行时浏览器。
+当调用方提供 `design_link`（Figma）+ `code_dir`（前端代码目录）时，requirement-traceability §3.4 通过 `test-shared-tools/agents/ui-fidelity-checker.md` 定义的 Agent 执行 UI 还原度对比。Claude 和 Codex 都先读取该定义；Claude 通过通用 Task agent 执行，Codex 默认内联执行，必要时用内置 `worker` 模拟。**纯静态对比**，不依赖运行时浏览器。
 
 **工具链**：
 

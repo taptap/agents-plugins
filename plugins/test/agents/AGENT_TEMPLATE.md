@@ -1,1 +1,0 @@
-../skills/commons/agents/AGENT_TEMPLATE.md

@@ -274,7 +274,7 @@ test-shared-tools 脚本依赖以下环境变量（按需配置）：
 
 ## 版本历史
 
-- **v0.0.11** - Agent prompt 真源迁移到各 skill 的 `agents/` 目录，并保留 `plugins/test/agents/**` Claude Code 注册软链。`CONVENTIONS.md` 和 `contracts/` 真源迁移到 `skills/commons/`，根目录保留兼容软链，确保 Codex skill-only 安装也能解析共享规范与 schema。补充 Claude / Codex 兼容协议：Claude 可继续通过注册入口调自定义 Agent；Codex 不注册自定义 Agent 类型，需读取 skill 内 Agent 定义后内联执行，或在明确委托时用内置 `default` / `explorer` / `worker` 模拟。
+- **v0.0.11** - Agent prompt 真源迁移到各 skill 的 `agents/` 目录，移除 `plugins/test/agents/**` 伪注册软链层。`CONVENTIONS.md` 和 `contracts/` 真源迁移到 `skills/commons/`，根目录保留兼容软链，确保 Codex skill-only 安装也能解析共享规范与 schema。补充 Claude / Codex 兼容协议：两端都读取 skill 内 Agent 定义执行；Claude 通过通用 Task agent 执行，Codex 默认内联执行，或在明确委托时用内置 `default` / `explorer` / `worker` 模拟。
 - **v0.0.10** - 一次大版本，6 块改动合并发布：
   1. **requirement-review / requirement-clarification 单 Agent 强推理重构**：删除 user/functional/exception-perspective 三个子代理；4.1.7 反 collapse 枚举归一化 + 4.1.8 多变体一致性约束；`rr_summary.json` 新增 `confidence` 字段 + verdict 优先级链硬规则（命中即停）。`requirement-clarification` 改用同样的单 Agent 强推理；`requirement-review/PHASES.md` 4.0 模式说明改中性命名（设计稿评审模式 / 描述评审模式）。
   2. **飞书报告 checkbox 反馈结构**：4 份 TEMPLATES（rr / tcr / rt / ca）统一改用表格 + 二选一 checkbox 反馈；`requirement-traceability` 缺陷清单加 `---` 分隔；`change-analysis §6` 加 cross-validation 综合结论 checkbox。新增 `CONVENTIONS.md`「飞书文档渲染规范」段；`commons/REQUIREMENT_DIMENSIONS.md` 加 severity 阻断/关注（P0/P1 alias）+ verdict↔confidence 映射；`contracts/rr-summary.schema.json` `confidence` / `blocking_issues` 改 required；`tests/check-schemas.sh` 加越界/缺失拒收用例。

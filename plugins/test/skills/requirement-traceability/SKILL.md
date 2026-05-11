@@ -81,13 +81,13 @@ description: >
 
 ### UI 还原度检查（条件触发）
 
-当调用方提供 `design_link`（Figma）+ `code_dir`（前端代码目录或代码文件清单）时，正向通道额外执行 UI 还原度对比。使用 Figma MCP 获取结构化设计数据，从 `code_dir` 读取相关组件的样式定义，通过 `test-shared-tools/agents/ui-fidelity-checker.md` 定义的 Agent 做静态对比，输出 `ui_fidelity_report.json` 合并到 `traceability_coverage_report.json`。Claude 可通过 `.claude/agents` 软链注册入口启动；Codex 先读取该定义，默认内联执行，必要时用内置 `worker` 模拟。
+当调用方提供 `design_link`（Figma）+ `code_dir`（前端代码目录或代码文件清单）时，正向通道额外执行 UI 还原度对比。使用 Figma MCP 获取结构化设计数据，从 `code_dir` 读取相关组件的样式定义，通过 `test-shared-tools/agents/ui-fidelity-checker.md` 定义的 Agent 做静态对比，输出 `ui_fidelity_report.json` 合并到 `traceability_coverage_report.json`。Claude 和 Codex 都先读取该定义；Claude 通过通用 Task agent 执行，Codex 默认内联执行，必要时用内置 `worker` 模拟。
 
 **纯静态对比**（不依赖运行时浏览器），confidence 上限 60。触发条件：`design_link` + `code_dir` 都存在且 Figma MCP 可用。详见 PHASES.md §3.4。
 
 ### API 契约感知检查（条件触发）
 
-当代码变更涉及 API 交互（网络请求路径、API 模型、请求参数等）时，§3.2.5 通过 `test-shared-tools/agents/api-contract-validator.md` 定义的 Agent，做完整的路径 / 参数 / 响应字段 / Breaking Change 4 维度校验。结果合并到 `traceability_coverage_report.json` 的 `api_contract` 字段。Claude 可通过 `.claude/agents` 软链注册入口启动；Codex 先读取该定义，默认内联执行，必要时用内置 `worker` 模拟。
+当代码变更涉及 API 交互（网络请求路径、API 模型、请求参数等）时，§3.2.5 通过 `test-shared-tools/agents/api-contract-validator.md` 定义的 Agent，做完整的路径 / 参数 / 响应字段 / Breaking Change 4 维度校验。结果合并到 `traceability_coverage_report.json` 的 `api_contract` 字段。Claude 和 Codex 都先读取该定义；Claude 通过通用 Task agent 执行，Codex 默认内联执行，必要时用内置 `worker` 模拟。
 
 触发条件（满足任一）：代码变更包含 API 相关文件、需求点涉及接口交互、同时存在前端和后端 MR/PR。
 

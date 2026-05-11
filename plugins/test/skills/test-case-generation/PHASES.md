@@ -385,7 +385,7 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 ### 4.1 使用子 Agent 生成（模块 >= 3 个）
 
-对每个功能模块，通过 Task 工具调用 test-case-writer 子 Agent。Agent 的完整行为定义真源见 [agents/test-case-writer.md](agents/test-case-writer.md)；Claude 注册入口 `agents/test-case-writer.md` 是软链。Codex 环境先读取该真源文件，默认主 Agent 内联执行；仅当用户明确要求并行/子 agent 时，使用内置 `worker` 并把定义全文嵌入 prompt。
+对每个功能模块，通过 Task 工具调用 test-case-writer 子 Agent。Agent 的完整行为定义真源见 [agents/test-case-writer.md](agents/test-case-writer.md)。Codex 环境先读取该真源文件，默认主 Agent 内联执行；仅当用户明确要求并行/子 agent 时，使用内置 `worker` 并把定义全文嵌入 prompt。
 
 **Task 调用要点**：
 
@@ -484,7 +484,7 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 #### 5.4.1 Task 调用
 
-在**单条消息**中同时发送 2 个 Task 调用（如分批则每批各 2 个），使用本 skill [agents/](agents/) 下的 Agent 定义。Claude 注册入口 `agents/test-case-generation/*` 是软链；Codex 环境先读取真源文件，默认主 Agent 顺序内联执行，用户明确要求并行/子 agent 时才用内置 `worker` 模拟。
+在**单条消息**中同时发送 2 个 Task 调用（如分批则每批各 2 个），使用本 skill [agents/](agents/) 下的 Agent 定义。Codex 环境先读取真源文件，默认主 Agent 顺序内联执行，用户明确要求并行/子 agent 时才用内置 `worker` 模拟。
 
 **Task prompt 示例**（以 review-agent-1 为例，review-agent-2 结构相同）：
 

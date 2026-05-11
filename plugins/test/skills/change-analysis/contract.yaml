@@ -113,7 +113,7 @@ dependencies:
     - test-shared-tools/scripts/search_prs.py
     - test-shared-tools/scripts/codex_agent.py  # Phase 3.5 cross-validation fallback
   agents:
-    - change-analysis/codex-change-analyzer  # Phase 3.5 cross-validation
+    - change-analysis/agents/codex-change-analyzer  # Phase 3.5 cross-validation
   env_vars:
     - FEISHU_APP_ID
     - FEISHU_APP_SECRET
