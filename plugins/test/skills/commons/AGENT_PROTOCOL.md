@@ -4,29 +4,35 @@
 
 ## Agent 定义规范
 
-所有子 Agent 的行为定义统一放在 `agents/` 目录下，作为**单一事实源**。各 PHASES.md 通过文件路径引用 Agent 定义，不内嵌 Agent prompt。
+所有子 Agent 的行为定义统一放在对应 skill 的 `agents/` 目录下，作为**单一事实源**。`plugins/test/agents/**` 只保留指向这些真源文件的 Claude Code 注册软链。各 PHASES.md 通过 skill 内文件路径引用 Agent 定义，不内嵌 Agent prompt。
 
 ### 目录结构
 
 ```
-agents/
-├── AGENT_TEMPLATE.md                 # 统一模板（无 frontmatter，不会被 agent loader 注册，仅作为新建 Agent 的复制起手参考）
-├── test-case-writer.md               # 测试用例生成 Agent
-├── ui-fidelity-checker.md            # UI 还原度检查 Agent
-├── test-case-generation/              # 测试用例生成评审冗余对
-│   ├── review-agent-1.md
+skills/
+├── commons/agents/
+│   └── AGENT_TEMPLATE.md             # 统一模板（无 frontmatter，不会被 agent loader 注册，仅作为新建 Agent 的复制起手参考）
+├── test-case-generation/agents/
+│   ├── test-case-writer.md           # 测试用例生成 Agent
+│   ├── review-agent-1.md             # 测试用例生成评审冗余对
 │   └── review-agent-2.md
-├── requirement-traceability/         # 需求追溯 Agent（按模块拆分场景）
+├── requirement-traceability/agents/
 │   └── case-tracer.md                # 用例中介验证拆模块并行 sub-agent
-└── change-analysis/                  # 变更分析交叉验证 Agent
-    └── codex-change-analyzer.md      # Codex CLI 独立分析（与主 Agent 交叉验证）
+└── test-shared-tools/agents/
+    ├── api-contract-validator.md     # API 契约校验共享 Agent
+    └── ui-fidelity-checker.md        # UI 还原度检查共享 Agent
+
+agents/                               # Claude Code 注册入口层（软链，不是真源）
+├── AGENT_TEMPLATE.md -> ../skills/commons/agents/AGENT_TEMPLATE.md
+├── api-contract-validator.md -> ../skills/test-shared-tools/agents/api-contract-validator.md
+└── ...
 ```
 
 > 注：`requirement-understanding/`（functional/exception/user-perspective）已并入主 Agent 单 Agent 强推理路线，不再作为独立 sub-agent。test-case-generation §2.4、requirement-review、requirement-clarification 全部通过主 Agent 在单上下文中按多维度顺序产出 findings，避免并行 sub-agent 的上下文/共识抖动。
 
 ### 模板结构
 
-每个 Agent 定义文件遵循统一结构（详见 [AGENT_TEMPLATE.md](../../agents/AGENT_TEMPLATE.md)）：
+每个 Agent 定义文件遵循统一结构（详见 [AGENT_TEMPLATE.md](agents/AGENT_TEMPLATE.md)）：
 
 1. **角色定义** — 一句话描述
 2. **模型** — 按模型分层策略选择
@@ -45,6 +51,12 @@ agents/
 - 按功能域分目录：`test-case-generation/`、`requirement-traceability/`
 
 ## 多 Agent 并行执行
+
+### Claude / Codex 兼容协议
+
+- **Claude Code**：可通过 `.claude/agents/**` 注册入口启动自定义 Agent；Task prompt 仍应要求子 Agent 读取 skill 内真源文件（例如 `$SKILLS_ROOT/test-shared-tools/agents/api-contract-validator.md`），避免依赖注册入口路径作为维护源。
+- **Codex**：不会把 `agents/*.md` 注册成自定义 agent 类型。执行时必须先读取对应 skill 内真源文件；默认由主 Agent 内联执行。只有在用户明确要求并行、委托或子 agent 时，才使用 Codex 内置 `default` / `explorer` / `worker`，并把该 Agent 定义全文嵌入子 Agent prompt。
+- **降级原则**：Task / 自定义 Agent / Codex 子 Agent 不可用时，回退到主 Agent 按同一 Agent 定义内联执行；不得跳过该 Agent 负责的检查。
 
 ### 调用模式
 

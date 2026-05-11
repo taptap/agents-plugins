@@ -8,7 +8,7 @@
 
 可选参数:
   --allowlist <path>   YAML 白名单文件，用于豁免"经设计认可的冲突"。
-                       格式见 plugins/test/contracts/known-collisions.yaml。
+                       格式见 skills/commons/contracts/known-collisions.yaml。
                        未列入白名单的冲突仍报 fail。
 """
 

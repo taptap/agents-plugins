@@ -2,13 +2,13 @@
 
 ## 关于系统预取
 
-通用预取机制见 [CONVENTIONS.md](../../CONVENTIONS.md#系统预取)。本 skill 无额外预取字段（使用通用 Story 预取字段集）。
+通用预取机制见 [CONVENTIONS.md](../commons/CONVENTIONS.md#系统预取)。本 skill 无额外预取字段（使用通用 Story 预取字段集）。
 
 ## 阶段 1: init - 初始化
 
 ### 1.0 输入路由与模式识别
 
-按 [CONVENTIONS.md](../../CONVENTIONS.md#本地文件输入) 定义的优先级确认需求来源，并据此确定执行模式：
+按 [CONVENTIONS.md](../commons/CONVENTIONS.md#本地文件输入) 定义的优先级确认需求来源，并据此确定执行模式：
 
 1. 工作目录中已存在上游产出文件（如 `clarified_requirements.json`）→ 本 skill 为首环节，一般不存在上游文件，跳过
 2. `requirement_doc` 参数提供了本地文件 → **文档模式**，跳过在线获取，直接进入阶段 2 的文档解析
@@ -229,7 +229,7 @@ python3 $SKILLS_ROOT/test-shared-tools/scripts/fetch_feishu_doc.py \
 - 功能点涉及实时数据更新（WebSocket、推送）→ 需要通信协议
 - 功能点涉及状态同步（如支付状态回调）→ 需要回调接口
 
-**Step 1.5：数据充分性检查**（参见 [CONVENTIONS.md 数据充分性门控](../../CONVENTIONS.md#条件触发章节的数据充分性门控)）
+**Step 1.5：数据充分性检查**（参见 [CONVENTIONS.md 数据充分性门控](../commons/CONVENTIONS.md#条件触发章节的数据充分性门控)）
 
 在提取契约前，扫描所有源材料（需求文档、设计稿、已有代码），查找 API 相关的**具体技术证据**：
 - 显式 API 路径（`/api/xxx`、`POST /xxx`）
@@ -321,9 +321,9 @@ python3 $SKILLS_ROOT/test-shared-tools/scripts/fetch_feishu_doc.py \
 
 ### 3.3 渐进式确认
 
-按 SKILL.md 中定义的问题编排策略执行。所有提问**必须**通过调用 AskUserQuestion 工具完成，格式见 CONVENTIONS.md「[AskUserQuestion 交互式提问](../../CONVENTIONS.md#askuserquestion-交互式提问)」。
+按 SKILL.md 中定义的问题编排策略执行。所有提问**必须**通过调用 AskUserQuestion 工具完成，格式见 CONVENTIONS.md「[AskUserQuestion 交互式提问](../commons/CONVENTIONS.md#askuserquestion-交互式提问)」。
 
-> **CRITICAL — 选项溯源**：每个 option 必须填 `evidence_tag`（`quoted` / `derived` / `unknown`）+ `evidence_ref`。`quoted` / `derived` 的 `evidence_ref` **必须包含成对引号包裹的原文摘录**（如 `"需求第 9 行『发现改为动态』"`），仅写定位会被 schema 拒收。**AI 没依据时不要编候选让用户选**——改用 `unknown` + 开放式追问（候选写到 `question` 文本里作为提示词，`option` 留给元操作）。详见 [输出溯源原则](../../CONVENTIONS.md#输出溯源原则) 与 [反捏造模板](../../CONVENTIONS.md#反捏造模板何时不要列候选)。
+> **CRITICAL — 选项溯源**：每个 option 必须填 `evidence_tag`（`quoted` / `derived` / `unknown`）+ `evidence_ref`。`quoted` / `derived` 的 `evidence_ref` **必须包含成对引号包裹的原文摘录**（如 `"需求第 9 行『发现改为动态』"`），仅写定位会被 schema 拒收。**AI 没依据时不要编候选让用户选**——改用 `unknown` + 开放式追问（候选写到 `question` 文本里作为提示词，`option` 留给元操作）。详见 [输出溯源原则](../commons/CONVENTIONS.md#输出溯源原则) 与 [反捏造模板](../commons/CONVENTIONS.md#反捏造模板何时不要列候选)。
 >
 > **占位符必须替换**：下方示例中的 `{N}` / `{xxx}` 是占位符，AI 实际生成时**必须**替换为真实的行号和原文摘录。schema 只校验引号格式，不会发现 `『{阻断项原文摘录}』` 这种未替换的占位符——但留下花括号即视为违规，会在 review 时被打回。
 

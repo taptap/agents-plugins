@@ -294,7 +294,7 @@ chat 必须输出两段：
 | 项 | 内容 |
 | --- | --- |
 | 触发 | stderr `type: validation`, `errors[]` 列出每条不合规字段，exit 2 |
-| 根因 | 用例文件不符合 plugins/test/CONVENTIONS.md#用例-json-格式 |
+| 根因 | 用例文件不符合 CONVENTIONS.md#用例-json-格式 |
 | 修复 | 按 stderr 提示逐条修，重跑 import |
 
 ---

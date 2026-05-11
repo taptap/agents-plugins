@@ -2,7 +2,7 @@
 
 本文件定义 `requirement-clarification` 和 `requirement-review` 共享的 **12 个功能点级维度**，以及 1 个**文档级附加项（PRD 文档质量校对）**。各 skill 的 CHECKLIST.md 引用本文件，仅补充 skill 特有的检查项和使用策略。
 
-术语定义见 [CONVENTIONS.md](../../CONVENTIONS.md#术语表)。
+术语定义见 [CONVENTIONS.md](CONVENTIONS.md#术语表)。
 
 ## 何时选用哪个 Skill
 

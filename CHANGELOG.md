@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.43
+
+### Test Plugin (0.0.11)
+
+- Moved reusable Agent prompt definitions into their owning skill `agents/` directories as the single source of truth, while keeping `plugins/test/agents/**` as Claude Code registration symlinks.
+- Moved shared `CONVENTIONS.md` and contract schemas into `skills/commons/` so Codex skill-only installs can resolve them; kept `plugins/test/CONVENTIONS.md` and `plugins/test/contracts` as compatibility symlinks.
+- Documented the cross-runtime protocol: Claude Code may launch registered custom Agents through the symlink layer; Codex reads the skill-local Agent definition and runs it inline or, when explicitly delegated, via built-in `default` / `explorer` / `worker` sub-agents.
+- Updated requirement-traceability, test-case-generation, api-contract-validation, and shared Agent protocol references to use skill-local Agent prompt paths.
+
 ## 0.1.42
 
 ### Test Plugin (0.0.10)

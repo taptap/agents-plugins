@@ -292,7 +292,7 @@ def _sanitize_quotes(text: str) -> str:
     return ''.join(result)
 
 
-CONVENTIONS_DOC = 'plugins/test/CONVENTIONS.md#用例-json-格式'
+CONVENTIONS_DOC = 'skills/commons/CONVENTIONS.md#用例-json-格式'
 
 # 顶层允许的字段（其他视为拼写错误）
 _ALLOWED_CASE_FIELDS = frozenset({
@@ -1071,7 +1071,7 @@ def _load_fv_schema(schema_path: str | None) -> dict:
     if not path.exists():
         _fail(ERR_PRECONDITION,
               f"fv schema 文件不存在: {path}",
-              hint='检查 plugins/test/skills/commons/schemas/forward_verification.schema.json 是否存在',
+              hint='检查 skills/commons/schemas/forward_verification.schema.json 是否存在',
               schema_path=str(path))
     with open(path, 'r', encoding='utf-8') as f:
         return json.load(f)

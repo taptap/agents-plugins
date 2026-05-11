@@ -10,7 +10,7 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 ## 关于系统预取
 
-通用预取机制见 [CONVENTIONS.md](../../CONVENTIONS.md#系统预取)。本 skill 额外预取：测试用例链接、需求文档内容（预下载到 `requirement_doc.md`）。
+通用预取机制见 [CONVENTIONS.md](../commons/CONVENTIONS.md#系统预取)。本 skill 额外预取：测试用例链接、需求文档内容（预下载到 `requirement_doc.md`）。
 
 ## 阶段 1: init - 初始化
 
@@ -48,7 +48,7 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 ### 2.0 输入路由
 
-按 [CONVENTIONS.md](../../CONVENTIONS.md#本地文件输入) 定义的优先级确认需求来源：
+按 [CONVENTIONS.md](../commons/CONVENTIONS.md#本地文件输入) 定义的优先级确认需求来源：
 
 1. 工作目录中存在上游产出文件（`clarified_requirements.json`）→ 直接读取，跳过 2.1（需求文档获取）；仍执行 2.2（设计稿）和 2.3（技术文档）以获取最新数据
 2. 如存在 `requirement_points.json` → 读取作为功能点清单的参考
@@ -79,7 +79,7 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 ### 2.5 需求充分性门控
 
-在进入多视角分析或功能拆解之前，对已收集的全部输入材料（需求文档、设计稿、技术文档、上游澄清结果）进行最低充分性评估。复用 [CONVENTIONS.md](../../CONVENTIONS.md#条件触发章节的数据充分性门控) 的三级判定模式。
+在进入多视角分析或功能拆解之前，对已收集的全部输入材料（需求文档、设计稿、技术文档、上游澄清结果）进行最低充分性评估。复用 [CONVENTIONS.md](../commons/CONVENTIONS.md#条件触发章节的数据充分性门控) 的三级判定模式。
 
 #### 评估维度
 
@@ -122,7 +122,7 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 2. **全部至少 partial（无 none）** → 继续执行但设 `confidence_ceiling = 70`，后续生成的所有用例 confidence 封顶于此值
 3. **任一维度 none 且无上游 clarified_requirements** → 暂停，向用户呈现充分性报告并请求决策：
 
-调用 AskUserQuestion 工具（按 [输出溯源原则](../../CONVENTIONS.md#输出溯源原则) 标注 `evidence_tag` + `evidence_ref`，本场景是固定处置选项，标 `derived` 且 `evidence_ref` 必须含 `sufficiency_assessment.json` 中具体维度名的原文摘录。下方示例的 `{维度名}` 是占位符，AI 必须替换为真实维度名如 `performance` / `error_handling`，保留花括号视为违规）：
+调用 AskUserQuestion 工具（按 [输出溯源原则](../commons/CONVENTIONS.md#输出溯源原则) 标注 `evidence_tag` + `evidence_ref`，本场景是固定处置选项，标 `derived` 且 `evidence_ref` 必须含 `sufficiency_assessment.json` 中具体维度名的原文摘录。下方示例的 `{维度名}` 是占位符，AI 必须替换为真实维度名如 `performance` / `error_handling`，保留花括号视为违规）：
 
 ```json
 {
@@ -297,7 +297,7 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 - **0 条** → 跳过本阶段，直接进入阶段 4
 - **≥ 1 条** → 调用 AskUserQuestion 一次性提问（按模块分组，每个 (FP, ambiguity) 一道 question）
 
-每道 question 标准选项（按 [输出溯源原则](../../CONVENTIONS.md#输出溯源原则) 标注 `evidence_tag` + `evidence_ref`，`evidence_ref` 必须含 `decomposition.md` / 需求文档中的原文摘录）：
+每道 question 标准选项（按 [输出溯源原则](../commons/CONVENTIONS.md#输出溯源原则) 标注 `evidence_tag` + `evidence_ref`，`evidence_ref` 必须含 `decomposition.md` / 需求文档中的原文摘录）：
 
 ```json
 {
@@ -385,7 +385,7 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 ### 4.1 使用子 Agent 生成（模块 >= 3 个）
 
-对每个功能模块，通过 Task 工具调用 test-case-writer 子 Agent。Agent 的完整行为定义见 [agents/test-case-writer.md](../../agents/test-case-writer.md)。
+对每个功能模块，通过 Task 工具调用 test-case-writer 子 Agent。Agent 的完整行为定义真源见 [agents/test-case-writer.md](agents/test-case-writer.md)；Claude 注册入口 `agents/test-case-writer.md` 是软链。Codex 环境先读取该真源文件，默认主 Agent 内联执行；仅当用户明确要求并行/子 agent 时，使用内置 `worker` 并把定义全文嵌入 prompt。
 
 **Task 调用要点**：
 
@@ -484,12 +484,12 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 #### 5.4.1 Task 调用
 
-在**单条消息**中同时发送 2 个 Task 调用（如分批则每批各 2 个），使用 [agents/test-case-generation/](../../agents/test-case-generation/) 下的 Agent 定义。
+在**单条消息**中同时发送 2 个 Task 调用（如分批则每批各 2 个），使用本 skill [agents/](agents/) 下的 Agent 定义。Claude 注册入口 `agents/test-case-generation/*` 是软链；Codex 环境先读取真源文件，默认主 Agent 顺序内联执行，用户明确要求并行/子 agent 时才用内置 `worker` 模拟。
 
 **Task prompt 示例**（以 review-agent-1 为例，review-agent-2 结构相同）：
 
 ```
-你是测试评审 Agent #1。请先 Read agents/test-case-generation/review-agent-1.md 获取你的完整角色定义和输出格式要求。
+你是测试评审 Agent #1。请先 Read $SKILLS_ROOT/test-case-generation/agents/review-agent-1.md 获取你的完整角色定义和输出格式要求。
 
 ## 输入数据
 1. 请 Read ./requirement_points.md（或 ./requirement_points.json）获取需求功能点清单
@@ -503,8 +503,8 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 如 sufficiency_assessment.overall 不为 "sufficient"，在评审过程中启动推测性内容审查（角色定义中的第 3 节），将推测性细节纳入 findings 输出。
 ```
 
-- **review-agent-1**：Agent 定义见 [review-agent-1.md](../../agents/test-case-generation/review-agent-1.md)，指定 `model="opus"`
-- **review-agent-2**：Agent 定义见 [review-agent-2.md](../../agents/test-case-generation/review-agent-2.md)，指定 `model="opus"`
+- **review-agent-1**：Agent 定义见 [review-agent-1.md](agents/review-agent-1.md)，指定 `model="opus"`
+- **review-agent-2**：Agent 定义见 [review-agent-2.md](agents/review-agent-2.md)，指定 `model="opus"`
 
 两个 Agent 接收相同输入，独立按 [CHECKLIST.md](CHECKLIST.md) 的 4 维度评审。
 
@@ -560,9 +560,9 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 ### 6.2 向用户呈现
 
-调用 AskUserQuestion 工具提供结构化选项（格式见 CONVENTIONS.md「[AskUserQuestion 交互式提问](../../CONVENTIONS.md#askuserquestion-交互式提问)」），降低用户认知负担。
+调用 AskUserQuestion 工具提供结构化选项（格式见 CONVENTIONS.md「[AskUserQuestion 交互式提问](../commons/CONVENTIONS.md#askuserquestion-交互式提问)」），降低用户认知负担。
 
-> **CRITICAL — 选项溯源**：本阶段选项是固定处置选项（接受/驳回/补充），属于元操作。`evidence_tag` 标 `derived`，`evidence_ref` 必须包含 phase 5.6 合并结果中对应 finding 的原文摘录（用 `「」` 圈出 finding 关键描述）。**禁止**在 option label/description 中编造未在 finding 原文出现的具体名词（用例新字段、新版本号、新 API 路径 等）。详见 [输出溯源原则](../../CONVENTIONS.md#输出溯源原则)。
+> **CRITICAL — 选项溯源**：本阶段选项是固定处置选项（接受/驳回/补充），属于元操作。`evidence_tag` 标 `derived`，`evidence_ref` 必须包含 phase 5.6 合并结果中对应 finding 的原文摘录（用 `「」` 圈出 finding 关键描述）。**禁止**在 option label/description 中编造未在 finding 原文出现的具体名词（用例新字段、新版本号、新 API 路径 等）。详见 [输出溯源原则](../commons/CONVENTIONS.md#输出溯源原则)。
 >
 > **占位符必须替换**：下方示例的 `{N}` / `{finding_id}` / `{finding 原文摘录}` 等花括号占位符，AI 生成时**必须**替换为真实的 finding 编号和原话。保留花括号会通过 schema 但属于违规。
 

@@ -207,7 +207,7 @@
 
 ### 关键约束
 
-通用渲染规范见 [CONVENTIONS.md「飞书文档渲染规范」](../../CONVENTIONS.md#飞书文档渲染规范)（表格 vs bullet 选择规则、禁用元素清单）。本 skill 特定补充：
+通用渲染规范见 [CONVENTIONS.md「飞书文档渲染规范」](../commons/CONVENTIONS.md#飞书文档渲染规范)（表格 vs bullet 选择规则、禁用元素清单）。本 skill 特定补充：
 
 - §1 评审总览 → 保留 bullet（KV 指标）
 - §2 需求覆盖率（3 个子表）+ §3.2 缺失边界场景 → 用表格（详见上方各章节格式规则）

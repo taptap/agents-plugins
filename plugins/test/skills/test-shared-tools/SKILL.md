@@ -229,5 +229,5 @@ python3 $CODEX --prompt "..." --model gpt-5.4-mini --timeout 300 --max-turns 20
 
 - **禁止**使用 WebFetch 获取飞书文档（飞书需认证，WebFetch 无法通过）
 - **禁止**使用 WebFetch 获取 Figma 设计稿（使用 Figma MCP 分级获取协议）
-- 脚本失败重试策略见 [CONVENTIONS.md](../../CONVENTIONS.md#脚本失败重试策略)
+- 脚本失败重试策略见 [CONVENTIONS.md](../commons/CONVENTIONS.md#脚本失败重试策略)
 - `fetch_feishu_doc.py` 的 stderr 包含进度日志和 JSON 元数据（最后一行），消费元数据时取 stderr 最后一行

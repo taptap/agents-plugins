@@ -2,7 +2,7 @@
 
 ## 关于系统预取
 
-通用预取机制见 [CONVENTIONS.md](../../CONVENTIONS.md#系统预取)。本 skill 额外预取：关联代码变更列表（GitLab MR / GitHub PR）。预取数据仅在 MR/PR 模式下可用；本地 diff 模式无预取。
+通用预取机制见 [CONVENTIONS.md](../commons/CONVENTIONS.md#系统预取)。本 skill 额外预取：关联代码变更列表（GitLab MR / GitHub PR）。预取数据仅在 MR/PR 模式下可用；本地 diff 模式无预取。
 
 ## 阶段 1: init - 输入验证
 
@@ -79,16 +79,16 @@ python3 $SKILLS_ROOT/test-shared-tools/scripts/github_helper.py pr-diff <owner/r
 
 ## 阶段 3: analyze - 启动 api-contract-validator Agent
 
-通过 Task 工具启动 `api-contract-validator` Agent（见 [agents/api-contract-validator.md](../../agents/api-contract-validator.md)），把签名提取、4 维度交叉比对、Breaking Change 检测、命名风格归一全部委托给 Agent。这个 Agent 是无副作用的纯计算单元，同时被 `requirement-traceability` §3.2.5 复用，避免逻辑重复实现。
+通过 Task 工具启动 `api-contract-validator` Agent（真源见 [test-shared-tools/agents/api-contract-validator.md](../test-shared-tools/agents/api-contract-validator.md)，Claude 注册入口为 `agents/api-contract-validator.md` 软链），把签名提取、4 维度交叉比对、Breaking Change 检测、命名风格归一全部委托给 Agent。这个 Agent 是无副作用的纯计算单元，同时被 `requirement-traceability` §3.2.5 复用，避免逻辑重复实现。
 
 ### 3.1 启动 Agent
 
-通过 Task 工具启动子 Agent，指定 `model="opus"`。
+通过 Task 工具启动子 Agent，指定 `model="opus"`。Codex 环境不注册自定义 agent 类型：先 Read `$SKILLS_ROOT/test-shared-tools/agents/api-contract-validator.md`，默认由主 Agent 内联执行；仅当用户明确要求并行/子 agent 时，使用 Codex 内置 `worker` 并将该 Agent 定义全文嵌入 prompt。
 
 **Task prompt**：
 
 ```
-你是 API 契约校验 Agent。请先 Read agents/api-contract-validator.md 获取你的完整角色定义和输出格式要求。
+你是 API 契约校验 Agent。请先 Read $SKILLS_ROOT/test-shared-tools/agents/api-contract-validator.md 获取你的完整角色定义和输出格式要求。
 
 ## 前端 diff
 {从阶段 2.1 获取的 diff 内容；按 contract_checklist.md 中识别出的 API 相关文件过滤}

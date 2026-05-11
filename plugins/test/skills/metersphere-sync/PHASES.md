@@ -15,7 +15,7 @@
 
 ### 1.1 输入路由
 
-按 [CONVENTIONS.md](../../CONVENTIONS.md#上游输入消费) 定义的优先级确认输入：
+按 [CONVENTIONS.md](../commons/CONVENTIONS.md#上游输入消费) 定义的优先级确认输入：
 
 1. 工作目录中存在 `final_cases.json` → 作为主输入
 2. 工作目录中存在补充用例文件（任一）：`change_supplementary_cases.json` / `review_supplementary_cases.json` / `supplementary_cases.json` → 作为主输入。多个并存时按列出顺序优先（按上游 skill 区分文件名以避免撞名；`supplementary_cases.json` 仅 test-case-generation 内部使用）
@@ -39,7 +39,7 @@
 
 | mode | precondition |
 | --- | --- |
-| sync | `final_cases.json` 存在；schema 合法（顶层 array、每条满足 plugins/test/CONVENTIONS.md#用例-json-格式）；同 `(module, title)` 不重名 |
+| sync | `final_cases.json` 存在；schema 合法（顶层 array、每条满足 ../commons/CONVENTIONS.md#用例-json-格式）；同 `(module, title)` 不重名 |
 | execute | `forward_verification.json` 存在；通过 `validate-fv`；`ms_case_mapping.json` 存在；mapping 的 `source_cases_file.sha256` 与当前 `final_cases.json` 一致 |
 
 execute 模式校验示例：
@@ -118,7 +118,7 @@ python3 $SKILLS_ROOT/test-shared-tools/scripts/metersphere_helper.py \
 | 同模块重名 | [R-IC-1](../commons/RECOVERY.md#r-ic-1--同模块内重名) |
 | MS API 单条失败 | 记进 `failed_details`，不中断（无需 R-code，正常行为）|
 
-常见 schema 错误见 [CONVENTIONS.md#用例-json-格式](../../CONVENTIONS.md#用例-json-格式)。
+常见 schema 错误见 [CONVENTIONS.md#用例-json-格式](../commons/CONVENTIONS.md#用例-json-格式)。
 
 ### 2.3 mapping 维护命令
 
@@ -219,7 +219,7 @@ python3 $SKILLS_ROOT/test-shared-tools/scripts/metersphere_helper.py \
 
 ### 4.0 冒烟测试报告前置检查
 
-读取 `smoke_test_report.json`（如存在）。verdict 五档枚举（与 `contracts/smoke-test-report.schema.json` 对齐）：
+读取 `smoke_test_report.json`（如存在）。verdict 五档枚举（与 `../commons/contracts/smoke-test-report.schema.json` 对齐）：
 
 | verdict | 处理 |
 |---|---|

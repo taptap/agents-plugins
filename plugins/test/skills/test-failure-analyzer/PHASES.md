@@ -2,13 +2,13 @@
 
 ## 关于系统预取
 
-通用预取机制见 [CONVENTIONS.md](../../CONVENTIONS.md#系统预取)。本 skill 不依赖 Story 预取，输入来源为测试执行结果和代码 diff。
+通用预取机制见 [CONVENTIONS.md](../commons/CONVENTIONS.md#系统预取)。本 skill 不依赖 Story 预取，输入来源为测试执行结果和代码 diff。
 
 ## 阶段 1: init - 初始化
 
 ### 1.0 输入路由
 
-按 [CONVENTIONS.md](../../CONVENTIONS.md#本地文件输入) 定义的优先级确认输入来源：
+按 [CONVENTIONS.md](../commons/CONVENTIONS.md#本地文件输入) 定义的优先级确认输入来源：
 
 1. `test_output` 参数提供了测试执行的 stdout/stderr 文本 → 直接使用
 2. `test_report` 参数提供了测试报告文件（JSON/XML/文本）→ Read 该文件

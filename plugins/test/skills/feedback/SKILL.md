@@ -112,7 +112,7 @@ references/knowledge-base/
 
 ### 置信度标记
 
-统一使用 [CONVENTIONS.md](../../CONVENTIONS.md#置信度标记) 定义的标记体系。Feedback 场景的映射：
+统一使用 [CONVENTIONS.md](../commons/CONVENTIONS.md#置信度标记) 定义的标记体系。Feedback 场景的映射：
 
 | 标准标记 | Feedback 场景含义 |
 |---------|-----------------|
@@ -238,4 +238,4 @@ Read(file_path="references/knowledge-base/TapSDK问题.md")
 
 任一路径都必须有可追溯的行为记录。**不允许** chat 输出"已分析"后无后续动作直接结束。
 
-通用阶段执行约定见 [CONVENTIONS.md](../../CONVENTIONS.md#阶段执行保障)。
+通用阶段执行约定见 [CONVENTIONS.md](../commons/CONVENTIONS.md#阶段执行保障)。

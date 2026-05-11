@@ -55,15 +55,15 @@ output:
       description: decompose 阶段的全局上下文摘要（>=3 模块时生成）
       format: markdown
     - name: "module_*_cases.json"
-      description: generate 阶段各功能模块的用例文件（N 由模块拆解数决定，由并行子 Agent 写入）。schema 在 contracts/testcase.schema.json
+      description: generate 阶段各功能模块的用例文件（N 由模块拆解数决定，由并行子 Agent 写入）。schema 在 ../commons/contracts/testcase.schema.json
       format: json
       pattern: true
     - name: final_cases.json
-      description: output 阶段的最终用例集（合并 review 后的所有模块用例 + 补充用例），对外可入库。schema 在 contracts/testcase.schema.json
+      description: output 阶段的最终用例集（合并 review 后的所有模块用例 + 补充用例），对外可入库。schema 在 ../commons/contracts/testcase.schema.json
       format: json
     # ===== 中间/可选产物 =====
     - name: test_cases.json
-      description: generate 收尾时由 Bash 合并 module_*_cases.json 产出的中间用例集（review 前快照，已被 final_cases.json 覆盖；保留作审计）。schema 在 contracts/testcase.schema.json
+      description: generate 收尾时由 Bash 合并 module_*_cases.json 产出的中间用例集（review 前快照，已被 final_cases.json 覆盖；保留作审计）。schema 在 ../commons/contracts/testcase.schema.json
       format: json
       optional: true
     # ===== 可选产物（仅 review 阶段实际执行时产出）=====
@@ -76,7 +76,7 @@ output:
       format: json
       optional: true
     - name: supplementary_cases.json
-      description: output 阶段的补充用例（如有覆盖缺口）。schema 在 contracts/testcase.schema.json
+      description: output 阶段的补充用例（如有覆盖缺口）。schema 在 ../commons/contracts/testcase.schema.json
       format: json
       optional: true
     - name: requirement_points.md

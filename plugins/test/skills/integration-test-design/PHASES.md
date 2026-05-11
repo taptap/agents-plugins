@@ -2,7 +2,7 @@
 
 ## 关于系统预取
 
-通用预取机制见 [CONVENTIONS.md](../../CONVENTIONS.md#系统预取)。本 skill 不依赖 Story 预取，输入来源为 API 定义/服务模块/客户端模块路径。
+通用预取机制见 [CONVENTIONS.md](../commons/CONVENTIONS.md#系统预取)。本 skill 不依赖 Story 预取，输入来源为 API 定义/服务模块/客户端模块路径。
 
 ## 阶段 1: init — 初始化与项目测试约定学习
 

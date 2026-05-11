@@ -34,4 +34,4 @@ repos:
         entry: bash tests/check-schemas.sh
         language: system
         pass_filenames: false
-        files: ^plugins/test/contracts/testcase\.schema\.json$
+        files: ^plugins/test/skills/commons/contracts/testcase\.schema\.json$

@@ -5,7 +5,7 @@
 1. `code_change_analysis.md` — 飞书云文档「代码变更分析报告」
 2. `test_coverage_report.md` — 飞书云文档「测试覆盖评估报告」
 
-> 第三份「补充测试用例」由后端从 `change_supplementary_cases.json` 渲染，模板不在本 skill 控制；本 skill 只保证 JSON 字段正确（详见 [CONVENTIONS.md 用例 JSON 格式](../../CONVENTIONS.md#用例-json-格式)）。
+> 第三份「补充测试用例」由后端从 `change_supplementary_cases.json` 渲染，模板不在本 skill 控制；本 skill 只保证 JSON 字段正确（详见 [CONVENTIONS.md 用例 JSON 格式](../commons/CONVENTIONS.md#用例-json-格式)）。
 
 > **关于符号约定**：本 skill 输出的所有 markdown 报告状态标记使用中文方括号（`[实证]/[推测]`、`[高]/[中]/[低]`、`[已覆盖]/[未覆盖]/[待评估]`），**禁止使用 emoji ✅/⚠️/❌、ASCII `[OK]/[!]/[X]`、星级 ★/★★/★★★**——前两类飞书 import 会破坏渲染（详见 §「关键约束」），后一类与跨 workflow 分级符号不统一。
 
@@ -362,7 +362,7 @@ PR Test Plan 覆盖率评估：覆盖核心主路径约 70%，存在 6 个测试
 
 ## 关键约束
 
-通用渲染规范见 [CONVENTIONS.md「飞书文档渲染规范」](../../CONVENTIONS.md#飞书文档渲染规范)（表格 vs bullet 选择规则、禁用元素清单）。本 skill 特定补充：
+通用渲染规范见 [CONVENTIONS.md「飞书文档渲染规范」](../commons/CONVENTIONS.md#飞书文档渲染规范)（表格 vs bullet 选择规则、禁用元素清单）。本 skill 特定补充：
 
 - 第 1 章「变更分组总览」是树状层级（业务域→文件），保留 bullet
 - 第 2.5 节 / 第 4.1 / 4.2 / 第 3 章「覆盖率汇总」用表格（详见上方各节格式规则）

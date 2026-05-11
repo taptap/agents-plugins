@@ -95,7 +95,7 @@ handoffs:
 - 提供选项或默认值帮助回答，如「支付超时后订单状态：A) 保持待支付 B) 自动取消 C) 其他」
 - 对用户不关心的维度，AI 提出默认假设让用户确认，而非追问到底
 - 标注问题来源维度和关联功能点
-- **每个 option 必须带 evidence 标注**：遵循 [输出溯源原则](../../CONVENTIONS.md#输出溯源原则) 的三级标签 `quoted` / `derived` / `unknown`。`quoted` / `derived` 的 `evidence_ref` 必须包含成对引号包裹的原文摘录（不能只写定位）。**AI 没依据时不要编候选让用户选**——改用 `unknown` + [反捏造模板](../../CONVENTIONS.md#反捏造模板何时不要列候选)的开放式追问。
+- **每个 option 必须带 evidence 标注**：遵循 [输出溯源原则](../commons/CONVENTIONS.md#输出溯源原则) 的三级标签 `quoted` / `derived` / `unknown`。`quoted` / `derived` 的 `evidence_ref` 必须包含成对引号包裹的原文摘录（不能只写定位）。**AI 没依据时不要编候选让用户选**——改用 `unknown` + [反捏造模板](../commons/CONVENTIONS.md#反捏造模板何时不要列候选)的开放式追问。
 
 ## 模型分层
 
@@ -378,8 +378,8 @@ handoffs:
 
 ## 注意事项
 
-- 回读中间文件、中断恢复等通用约定见 [CONVENTIONS](../../CONVENTIONS.md)
-- 条件触发的分析章节（如 API 契约提取）在源材料信息不足时跳过，不生成推测性内容。详见 [CONVENTIONS.md 数据充分性门控](../../CONVENTIONS.md#条件触发章节的数据充分性门控)
+- 回读中间文件、中断恢复等通用约定见 [CONVENTIONS](../commons/CONVENTIONS.md)
+- 条件触发的分析章节（如 API 契约提取）在源材料信息不足时跳过，不生成推测性内容。详见 [CONVENTIONS.md 数据充分性门控](../commons/CONVENTIONS.md#条件触发章节的数据充分性门控)
 - 澄清过程中，从需求文档能直接获得答案的问题标记 `source: "document"`，不需要向人提问
 - 只在文档无法回答的问题上调用 AskUserQuestion 工具，避免过度打扰
 - 每个功能点的 `clarification_status` 反映当前澄清程度，`unconfirmed` 的项目会传递给下游 skill 作为风险标记

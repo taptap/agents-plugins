@@ -38,7 +38,7 @@
 
 `change_id` 取值：MR/PR 模式下为 MR/PR 标识（如 `project/path!123` 或 `owner/repo#456`）；本地 diff 模式下为文件名或自动生成的序号（如 `diff-1`）。
 
-`confidence` 取值 0-100，量化置信度评分。`confidence_label` 为向后兼容的文本标签，映射关系见 [CONVENTIONS.md](../../CONVENTIONS.md#量化置信度评分)。
+`confidence` 取值 0-100，量化置信度评分。`confidence_label` 为向后兼容的文本标签，映射关系见 [CONVENTIONS.md](../commons/CONVENTIONS.md#量化置信度评分)。
 
 `trace_direction` 取值：`bidirectional`（正反向 Agent 都确认）、`forward-only`（仅正向确认）、`reverse-only`（仅反向确认）。双向确认的映射 confidence 已包含 +20 共识加成。
 
@@ -175,7 +175,7 @@
 
 ## forward_verification.json (v2)
 
-正向用例中介验证结果。**顶层是平铺 JSON 数组**。**权威 schema 在 `commons/schemas/forward_verification.schema.json`**；本节是人话索引，schema 与本节冲突时以 schema 为准。完整字段表见 [`commons/TRACEABILITY_PROTOCOL.md`](../commons/TRACEABILITY_PROTOCOL.md#forward_verificationjson-格式v2)。
+正向用例中介验证结果。**顶层是平铺 JSON 数组**。**权威 schema 在 `../commons/schemas/forward_verification.schema.json`**；本节是人话索引，schema 与本节冲突时以 schema 为准。完整字段表见 [`commons/TRACEABILITY_PROTOCOL.md`](../commons/TRACEABILITY_PROTOCOL.md#forward_verificationjson-格式v2)。
 
 > **v2 关键变化**：pass 必须带 `evidence`；pass + conf<70 schema 拒绝；ext_deps 非空的 pass 下游降级为 MS Prepare（不再是「Pass + caveat」）。
 
@@ -339,7 +339,7 @@ UI 还原度检查报告（条件产出）。
 > | `expected` | `expected_result` |
 > | `actual` | `actual_result` |
 >
-> 写 defect 前先停一拍 —— LLM 训练先验默认会写左列；本 marketplace 为了让规约可 enforce 选了右列。第一遍就写对，不要让 schema 守门替你纠错。权威定义见 `commons/schemas/defect-list.schema.json`。
+> 写 defect 前先停一拍 —— LLM 训练先验默认会写左列；本 marketplace 为了让规约可 enforce 选了右列。第一遍就写对，不要让 schema 守门替你纠错。权威定义见 `../commons/schemas/defect-list.schema.json`。
 
 ```json
 {
@@ -654,7 +654,7 @@ private const val FAKE_DOWNLOAD_PROGRESS_INTERVAL_MS = 200L
 
 ### 关键约束
 
-通用渲染规范见 [CONVENTIONS.md「飞书文档渲染规范」](../../CONVENTIONS.md#飞书文档渲染规范)（表格 vs bullet 选择规则、禁用元素清单）。本 skill 特定补充：
+通用渲染规范见 [CONVENTIONS.md「飞书文档渲染规范」](../commons/CONVENTIONS.md#飞书文档渲染规范)（表格 vs bullet 选择规则、禁用元素清单）。本 skill 特定补充：
 
 - §1 核心指标 + §5 其他观察 → 保留 bullet（KV 指标 / 标签化短列表）
 - §3.1 需求覆盖矩阵（5 列）+ §3.2 代码变更追溯（3 列） → 用表格（详见上方各章节格式规则）

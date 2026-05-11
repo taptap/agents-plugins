@@ -150,8 +150,8 @@ python3 $SKILLS_ROOT/test-shared-tools/scripts/gitlab_helper.py file-content <pr
 
 - 飞书工具选择和禁用项见 [test-shared-tools/SKILL.md](../test-shared-tools/SKILL.md) 的「工具选择快速参考」和「禁用工具」
 - **每个阶段结束时必须输出进度统计**
-- 回读中间文件等通用约定见 [CONVENTIONS](../../CONVENTIONS.md)
-- 阻断项确认通过调用 AskUserQuestion 工具完成，见 [CONVENTIONS.md](../../CONVENTIONS.md#askuserquestion-交互式提问) 和 [PHASES.md](PHASES.md) 阶段 4.4
+- 回读中间文件等通用约定见 [CONVENTIONS](../commons/CONVENTIONS.md)
+- 阻断项确认通过调用 AskUserQuestion 工具完成，见 [CONVENTIONS.md](../commons/CONVENTIONS.md#askuserquestion-交互式提问) 和 [PHASES.md](PHASES.md) 阶段 4.4
 
 ## Closing Checklist（CRITICAL）
 
@@ -203,7 +203,7 @@ Skill(skill: "test:test-case-generation")
 {阻断项编号清单，每条一行}
 ````
 
-通用阶段执行约定见 [CONVENTIONS.md](../../CONVENTIONS.md#阶段执行保障)。
+通用阶段执行约定见 [CONVENTIONS.md](../commons/CONVENTIONS.md#阶段执行保障)。
 
 ## 约束规则
 
