@@ -155,7 +155,7 @@ func freePublishedIOSGame() {
 
 ## 跳过标准与测试质量防线
 
-通用规则见 [TEST_QUALITY_GUIDELINES.md](../_shared/TEST_QUALITY_GUIDELINES.md)（跳过标准、防硬编码、防 Mock 滥用、变异测试思维）。以下为单元测试特有的补充：
+通用规则见 [TEST_QUALITY_GUIDELINES.md](../commons/TEST_QUALITY_GUIDELINES.md)（跳过标准、防硬编码、防 Mock 滥用、变异测试思维）。以下为单元测试特有的补充：
 
 ### 跳过时的记录格式
 

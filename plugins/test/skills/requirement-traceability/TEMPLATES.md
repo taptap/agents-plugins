@@ -175,7 +175,7 @@
 
 ## forward_verification.json (v2)
 
-正向用例中介验证结果。**顶层是平铺 JSON 数组**。**权威 schema 在 `_shared/schemas/forward_verification.schema.json`**；本节是人话索引，schema 与本节冲突时以 schema 为准。完整字段表见 [`_shared/TRACEABILITY_PROTOCOL.md`](../_shared/TRACEABILITY_PROTOCOL.md#forward_verificationjson-格式v2)。
+正向用例中介验证结果。**顶层是平铺 JSON 数组**。**权威 schema 在 `commons/schemas/forward_verification.schema.json`**；本节是人话索引，schema 与本节冲突时以 schema 为准。完整字段表见 [`commons/TRACEABILITY_PROTOCOL.md`](../commons/TRACEABILITY_PROTOCOL.md#forward_verificationjson-格式v2)。
 
 > **v2 关键变化**：pass 必须带 `evidence`；pass + conf<70 schema 拒绝；ext_deps 非空的 pass 下游降级为 MS Prepare（不再是「Pass + caveat」）。
 
@@ -339,7 +339,7 @@ UI 还原度检查报告（条件产出）。
 > | `expected` | `expected_result` |
 > | `actual` | `actual_result` |
 >
-> 写 defect 前先停一拍 —— LLM 训练先验默认会写左列；本 marketplace 为了让规约可 enforce 选了右列。第一遍就写对，不要让 schema 守门替你纠错。权威定义见 `_shared/schemas/defect-list.schema.json`。
+> 写 defect 前先停一拍 —— LLM 训练先验默认会写左列；本 marketplace 为了让规约可 enforce 选了右列。第一遍就写对，不要让 schema 守门替你纠错。权威定义见 `commons/schemas/defect-list.schema.json`。
 
 ```json
 {

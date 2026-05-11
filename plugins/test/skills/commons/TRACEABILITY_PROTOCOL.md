@@ -116,7 +116,7 @@ AI 分类标准：
 
 ## forward_verification.json 格式（v2）
 
-requirement-traceability 正向通道的产出。**权威 schema 在 `_shared/schemas/forward_verification.schema.json`**，本节是人话说明，schema 与本节冲突时以 schema 为准。
+requirement-traceability 正向通道的产出。**权威 schema 在 `commons/schemas/forward_verification.schema.json`**，本节是人话说明，schema 与本节冲突时以 schema 为准。
 
 ```json
 [

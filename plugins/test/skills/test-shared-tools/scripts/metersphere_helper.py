@@ -1062,7 +1062,7 @@ from datetime import datetime, timezone  # noqa: E402
 
 _DEFAULT_FV_SCHEMA_PATH = (
     Path(__file__).resolve().parent.parent.parent
-    / '_shared' / 'schemas' / 'forward_verification.schema.json'
+    / 'commons' / 'schemas' / 'forward_verification.schema.json'
 )
 
 
@@ -1071,7 +1071,7 @@ def _load_fv_schema(schema_path: str | None) -> dict:
     if not path.exists():
         _fail(ERR_PRECONDITION,
               f"fv schema 文件不存在: {path}",
-              hint='检查 plugins/test/skills/_shared/schemas/forward_verification.schema.json 是否存在',
+              hint='检查 plugins/test/skills/commons/schemas/forward_verification.schema.json 是否存在',
               schema_path=str(path))
     with open(path, 'r', encoding='utf-8') as f:
         return json.load(f)

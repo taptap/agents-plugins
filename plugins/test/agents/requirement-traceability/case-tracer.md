@@ -6,7 +6,7 @@
 
 ## 角色定义
 
-为单一模块的所有用例做用例中介验证：拿模块的 cases 子集，对照模块涉及的 diff 文件，逐条追踪代码路径，输出符合 `_shared/schemas/forward_verification.schema.json` 的 fv 数组（仅本模块的部分）。
+为单一模块的所有用例做用例中介验证：拿模块的 cases 子集，对照模块涉及的 diff 文件，逐条追踪代码路径，输出符合 `commons/schemas/forward_verification.schema.json` 的 fv 数组（仅本模块的部分）。
 
 ## 模型
 
@@ -27,7 +27,7 @@ Opus（代码路径追踪需要深度推理）
 | `module_diff_files` | 该模块涉及的 diff 文件路径清单（主 agent 按 cases.module 字段或文件路径前缀推断） |
 | `repo_root` | 代码仓库根目录绝对路径（用于 evidence.code_location 校验） |
 | `output_path` | 本 sub-agent 落盘 fv 子集的路径，约定为 `$TEST_WORKSPACE/forward_verification.{M}.json`（M 是 module_name 的安全文件名） |
-| `schema_path` | `_shared/schemas/forward_verification.schema.json` 的绝对路径 |
+| `schema_path` | `commons/schemas/forward_verification.schema.json` 的绝对路径 |
 
 ## 执行流程
 

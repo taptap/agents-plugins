@@ -47,7 +47,7 @@ description: >
 
 ## 集成测试价值评估
 
-不是所有代码层都值得集成测。在 analyze 阶段对每个待测场景做价值评估，与 [单测的分层框架](../unit-test-design/SKILL.md#原则-2按行为主体分层判断测试价值) 配套使用，跨 skill 边界规则见 [UNIT_VS_INTEGRATION_BOUNDARIES](../_shared/UNIT_VS_INTEGRATION_BOUNDARIES.md)。
+不是所有代码层都值得集成测。在 analyze 阶段对每个待测场景做价值评估，与 [单测的分层框架](../unit-test-design/SKILL.md#原则-2按行为主体分层判断测试价值) 配套使用，跨 skill 边界规则见 [UNIT_VS_INTEGRATION_BOUNDARIES](../commons/UNIT_VS_INTEGRATION_BOUNDARIES.md)。
 
 ### 集成测试的核心价值
 
@@ -86,7 +86,7 @@ description: >
 
 ## 跳过标准与测试质量防线
 
-通用规则见 [TEST_QUALITY_GUIDELINES.md](../_shared/TEST_QUALITY_GUIDELINES.md)（跳过标准、防硬编码、防 Mock 滥用、变异测试思维）。以下为集成测试特有的补充：
+通用规则见 [TEST_QUALITY_GUIDELINES.md](../commons/TEST_QUALITY_GUIDELINES.md)（跳过标准、防硬编码、防 Mock 滥用、变异测试思维）。以下为集成测试特有的补充：
 
 ### 跳过标准补充：test helper 适用范围不明确
 

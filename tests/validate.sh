@@ -1200,7 +1200,7 @@ while IFS= read -r -d '' skill_md; do
     fail "${rel} frontmatter name='${fname}' != dir='${dir}'"
     check10_failed=1
   fi
-done < <(find "${REPO_ROOT}/plugins/test" -path '*/skills/*/SKILL.md' -not -path '*/_shared/*' -print0)
+done < <(find "${REPO_ROOT}/plugins/test" -path '*/skills/*/SKILL.md' -not -path '*/commons/*' -print0)
 if [[ $check10_failed -eq 0 ]]; then
   pass "all SKILL.md frontmatter name matches directory"
 fi
@@ -1224,7 +1224,7 @@ while IFS= read -r -d '' skill_md; do
       check11_failed=1
     fi
   done < <(grep -E '^[[:space:]]+skill:[[:space:]]*[a-z][a-z0-9_-]*:[a-z][a-z0-9_-]*' "$skill_md" 2>/dev/null)
-done < <(find "${REPO_ROOT}/plugins/test" -path '*/skills/*/SKILL.md' -not -path '*/_shared/*' -print0)
+done < <(find "${REPO_ROOT}/plugins/test" -path '*/skills/*/SKILL.md' -not -path '*/commons/*' -print0)
 if [[ $check11_failed -eq 0 ]]; then
   pass "all handoffs targets resolve"
 fi
@@ -1247,7 +1247,7 @@ while IFS= read -r -d '' f; do
       check12_failed=1
     fi
   done < <(grep -oE 'subagent_type[[:space:]]*=[[:space:]]*"[^"]+"' "$f" 2>/dev/null | sed -E 's/.*"([^"]+)".*/\1/' | sort -u)
-done < <(find "${REPO_ROOT}/plugins/test" \( -path '*/skills/*/SKILL.md' -o -path '*/skills/*/PHASES.md' -o -path '*/skills/*/references/*.md' \) -not -path '*/_shared/*' -print0)
+done < <(find "${REPO_ROOT}/plugins/test" \( -path '*/skills/*/SKILL.md' -o -path '*/skills/*/PHASES.md' -o -path '*/skills/*/references/*.md' \) -not -path '*/commons/*' -print0)
 if [[ $check12_failed -eq 0 ]]; then
   pass "all subagent_type references resolve"
 fi

@@ -44,7 +44,7 @@ description: >
 
 ## 交叉验证（可选）
 
-当运行环境支持并行 Agent 且功能点 > 5 个时，review 阶段可启用交叉验证模式（详见 [AGENT_PROTOCOL — 交叉验证协议](../_shared/AGENT_PROTOCOL.md#交叉验证协议)）：
+当运行环境支持并行 Agent 且功能点 > 5 个时，review 阶段可启用交叉验证模式（详见 [AGENT_PROTOCOL — 交叉验证协议](../commons/AGENT_PROTOCOL.md#交叉验证协议)）：
 
 - **视角 A（覆盖率）**：聚焦需求覆盖率维度和场景完整性维度
 - **视角 B（质量）**：聚焦用例正确性维度和用例规范性维度

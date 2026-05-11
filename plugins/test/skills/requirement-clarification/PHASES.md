@@ -263,11 +263,11 @@ python3 $SKILLS_ROOT/test-shared-tools/scripts/fetch_feishu_doc.py \
 
 ### 3.2.5 PRD 文档质量校对（必做）
 
-12 维度功能点分析完成后、进入渐进式确认之前，对 PRD 文档**文本本身**做一次校对，按 [REQUIREMENT_DIMENSIONS.md 附加项](../_shared/REQUIREMENT_DIMENSIONS.md#附加项prd-文档质量校对) 的 5 类检查项执行：错别字 / 术语一致性 / 易读性 / 文案-设计稿一致性 / 数字单位一致性。
+12 维度功能点分析完成后、进入渐进式确认之前，对 PRD 文档**文本本身**做一次校对，按 [REQUIREMENT_DIMENSIONS.md 附加项](../commons/REQUIREMENT_DIMENSIONS.md#附加项prd-文档质量校对) 的 5 类检查项执行：错别字 / 术语一致性 / 易读性 / 文案-设计稿一致性 / 数字单位一致性。
 
 执行规则：
 1. 仅基于 PRD 原文判定，每条发现必须含**原文摘录**（用 `『』` 圈出）；找不到原文 = 不写这条
-2. 所有发现先在内存中暂存，按 `severity` 区分后续处理（中文枚举，详见 [_shared/REQUIREMENT_DIMENSIONS.md 术语映射](../_shared/REQUIREMENT_DIMENSIONS.md#术语映射)）：
+2. 所有发现先在内存中暂存，按 `severity` 区分后续处理（中文枚举，详见 [commons/REQUIREMENT_DIMENSIONS.md 术语映射](../commons/REQUIREMENT_DIMENSIONS.md#术语映射)）：
    - `阻断`（错别字、数字单位歧义、占位符不一致）→ 必须在 3.3 渐进式确认中通过 AskUserQuestion 单独提问（option 提供「按建议修正 / 维持原文 / PM 线下确认」三个元操作，`evidence_tag = derived`，`evidence_ref` 必须包含 PRD 原文摘录）；用户答复后将决策合并到该条的 `resolution` 字段
    - `关注`（术语漂移、易读性）→ 不主动追问，直接进入 4.1 consolidate 阶段
 3. 4.1 consolidate 阶段把所有发现（含『阻断』决策结果）写入 `clarified_requirements.json` 的 `doc_quality_issues` 数组

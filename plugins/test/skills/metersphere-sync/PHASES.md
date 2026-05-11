@@ -110,12 +110,12 @@ python3 $SKILLS_ROOT/test-shared-tools/scripts/metersphere_helper.py \
 - `source_cases_file.sha256`：用于 `lookup-plan-case` 校验 mapping 与当前 cases 是否一致；不一致 → stale_mapping
 - `entries[].module_path`：MS 模块完整路径，便于人工定位
 
-**错误处理**（详见 [Recovery Cookbook](../../_shared/RECOVERY.md#6-r-icimport-cases-失败)）：
+**错误处理**（详见 [Recovery Cookbook](../../commons/RECOVERY.md#6-r-icimport-cases-失败)）：
 
 | 错误 | R-code |
 | --- | --- |
-| schema 校验失败 / 顶层非数组 | [R-IC-2](../../_shared/RECOVERY.md#r-ic-2--schema-校验失败) |
-| 同模块重名 | [R-IC-1](../../_shared/RECOVERY.md#r-ic-1--同模块内重名) |
+| schema 校验失败 / 顶层非数组 | [R-IC-2](../../commons/RECOVERY.md#r-ic-2--schema-校验失败) |
+| 同模块重名 | [R-IC-1](../../commons/RECOVERY.md#r-ic-1--同模块内重名) |
 | MS API 单条失败 | 记进 `failed_details`，不中断（无需 R-code，正常行为）|
 
 常见 schema 错误见 [CONVENTIONS.md#用例-json-格式](../../CONVENTIONS.md#用例-json-格式)。
@@ -132,7 +132,7 @@ python3 $HELPER refresh-mapping --mapping-path PATH --cases-path final_cases.jso
 python3 $HELPER refresh-mapping --mapping-path PATH --cases-path final_cases.json --apply
 ```
 
-差异处理见 [R-RM-1（missing_in_mapping）](../../_shared/RECOVERY.md#r-rm-1--missing_in_mapping) / [R-RM-2（stale_in_mapping）](../../_shared/RECOVERY.md#r-rm-2--stale_in_mapping)。`extra_in_ms`（MS 端独立加的）永不动。
+差异处理见 [R-RM-1（missing_in_mapping）](../../commons/RECOVERY.md#r-rm-1--missing_in_mapping) / [R-RM-2（stale_in_mapping）](../../commons/RECOVERY.md#r-rm-2--stale_in_mapping)。`extra_in_ms`（MS 端独立加的）永不动。
 
 ### 2.4 跨 plan 切换 / 重 import 后的 mapping 重建（P11 教训）
 
@@ -162,13 +162,13 @@ python3 $HELPER rebuild-mapping --plan-id <new_plan_id> --cases-path final_cases
 }
 ```
 
-**异常处理**（详见 [Recovery Cookbook](../../_shared/RECOVERY.md#4-r-rbrebuild-mapping-失败)）：
+**异常处理**（详见 [Recovery Cookbook](../../commons/RECOVERY.md#4-r-rbrebuild-mapping-失败)）：
 
 | 输出字段非空 | R-code |
 | --- | --- |
-| `ambiguous_titles` | [R-RB-1](../../_shared/RECOVERY.md#r-rb-1--ambiguous_titles) |
-| `unmatched_local` | [R-RB-2](../../_shared/RECOVERY.md#r-rb-2--unmatched_localD6-修复小循环)（含修复诊断流程图）|
-| `unmatched_in_plan` | [R-RB-3](../../_shared/RECOVERY.md#r-rb-3--unmatched_in_plan) |
+| `ambiguous_titles` | [R-RB-1](../../commons/RECOVERY.md#r-rb-1--ambiguous_titles) |
+| `unmatched_local` | [R-RB-2](../../commons/RECOVERY.md#r-rb-2--unmatched_localD6-修复小循环)（含修复诊断流程图）|
+| `unmatched_in_plan` | [R-RB-3](../../commons/RECOVERY.md#r-rb-3--unmatched_in_plan) |
 
 ---
 

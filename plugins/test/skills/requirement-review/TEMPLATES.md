@@ -171,7 +171,7 @@
 
 ## 二、文档文案校对
 
-> 必填区块。对 PRD 文档**文本本身**的校对结果（错别字 / 术语 / 易读性 / 文案-设计稿一致性 / 单位）。每条须含 PRD 原文摘录（用『』圈出）。无发现也须显式写「无发现」。严重性术语见 [_shared/REQUIREMENT_DIMENSIONS.md 术语映射](../_shared/REQUIREMENT_DIMENSIONS.md#术语映射)。
+> 必填区块。对 PRD 文档**文本本身**的校对结果（错别字 / 术语 / 易读性 / 文案-设计稿一致性 / 单位）。每条须含 PRD 原文摘录（用『』圈出）。无发现也须显式写「无发现」。严重性术语见 [commons/REQUIREMENT_DIMENSIONS.md 术语映射](../commons/REQUIREMENT_DIMENSIONS.md#术语映射)。
 
 | #   | 类别 | 位置 | 原文摘录 | 建议 | 严重性 |
 | --- | ---- | ---- | -------- | ---- | ------ |
@@ -389,7 +389,7 @@
     - [ ] 无效问题，原因：____________
   ```
 - `P0`/`P1` 必须用 `**...**` 加粗，便于评审会主持人一眼定位本组的 P0 项
-- **优先级二档**：`P0` = 评审会上必须拍板（对齐 review_checklist.md severity=阻断 / rr_summary.json blocking_issues），`P1` = 后续跟进即可（severity=关注）。详见 [_shared/REQUIREMENT_DIMENSIONS.md 术语映射](../_shared/REQUIREMENT_DIMENSIONS.md#术语映射)
+- **优先级二档**：`P0` = 评审会上必须拍板（对齐 review_checklist.md severity=阻断 / rr_summary.json blocking_issues），`P1` = 后续跟进即可（severity=关注）。详见 [commons/REQUIREMENT_DIMENSIONS.md 术语映射](../commons/REQUIREMENT_DIMENSIONS.md#术语映射)
 - **不写维度名**（如 `功能边界`/`状态流转`）：维度归属在 review_checklist.md 已记录，§3 重复显示对人类读者价值低
 - **不写建议处理时机**（如 `评审会上`/`开发前`）：第 4 章「时间盒清单」按 4 个时间点重新聚合所有 to-do，§3 重复显示是冗余
 - **不写来源编号**（FB2、LC2 + UX3 等内部编码对人类读者无意义）
@@ -417,7 +417,7 @@
 - 影响范围维度中涉及跨模块或跨系统变更的项
 - 时间依赖或环境依赖可能导致延期的项
 
-格式：5 列表格 `编号 / 风险描述 / 优先级 / 影响范围 / 建议措施`，优先级用 P0/P1（对齐 §3 和 _shared 术语映射）。
+格式：5 列表格 `编号 / 风险描述 / 优先级 / 影响范围 / 建议措施`，优先级用 P0/P1（对齐 §3 和 commons 术语映射）。
 无风险时不写表格，直接写一行 `- 未发现重大风险`。
 
 **第 6 章「评审范围声明」**

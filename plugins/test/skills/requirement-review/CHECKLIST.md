@@ -2,7 +2,7 @@
 
 本文件提供 `requirement-review` 工作流在 `review` 阶段的检查项和评审策略。
 
-12 维度检查点和问题模板见 [共享维度框架](../_shared/REQUIREMENT_DIMENSIONS.md)。
+12 维度检查点和问题模板见 [共享维度框架](../commons/REQUIREMENT_DIMENSIONS.md)。
 
 ## 术语说明
 
@@ -27,7 +27,7 @@
 - 根据需求类型（understand 阶段的分类结果）选择适用的维度，跳过明显不相关的维度并标记为 `[不适用]`
 - 评审发现的问题按照 TEMPLATES.md 中的问题分配规则分配给对应职能
 - 各维度统一使用 [TEMPLATES.md](TEMPLATES.md#review_checklistmd-模板) 中定义的表格格式输出
-- **12 维度评审完成后**必须执行 [PRD 文档质量校对](../_shared/REQUIREMENT_DIMENSIONS.md#附加项prd-文档质量校对)（错别字 / 术语一致性 / 易读性 / 文案-设计稿一致性 / 数字单位一致性），结果写入 `review_checklist.md` 单独的「文档文案校对」区块。错别字若已扩散到端上文案视为阻断项。
+- **12 维度评审完成后**必须执行 [PRD 文档质量校对](../commons/REQUIREMENT_DIMENSIONS.md#附加项prd-文档质量校对)（错别字 / 术语一致性 / 易读性 / 文案-设计稿一致性 / 数字单位一致性），结果写入 `review_checklist.md` 单独的「文档文案校对」区块。错别字若已扩散到端上文案视为阻断项。
 - **12 维度评审完成后**必须执行 [PHASES.md 4.1.7 分类变量正向枚举校验](PHASES.md#417-分类变量正向枚举校验必做)（检测「X 不…」「非 X」「除 X 外」等否定句式，提取隐含分类变量并查全集），结果写入 `review_checklist.md` 单独的「分类变量枚举」区块。无发现也须显式写「无发现」。
 - **进入「交互与 UI 规则」维度时**必须执行 [PHASES.md 4.1.8 多变体一致性追问](PHASES.md#418-多变体一致性追问条件触发critical--类继承防御)（检测 cell/列表/tab 改动场景），命中时在该维度行下增加 `[待确认]` 子项分配给 PM；不命中时在维度说明列写「无多变体场景」。
 
@@ -39,7 +39,7 @@
 
 ### 问题职能分配
 
-评审发现的问题按 PM/Dev/QA/Design 分组，使用 P0/P1 二档优先级（P0=severity 阻断、P1=severity 关注）。详见 [_shared/REQUIREMENT_DIMENSIONS.md 术语映射](../_shared/REQUIREMENT_DIMENSIONS.md#术语映射)。
+评审发现的问题按 PM/Dev/QA/Design 分组，使用 P0/P1 二档优先级（P0=severity 阻断、P1=severity 关注）。详见 [commons/REQUIREMENT_DIMENSIONS.md 术语映射](../commons/REQUIREMENT_DIMENSIONS.md#术语映射)。
 
 ---
 

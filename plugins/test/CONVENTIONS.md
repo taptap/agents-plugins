@@ -21,11 +21,11 @@
 
 ## 断言审计协议
 
-详见 [skills/_shared/ASSERTION_AUDIT.md](skills/_shared/ASSERTION_AUDIT.md)。
+详见 [skills/commons/ASSERTION_AUDIT.md](skills/commons/ASSERTION_AUDIT.md)。
 
 ## 独立验证者协议
 
-详见 [skills/_shared/ASSERTION_AUDIT.md](skills/_shared/ASSERTION_AUDIT.md)。
+详见 [skills/commons/ASSERTION_AUDIT.md](skills/commons/ASSERTION_AUDIT.md)。
 
 ## 回读中间文件
 
@@ -177,7 +177,7 @@ Agent 因 context 截断或异常中断后恢复执行时：
 
 ### 优先级 / 状态术语
 
-- 严重性 / 优先级二档 `阻断` / `关注`，工程化别名 `P0` / `P1`（详见 [_shared/REQUIREMENT_DIMENSIONS.md 术语映射](skills/_shared/REQUIREMENT_DIMENSIONS.md#术语映射)）
+- 严重性 / 优先级二档 `阻断` / `关注`，工程化别名 `P0` / `P1`（详见 [commons/REQUIREMENT_DIMENSIONS.md 术语映射](skills/commons/REQUIREMENT_DIMENSIONS.md#术语映射)）
 - 旧版 `阻断/高/中/低` 四档已废弃，改用 P0/P1
 - 信息边界状态符号 `[已获取]` / `[未获取]` / `[不完整]`
 - 实证置信度 `[实证]` / `[推测]`
@@ -461,7 +461,7 @@ requirement-clarification → clarified_requirements.json (functional_point.conf
 
 ## Agent 定义规范
 
-详见 [skills/_shared/AGENT_PROTOCOL.md](skills/_shared/AGENT_PROTOCOL.md)。
+详见 [skills/commons/AGENT_PROTOCOL.md](skills/commons/AGENT_PROTOCOL.md)。
 
 ## 模型分层策略
 
@@ -492,7 +492,7 @@ requirement-clarification → clarified_requirements.json (functional_point.conf
 
 ## 多 Agent 并行执行
 
-详见 [skills/_shared/AGENT_PROTOCOL.md](skills/_shared/AGENT_PROTOCOL.md)。
+详见 [skills/commons/AGENT_PROTOCOL.md](skills/commons/AGENT_PROTOCOL.md)。
 
 ## 功能点编号前缀
 
@@ -586,27 +586,27 @@ requirement-clarification → clarified_requirements.json (functional_point.conf
 
 ## 双通道追溯模式
 
-详见 [skills/_shared/TRACEABILITY_PROTOCOL.md](skills/_shared/TRACEABILITY_PROTOCOL.md)。
+详见 [skills/commons/TRACEABILITY_PROTOCOL.md](skills/commons/TRACEABILITY_PROTOCOL.md)。
 
 ## 影响范围分析约定
 
-详见 [skills/_shared/TRACEABILITY_PROTOCOL.md](skills/_shared/TRACEABILITY_PROTOCOL.md)。
+详见 [skills/commons/TRACEABILITY_PROTOCOL.md](skills/commons/TRACEABILITY_PROTOCOL.md)。
 
 ## 自循环协议
 
-详见 [skills/_shared/TRACEABILITY_PROTOCOL.md](skills/_shared/TRACEABILITY_PROTOCOL.md)。
+详见 [skills/commons/TRACEABILITY_PROTOCOL.md](skills/commons/TRACEABILITY_PROTOCOL.md)。
 
 ## UI 还原度检查约定
 
-详见 [skills/_shared/TRACEABILITY_PROTOCOL.md](skills/_shared/TRACEABILITY_PROTOCOL.md)。
+详见 [skills/commons/TRACEABILITY_PROTOCOL.md](skills/commons/TRACEABILITY_PROTOCOL.md)。
 
 ## 测试执行报告格式
 
-详见 [skills/_shared/ASSERTION_AUDIT.md](skills/_shared/ASSERTION_AUDIT.md)。
+详见 [skills/commons/ASSERTION_AUDIT.md](skills/commons/ASSERTION_AUDIT.md)。
 
 ## 验证用例 JSON 格式
 
-详见 [skills/_shared/TRACEABILITY_PROTOCOL.md](skills/_shared/TRACEABILITY_PROTOCOL.md)。
+详见 [skills/commons/TRACEABILITY_PROTOCOL.md](skills/commons/TRACEABILITY_PROTOCOL.md)。
 
 ## 术语表
 
