@@ -24,7 +24,7 @@ description: >
 - 适用场景：功能开发完成后，验证代码变更是否完整覆盖需求；**smoke-test 模式**下可作为冒烟测试验证引擎
 - 必要输入：代码变更（MR/PR 链接、本地 diff 文件、或直接提供 diff 文本）必须非空；需求描述推荐提供，缺失时基于代码变更做单边追溯（降级模式）
 - 输出产物：`traceability_matrix.json`、`traceability_coverage_report.json`、`risk_assessment.json`、`forward_verification.json`（正向用例中介验证结果）；标准模式且 mapping/plan_info 就位时额外输出 `ms_sync_report.json` + `forward_verification.enriched.json` + `pass_with_caveats.md` + `pending_external_validation.md`（writeback 阶段产出）；smoke-test 模式额外输出 `defect_list.json`、`smoke_test_report.json`
-- 失败门控：代码变更为空时停止；mapping sha 不匹配时停止；fv schema 校验失败时停止；无法确认的映射标记为 `[推测]`；smoke-test 模式下 P0 缺陷 > 0 则 verdict = fail
+- 失败门控：代码变更为空时停止；mapping sha 不匹配时停止；fv schema 校验失败时停止；无法确认的映射标记为 `[推测]`；smoke-test 模式按 input_quality × P0 二维表生成五档 verdict
 - 执行步骤：`init → fetch → map → output(4.1-4.5) → 4.6 兜底 → 4.6a 校验 → 4.7 fail 复核 → writeback`（smoke-test 模式 output 后走 5S.1/5S.2 冒烟报告并跳过 4.7 / writeback；标准模式有未覆盖需求时在 output 后追加 Phase 5 自循环，收敛后再进 writeback；mapping/plan_info 缺失时 writeback 整段 graceful skip）
 - **可能的用户交互（standard 模式）**：
   - **Phase 4.7 高 conf fail 复核**：每条 `result==fail && confidence>=80` 的 fv 条目触发一次交互式提问（Claude 用 AskUserQuestion，Codex 用编号选项；A 保持 / B 改 Pass / C 改 inconclusive）。N 条高 conf fail 就是 N 次问询
@@ -154,8 +154,8 @@ description: >
 
 - 从 `forward_verification.json` 的 fail 项、`traceability_coverage_report.json` 的 gaps、`api_contract.issues` 中提取缺陷
 - 基于置信度和风险等级判定优先级（P0/P1/P2）
-- **P0 门控**：P0 缺陷数 > 0 → `verdict: "fail"`（冒烟不通过）
-- 额外输出：`defect_list.json`（结构化缺陷列表，含名称、优先级、实际结果、预期结果）+ `smoke_test_report.json`（冒烟测试报告含通过/不通过判定）
+- **P0 门控**：`full + P0>0` → `fail`；`medium + P0>0` → `fail-with-degraded-input`；`low` → `inconclusive`
+- 额外输出：`defect_list.json`（结构化缺陷列表，含名称、优先级、实际结果、预期结果）+ `smoke_test_report.json`（冒烟测试报告含五档 verdict）
 - smoke-test 模式下跳过 Phase 5 自循环（不做交互式缺口修复，直接输出最终结果）
 - **评估范围界定**：冒烟测试评估的是 MR/PR diff 中代码变更的实现质量，不评估 CI/CD 流程状态。以下情况**不构成缺陷**：
   - MR/PR 处于 opened/draft 状态（未合并）

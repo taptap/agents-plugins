@@ -120,7 +120,7 @@ output:
       schema: ../commons/contracts/defect-list.schema.json
       produced_when: mode=smoke-test
     - name: smoke_test_report.json
-      description: 冒烟测试报告含 pass/fail 判定（smoke-test 模式产出）
+      description: 冒烟测试报告含五档 verdict 判定（smoke-test 模式产出）
       format: json
       optional: true
       schema: ../commons/contracts/smoke-test-report.schema.json
@@ -179,7 +179,7 @@ output:
       description: 缺陷总数（0 表示无缺陷或非 smoke-test 模式）
     smoke_test_p0_count:
       type: number
-      description: P0 缺陷数（>0 则 verdict=fail）
+      description: P0 缺陷数；最终 verdict 由 input_quality × P0 二维表决定
 
 dependencies:
   scripts:

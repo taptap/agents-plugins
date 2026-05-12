@@ -50,7 +50,7 @@ description: >
 - 计划幂等 — 同名计划存在时追加用例，不存在时新建
 - 用户可达入口 — sync 模式完成后必须在最终回复中直接展示 `ms_plan_info.json.plan_url`
 - 验证回写 — 基于 forward_verification.json（requirement-traceability 产出）的置信度和结果，自动标记高置信度 Pass/Failure 用例
-- 冒烟测试联动 — 消费 smoke_test_report.json（requirement-traceability 产出），P0 缺陷时全量降级为 Prepare
+- 冒烟测试边界 — smoke-test 模式只产出报告，不由本 skill 直接消费 smoke_test_report.json 写回 MS
 - 人工标记 — 置信度不足的用例保持待执行状态，添加评论注明原因
 
 ## 两种执行模式
@@ -59,8 +59,8 @@ description: >
 导入用例 + 创建/复用测试计划 + 关联用例。适用于测试用例生成完成后的首次同步。
 
 ### mode=execute
-在已完成 sync 的基础上，增加验证结果回写。需要额外输入 `traceability/<change_set_slug>/forward_verification.json`（requirement-traceability 产出），并复用同一工作区 `metersphere/ms_case_mapping.json` / `metersphere/ms_plan_info.json`；可选输入 `smoke_test_report.json`。
-适用于需求还原度检查完成后，将 AI 验证结果写回 MS 测试计划。当冒烟测试发现 P0 缺陷时，自动将所有用例降级为待人工验证。
+在已完成 sync 的基础上，增加验证结果回写。需要额外输入 `traceability/<change_set_slug>/forward_verification.json`（requirement-traceability 产出），并复用同一工作区 `metersphere/ms_case_mapping.json` / `metersphere/ms_plan_info.json`。
+适用于需求还原度检查完成后，将 AI 验证结果写回 MS 测试计划。
 
 ## 工具调用
 
