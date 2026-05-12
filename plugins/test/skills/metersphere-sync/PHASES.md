@@ -232,7 +232,7 @@ python3 $SKILLS_ROOT/test-shared-tools/scripts/metersphere_helper.py \
 | `fail-with-degraded-input` | 全量降级 Prepare（见下），评论中额外注明输入质量降级 |
 | `inconclusive` | 全量降级 Prepare（见下），评论中注明判定不确定，需人工补充证据 |
 | `pass` | 继续正常流程（4.1-4.4），将 `traceability_summary` 追加到回写评论 |
-| `pass-with-warnings` | 继续正常流程（4.1-4.4），评论中追加 `warnings` 摘要 |
+| `pass-with-degraded-input` | 继续正常流程（4.1-4.4），评论中追加输入质量降级摘要 |
 | 文件不存在 | 继续正常流程（4.1-4.4），不追加 smoke 摘要 |
 
 **全量降级流程**（适用于 `fail` / `fail-with-degraded-input` / `inconclusive` 三档）：
