@@ -32,7 +32,7 @@
 
 ## 阶段 2: analyze — 接口分析
 
-**上游感知**（可选）：如果工作目录中存在 `requirement_points.json`（上游 requirement-clarification 产出），先读取：
+**上游感知**（可选）：如果公共工作区中存在 `clarification/requirement_points.json`（上游 requirement-clarification 产出），先读取：
 - 提取 P0/P1 功能点，标记与这些功能点相关的 API 端点为高优先级
 - 在 `integration_test_plan.md` 中标注每个端点对应的需求功能点编号
 

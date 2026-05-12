@@ -41,9 +41,9 @@
 
 ## 上游输入消费
 
-当 skill 被编排层作为 pipeline 的一环调用时，上游 skill 的输出文件会被放置到工作目录中。
+当 skill 被编排层作为 pipeline 的一环调用时，上游 skill 的输出文件会被放置到公共需求工作区的对应子目录中。
 
-**约定**：如工作目录中已存在上游产出文件（如 `clarified_requirements.json`），优先消费该文件，跳过对应的数据获取步骤。各 PHASES.md 在 fetch/understand 阶段开头检查上游文件是否存在。
+**约定**：如工作区中已存在上游产出文件（如 `clarification/clarified_requirements.json`），优先消费该文件，跳过对应的数据获取步骤。各 PHASES.md 在 fetch/understand 阶段开头检查上游文件是否存在。
 
 > 当 `$TEST_WORKSPACE` 已设置时，本节中的「工作目录」指 `$TEST_WORKSPACE` 所指向的目录。
 
@@ -55,39 +55,46 @@
 
 | 状态 | 行为 |
 | --- | --- |
-| 已设置 | 所有 skill 的输出文件写入 `$TEST_WORKSPACE`，上游文件也从该目录查找 |
-| 未设置 | 行为不变（写入当前工作目录），向后兼容 |
+| 已设置 | `$TEST_WORKSPACE` 作为需求工作区根目录；各 skill 按 `clarification/`、`test_cases/`、`metersphere/`、`traceability/` 子目录读写产物 |
+| 未设置 | 各需求类 skill 应先定位或创建 `requirement_<stable_id>/`，再将其作为本轮工作目录 |
 
 ### 命名约定
 
-工作区目录位于 `plugins/test/workspace/` 下，以需求名 kebab-case 命名：
+工作区目录位于当前仓库工作区下，以 `requirement_<stable_id>/` 命名。`stable_id` 的生成规则由各需求类 skill 定义（通常优先取 Story / 需求链接里的稳定 ID）：
 
 ```
-plugins/test/workspace/
-├── add-coupon-feature/          # 需求1：所有 skill 产物汇聚于此
-│   ├── clarification_log.md
-│   ├── clarified_requirements.json
-│   ├── requirement_points.json
-│   ├── final_cases.json
-│   ├── traceability_matrix.json
-│   ├── ms_case_mapping.json        # metersphere-sync 产出
-│   ├── ms_plan_info.json           # metersphere-sync 产出
-│   ├── ms_sync_report.json         # metersphere-sync 产出
-│   └── ...
-└── user-registration-refactor/  # 需求2
+./
+├── requirement_1234567890/      # 需求1：所有 skill 产物汇聚于此
+│   ├── manifest.json
+│   ├── source/
+│   ├── clarification/
+│   │   ├── clarification_log.md
+│   │   ├── clarified_requirements.json
+│   │   └── requirement_points.json
+│   ├── test_cases/
+│   │   └── final_cases.json
+│   ├── metersphere/
+│   │   ├── ms_case_mapping.json
+│   │   └── ms_plan_info.json
+│   └── traceability/
+│       └── <change_set_slug>/
+│           ├── traceability_matrix.json
+│           └── ms_sync_report.json
+└── requirement_tap-12345/       # 需求2
     └── ...
 ```
 
-`workspace/` 目录已加入 `.gitignore`，不会被提交。
+`requirement_*/` 目录已加入 `.gitignore`，不会被提交。`mcp__cases__save_test_cases` 也会把可写范围限制在 `requirement_<stable_id>/` 工作区内；因此 `$TEST_WORKSPACE` 必须指向 `requirement_<stable_id>/` 工作区根目录。
 
 ### 本地工作流示例
 
 ```bash
-export TEST_WORKSPACE=plugins/test/workspace/add-coupon-feature
+export TEST_WORKSPACE=requirement_1234567890
 mkdir -p $TEST_WORKSPACE
-# 1. 运行 requirement-clarification → 产出写入 $TEST_WORKSPACE
-# 2. 运行 test-case-generation → 从 $TEST_WORKSPACE 找到上游文件，产出也写入此处
-# 3. 运行 requirement-traceability → 同上
+# 1. 运行 requirement-clarification → 产出写入 $TEST_WORKSPACE/clarification
+# 2. 运行 test-case-generation → 从 $TEST_WORKSPACE/clarification 读上游，产出写入 $TEST_WORKSPACE/test_cases
+# 3. 运行 metersphere-sync → 产出写入 $TEST_WORKSPACE/metersphere
+# 4. 运行 requirement-traceability → 产出写入 $TEST_WORKSPACE/traceability/<change_set_slug>
 ```
 
 ## 本地文件输入
@@ -184,58 +191,63 @@ Agent 因 context 截断或异常中断后恢复执行时：
 
 ## AskUserQuestion 交互式提问
 
-所有 skill 需要向用户提问并等待回答时，**必须**直接调用 `AskUserQuestion` 工具。不要将问题输出为纯文本，调用工具可以让 CLI 和 Web 端均渲染为可交互的选项卡片。
+所有 skill 需要向用户提问并等待回答时，必须遵守本节的**交互式提问协议**。`AskUserQuestion` 是 Claude 环境的交互适配器，不是跨环境契约本身；Codex 环境没有该工具时，按同一结构在对话中逐题提问，并把用户回答写回相同的产物。
 
 > 本节是「输出溯源原则」在交互提问场景的落地。每个 question 和 option 都必须标注 `evidence_tag`，禁止把 AI 自己脑补的细节伪装成"事实"让用户确认。
 
 ### 格式规范
 
-调用 `AskUserQuestion` 工具，传入以下结构：
+统一问题结构称为 `InteractiveQuestion`：
 
 ```json
 {
-  "questions": [
+  "question_id": "RC-Q-001",
+  "question": "完整的问题文本",
+  "header": "简短标题（不超过12字）",
+  "evidence_ref": "需求第 N 行『原文摘录』 / null（探查类）",
+  "options": [
     {
-      "question": "完整的问题文本",
-      "header": "简短标题（不超过12字）",
-      "evidence_ref": "需求第 N 行『原文摘录』 / null（探查类）",
-      "options": [
-        {
-          "label": "选项显示文本",
-          "description": "选项补充说明",
-          "evidence_tag": "quoted | derived | unknown",
-          "evidence_ref": "需求第 N 行『原文摘录』 / null"
-        }
-      ],
-      "multiSelect": false
+      "label": "选项显示文本",
+      "description": "选项补充说明",
+      "evidence_tag": "quoted | derived | unknown",
+      "evidence_ref": "需求第 N 行『原文摘录』 / null"
     }
-  ]
+  ],
+  "multiSelect": false,
+  "allow_free_text": true,
+  "blocking": true,
+  "writes_to": "clarification_log.md / clarifications.json / traceability_coverage_report.json"
 }
 ```
+
+Claude 环境如存在 `AskUserQuestion` 工具，把单个 `InteractiveQuestion` 包装为 `{"questions": [question]}` 调用。Codex 环境直接在 chat 中渲染同一个问题、编号选项和「可自由补充」提示；没有可交互通道或用户暂未回答时，写入 `pending_questions.json` 或目标产物的 `[待确认]` 状态，禁止自行补答案。
 
 ### 字段说明
 
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `questions` | array | 是 | 问题列表，每次 **1-4 个** |
-| `questions[].question` | string | 是 | 完整问题描述 |
-| `questions[].header` | string | 是 | 简短标题（不超过 12 字），用于卡片标题栏 |
-| `questions[].evidence_ref` | string \| null | 是 | 问题来源在原始素材中的位置（建议带原文摘录）；纯探查类问题填 `null` |
-| `questions[].options` | array | 是 | 选项列表，**2-4 个** |
-| `questions[].options[].label` | string | 是 | 选项显示文本（1-5 词，简洁明了） |
-| `questions[].options[].description` | string | 是 | 选项补充说明（解释选择后的影响） |
-| `questions[].options[].evidence_tag` | string | 是 | `quoted` / `derived` / `unknown`，含义见「输出溯源原则」三级表 |
-| `questions[].options[].evidence_ref` | string \| null | 是 | `quoted` / `derived` 必填且必须含成对引号包裹的原文摘录（如 `"需求第 9 行『搜索结果需要包含官方论坛』"`、`"SearchFragment.kt:42 『return badge ?: ""』"`）；`unknown` 可填 `null` |
-| `questions[].multiSelect` | boolean | 是 | 是否允许多选 |
+| `question_id` | string | 是 | 当前 skill 内稳定唯一的问题 ID，用于回答回写和追溯 |
+| `question` | string | 是 | 完整问题描述 |
+| `header` | string | 是 | 简短标题（不超过 12 字），用于卡片或对话标题 |
+| `evidence_ref` | string \| null | 是 | 问题来源在原始素材中的位置（建议带原文摘录）；纯探查类问题填 `null` |
+| `options` | array | 是 | 选项列表，通常 **2-4 个**；开放式问题可只给元操作选项 |
+| `options[].label` | string | 是 | 选项显示文本（1-5 词，简洁明了） |
+| `options[].description` | string | 是 | 选项补充说明（解释选择后的影响） |
+| `options[].evidence_tag` | string | 是 | `quoted` / `derived` / `unknown`，含义见「输出溯源原则」三级表 |
+| `options[].evidence_ref` | string \| null | 是 | `quoted` / `derived` 必填且必须含成对引号包裹的原文摘录（如 `"需求第 9 行『搜索结果需要包含官方论坛』"`、`"SearchFragment.kt:42 『return badge ?: ""』"`）；`unknown` 可填 `null` |
+| `multiSelect` | boolean | 是 | 是否允许多选 |
+| `allow_free_text` | boolean | 是 | 是否允许用户在选项之外补充说明；默认 true |
+| `blocking` | boolean | 是 | 是否必须等用户回答后才能继续当前流程 |
+| `writes_to` | string | 是 | 回答需要写入的目标产物或日志 |
 
 ### 约束
 
-- 每次提问控制在 **1-4 个问题**
-- 每个问题提供 **2-4 个选项**，降低用户认知负担
+- 每次交互只问 **1 个问题**。需要问多个时按优先级逐题发起，等用户答复一个再发起下一个
+- 每个问题通常提供 **2-4 个选项**，降低用户认知负担；确实需要开放式补充时，只保留元操作选项
 - 每个选项**必须**提供 `description`、`evidence_tag`、`evidence_ref` 三个字段
-- 分析说明在调用工具之前单独输出为文本
+- 分析说明在发起交互之前单独输出为文本
 - 不要在 JSON 中使用 Markdown 格式（如 `**加粗**`），保持纯文本
-- 如果一次需要确认的问题超过 4 个，分多次调用
+- 输出产物是跨环境契约，交互 UI 只是适配层；不得因为 Codex 没有 `AskUserQuestion` 就跳过确认或编造默认答案
 
 ### evidence_tag 硬规则（CRITICAL）
 
@@ -283,36 +295,24 @@ Agent 因 context 截断或异常中断后恢复执行时：
 
 ### 示例
 
-先输出分析说明文本，再调用 AskUserQuestion 工具：
+先输出分析说明文本，再发起单个交互问题。Claude 可包装进 `AskUserQuestion.questions[0]`，Codex 直接渲染为编号选项：
 
 ```json
 {
-  "questions": [
-    {
-      "question": "本次需求涉及哪些平台？",
-      "header": "平台范围",
-      "evidence_ref": null,
-      "options": [
-        {"label": "仅前端", "description": "iOS/Android/Web/PC 平台", "evidence_tag": "unknown", "evidence_ref": null},
-        {"label": "仅后端", "description": "服务端逻辑变更", "evidence_tag": "unknown", "evidence_ref": null},
-        {"label": "前后端同时修改", "description": "前后端联动变更", "evidence_tag": "unknown", "evidence_ref": null},
-        {"label": "多端同步（请在回复中列出具体平台）", "description": "用户在回复中补充", "evidence_tag": "unknown", "evidence_ref": null}
-      ],
-      "multiSelect": false
-    },
-    {
-      "question": "核心变更是什么？请选择最接近的描述",
-      "header": "核心变更",
-      "evidence_ref": "需求第 1-10 行变更点清单",
-      "options": [
-        {"label": "新增功能模块", "description": "全新的功能模块开发", "evidence_tag": "derived", "evidence_ref": "需求第 4 行『新增热榜卡片』、第 6 行『新增论坛搜索』"},
-        {"label": "修改现有逻辑", "description": "对已有功能的行为变更", "evidence_tag": "derived", "evidence_ref": "需求第 2 行『发现改为动态』、第 5 行『热榜改为独立单页』"},
-        {"label": "UI/交互调整", "description": "界面或交互流程变化", "evidence_tag": "derived", "evidence_ref": "需求第 1 行『顶部 tab 吸顶』、第 3 行『二层底部栏去掉』"},
-        {"label": "性能优化/重构", "description": "非功能性改进", "evidence_tag": "derived", "evidence_ref": "需求第 10 行『loading 骨架屏替换』"}
-      ],
-      "multiSelect": true
-    }
-  ]
+  "question_id": "RC-Q-001",
+  "question": "本次需求涉及哪些平台？",
+  "header": "平台范围",
+  "evidence_ref": null,
+  "options": [
+    {"label": "仅前端", "description": "iOS/Android/Web/PC 平台", "evidence_tag": "unknown", "evidence_ref": null},
+    {"label": "仅后端", "description": "服务端逻辑变更", "evidence_tag": "unknown", "evidence_ref": null},
+    {"label": "前后端同时修改", "description": "前后端联动变更", "evidence_tag": "unknown", "evidence_ref": null},
+    {"label": "多端同步（请补充）", "description": "用户在回复中补充具体平台", "evidence_tag": "unknown", "evidence_ref": null}
+  ],
+  "multiSelect": false,
+  "allow_free_text": true,
+  "blocking": true,
+  "writes_to": "clarifications.json"
 }
 ```
 
@@ -363,7 +363,7 @@ Agent 因 context 截断或异常中断后恢复执行时：
 
 ### 核心硬规则
 
-1. **不知道就问，不要编**：AI 没依据时禁止生成 `option` 候选填具体细节让用户选，必须改为 `unknown` + 开放式追问（详见「AskUserQuestion 反捏造模板」）
+1. **不知道就问，不要编**：AI 没依据时禁止生成 `option` 候选填具体细节让用户选，必须改为 `unknown` + 开放式追问（详见「反捏造模板」）
 2. **"X 已有 / 历史如此 / 同类如此"不是依据**：用户措辞中提到"安卓已有""历史版本如此""通常这么做"时，AI **不得**自动补全实现细节（如"安卓有角标"）。"安卓已有"只能推出"安卓的对应功能存在"，推不出任何具体形态
 3. **跳过优于捏造**：信息不足时跳过该字段或整节，远好于生成看似合理但无依据的内容
 4. **错误必须明确认领**：当 AI 发现自己生成了无依据内容（自检或被用户指出），必须明确声明"这是无依据推断"，不要含糊带过
@@ -374,14 +374,14 @@ Agent 因 context 截断或异常中断后恢复执行时：
 
 | 输出形态 | 字段 | 详见 |
 | --- | --- | --- |
-| AskUserQuestion 选项 | `options[].evidence_tag` + `options[].evidence_ref` | 「AskUserQuestion 交互式提问」节 |
+| 交互式提问选项 | `options[].evidence_tag` + `options[].evidence_ref` | 「AskUserQuestion 交互式提问」节 |
 | 条件触发章节内的字段 | 字段级 `source` 标注 + 章节级 `evidence` 三级判定 | 「条件触发章节的数据充分性门控」节 |
 | 分析结论 | `[已确认]` / `[基于 diff]` / `[推测]` / `[待确认]` | 「置信度标记」节 |
 | 用例 / 契约的字段 | `source: "document" / "design" / "code" / "human"` | 各 skill PHASES.md |
 
 ### 与已有机制的关系
 
-本节是横切总纲。后续「条件触发章节的数据充分性门控」「置信度标记」「AskUserQuestion 交互式提问」均是本原则在具体场景的落地。新增分析步骤、新增 AskUserQuestion 选项、新增字段时，必须先按本节判定 `evidence_tag`，再选对应落地机制。
+本节是横切总纲。后续「条件触发章节的数据充分性门控」「置信度标记」「AskUserQuestion 交互式提问」均是本原则在具体场景的落地。新增分析步骤、新增交互式提问选项、新增字段时，必须先按本节判定 `evidence_tag`，再选对应落地机制。
 
 ## 条件触发章节的数据充分性门控
 
@@ -507,7 +507,7 @@ requirement-clarification → clarified_requirements.json (functional_point.conf
 - `RP-` 是用例生成 / 评审阶段从需求文档自行提炼的验证点（仅当无上游 `requirement_points.json` 时才产出）
 - `R-` 是追溯阶段从需求中提取的映射锚点（有上游 FP- 时直接继承作为主键，R- 作为别名）
 
-> traceability 直接消费 `final_cases.json`（`case_id` 形如 `M1-TC-01`）作为正向通道用例输入，不引入 `VC-` 编号的中间用例层。
+> traceability 直接消费 `test_cases/final_cases.json`（`case_id` 形如 `M1-TC-01`）作为正向通道用例输入，不引入 `VC-` 编号的中间用例层。
 
 下游 skill 消费上游的 `requirement_points.json` 时，按内容重新编号，不继承上游前缀。
 
@@ -518,6 +518,12 @@ requirement-clarification → clarified_requirements.json (functional_point.conf
 ## 用例 JSON 格式
 
 所有 skill 生成的测试用例统一使用以下 JSON 格式。各 skill 的 SKILL.md 和 PHASES.md 通过引用本节保持格式一致。
+
+字段按生命周期分三层理解，避免把“AI 生成输入”和“下游标准产物”混为一谈：
+
+- **AI 生成输入**：模型必须写清楚用例内容（`title` / `priority` / `preconditions` / `steps`），并尽量填写业务模块 `module`；不要手工编造 `case_id`。
+- **标准落盘产物**：进入 `final_cases.json` 或被下游消费前，每条用例都应有稳定 `case_id`，`module` 缺失、`null` 或空字符串统一兜底为 `未分类`。
+- **下游消费**：MeterSphere 按 `module` 分组建目录，需求回溯用 `case_id` 作为用例主键；`module` 只作为分组和辅助上下文，不作为需求匹配的唯一依据。
 
 ```json
 [
@@ -539,9 +545,9 @@ requirement-clarification → clarified_requirements.json (functional_point.conf
 
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `case_id` | string | 是 | 模块前缀 + 序号（如 M1-TC-01），review 阶段去重后允许断号 |
+| `case_id` | string | 产物必有 / AI 可省略 | 稳定用例主键，模块前缀 + 序号（如 M1-TC-01），review 阶段去重后允许断号。AI 生成时不要手工编造；由 MCP tool / 后端 / 合并脚本在落盘前补齐 |
 | `title` | string | 是 | 用例标题，纯业务描述。禁止包含：内部编号、优先级前缀（P0/P1/P2/P3）、测试方法或分类前缀（如「等价类-有效类：」「等价类-无效类：」「场景法：」等）、来源前缀（如「[补充]」「【补充】」「[新增]」等）。这些信息已由 `priority`、`test_method` 和 `source` 字段承载 |
-| `module` | string | 是 | 模块名称（不带编号前缀） |
+| `module` | string | 生成应填 / 可兜底 | 模块名称（不带编号前缀）。test-case-generation 主链路应填写；缺失、`null` 或空字符串在标准产物和 MS 同步前统一归为 `未分类` |
 | `priority` | string | 是 | P0 / P1 / P2 / P3 |
 | `test_method` | string | 否 | 等价类划分 / 边界值分析 / 场景法 / 错误推测法 / 判定表法 / 状态迁移法 / 探索性测试法。test-case-generation 必填；test-case-review、change-analysis 输出 supplementary cases 时可缺省 |
 | `confidence` | number | 否 | 用例置信度（0-100），评分标准见「量化置信度评分」。test-case-generation 阶段生成 |
@@ -556,6 +562,8 @@ requirement-clarification → clarified_requirements.json (functional_point.conf
 - `priority` 只允许 P0 / P1 / P2 / P3
 - 所有文本使用中文
 - 用例文本中禁止出现 ASCII 双引号，使用中文引号「」
+- `case_id` 不允许写进 `title`；追溯和回写只认字段级 `case_id`
+- `module` 不得落盘为 `null` 或空字符串；无法归类时使用 `未分类`
 - `test_method` 为「探索性测试法」时，`steps[].action` 填探索要点/操作方向（非精确步骤），`steps[].expected` 填判定标准/Oracle（非精确预期），`preconditions` 须包含章程（Charter）描述
 - 禁止在用例 JSON 中包含 `tags` 字段，标签由后端根据工作流类型自动赋值
 
@@ -565,8 +573,9 @@ requirement-clarification → clarified_requirements.json (functional_point.conf
 
 防御层级（从前到后）：
 1. **生成层**（最强）：tool input_schema → Anthropic API 拒绝不符合 schema 的 tool 调用
-2. **tool 内二次校验**：tool 实现内部再调一次 `case_schema.validate_cases()`，捕获 `model_validator` 才能识别的语义错（顶层 `expected`/`tags`、`name→title` 等拼写漂移）
+2. **tool 内二次校验与规范化**：tool 实现内部再调一次 `case_schema.validate_cases()`，捕获 `model_validator` 才能识别的语义错（顶层 `expected`/`tags`、`name→title` 等拼写漂移），并在落盘前补齐缺失 `case_id`、规范化空 `module`
 3. **Hook 引导**：PreToolUse hook 检测到 Write `*_cases.json` 时直接 `deny`，引导 AI 改用 MCP tool
+4. **合并后校验**：当流程因用例量大使用 Bash/Python 合并 `test_cases.json` / `final_cases.json` 时，写入后必须再次执行用例 schema 校验和 `case_id/module` 规范化检查
 
 完整示例（这就是 tool `cases` 参数中每条用例的形态）：
 

@@ -12,51 +12,50 @@
 ```
 [requirement-clarification]
     │
-    ├─→ clarified_requirements.json
-    ├─→ requirement_points.json
-    └─→ implementation_brief.json
+    ├─→ clarification/clarified_requirements.json
+    ├─→ clarification/requirement_points.json
+    └─→ clarification/implementation_brief.json
         │
         ▼
 [test-case-generation]
-    │  消费: clarified_requirements.json, requirement_points.json
+    │  消费: clarification/clarified_requirements.json, clarification/requirement_points.json
     │
-    ├─→ final_cases.json
-    ├─→ test_cases.json
-    ├─→ tc_gen_review.md
-    └─→ review_summary.json
+    ├─→ test_cases/final_cases.json
+    ├─→ test_cases/test_cases.json
+    ├─→ test_cases/tc_gen_review.md
+    └─→ test_cases/review_summary.json
         │
         ▼  + 用户提供 MR/PR 链接（手动输入）
 [requirement-traceability]
-    │  消费: clarified_requirements.json, requirement_points.json
-    │  注意: 不消费 final_cases.json
+    │  消费: clarification/clarified_requirements.json, clarification/requirement_points.json, test_cases/final_cases.json
     │
-    ├─→ traceability_matrix.json
-    ├─→ traceability_coverage_report.json
-    ├─→ forward_verification.json
-    └─→ risk_assessment.json
+    ├─→ traceability/<change_set_slug>/traceability_matrix.json
+    ├─→ traceability/<change_set_slug>/traceability_coverage_report.json
+    ├─→ traceability/<change_set_slug>/forward_verification.json
+    └─→ traceability/<change_set_slug>/risk_assessment.json
 ```
 
 ### 可选扩展：MeterSphere 同步
 
 ```
 [test-case-generation]
-    └─→ final_cases.json
+    └─→ test_cases/final_cases.json
         ▼
 [metersphere-sync]    (mode=sync)
-    │  消费: final_cases.json
-    └─→ ms_sync_report.json, ms_case_mapping.json, ms_plan_info.json
+    │  消费: test_cases/final_cases.json
+    └─→ metersphere/ms_import_report.json, metersphere/ms_case_mapping.json, metersphere/ms_plan_info.json
 ```
 
 [requirement-traceability] 完成后可追加 execute 模式回写验证结果：
 
 ```
 [requirement-traceability]
-    │  正向通道内嵌用例中介验证（消费上游 final_cases.json）
-    └─→ forward_verification.json
+    │  正向通道内嵌用例中介验证（消费上游 test_cases/final_cases.json）
+    └─→ traceability/<change_set_slug>/forward_verification.json
         ▼
 [metersphere-sync]    (mode=execute)
-    │  消费: final_cases.json, forward_verification.json, ms_case_mapping.json
-    └─→ ms_sync_report.json (含执行回写统计)
+    │  消费: test_cases/final_cases.json, traceability/<change_set_slug>/forward_verification.json, metersphere/ms_case_mapping.json
+    └─→ traceability/<change_set_slug>/ms_sync_report.json (含执行回写统计)
 ```
 
 > **与 trace Phase 6 writeback 的关系**：上图描述的是手动模式调用入口；自动模式（qa-workflow）下 writeback 由 `requirement-traceability` 内部 Phase 6 触发，不显式调 `metersphere-sync mode=execute`。两入口共享同一 helper，互斥执行。共享/互斥规则详见 [`contracts/known-collisions.yaml`](contracts/known-collisions.yaml) 的 `forward_verification.enriched.json` 条目。
@@ -65,14 +64,14 @@
 
 | 上游 Skill | 输出文件 | 下游 Skill | 输入参数 |
 |---|---|---|---|
-| requirement-clarification | `clarified_requirements.json` | test-case-generation | `clarified_requirements` |
-| requirement-clarification | `requirement_points.json` | test-case-generation | `requirement_points` |
-| requirement-clarification | `clarified_requirements.json` | requirement-traceability | `clarified_requirements` |
-| requirement-clarification | `requirement_points.json` | requirement-traceability | `requirement_points` |
-| test-case-generation | `final_cases.json` | requirement-traceability | `final_cases` |
-| test-case-generation | `final_cases.json` | metersphere-sync | `final_cases` |
-| requirement-traceability | `forward_verification.json` | metersphere-sync | `forward_verification` |
-| requirement-clarification | `requirement_points.json` | metersphere-sync | `requirement_points` |
+| requirement-clarification | `clarification/clarified_requirements.json` | test-case-generation | `clarified_requirements` |
+| requirement-clarification | `clarification/requirement_points.json` | test-case-generation | `requirement_points` |
+| requirement-clarification | `clarification/clarified_requirements.json` | requirement-traceability | `clarified_requirements` |
+| requirement-clarification | `clarification/requirement_points.json` | requirement-traceability | `requirement_points` |
+| test-case-generation | `test_cases/final_cases.json` | requirement-traceability | `final_cases` |
+| test-case-generation | `test_cases/final_cases.json` | metersphere-sync | `final_cases` |
+| requirement-traceability | `traceability/<change_set_slug>/forward_verification.json` | metersphere-sync | `forward_verification` |
+| requirement-clarification | `clarification/requirement_points.json` | metersphere-sync | `requirement_points` |
 
 ---
 
@@ -87,9 +86,9 @@
 
 | 上游 Skill | 输出文件 | 下游 Skill | 输入参数 | 用途 |
 |---|---|---|---|---|
-| requirement-clarification | `requirement_points.json` | unit-test-design | `requirement_points` | 指导覆盖重点 |
-| test-case-generation | `final_cases.json` | unit-test-design | `final_cases` | 参考已有用例 |
-| requirement-clarification | `requirement_points.json` | integration-test-design | `requirement_points` | 指导覆盖重点 |
+| requirement-clarification | `clarification/requirement_points.json` | unit-test-design | `requirement_points` | 指导覆盖重点 |
+| test-case-generation | `test_cases/final_cases.json` | unit-test-design | `final_cases` | 参考已有用例 |
+| requirement-clarification | `clarification/requirement_points.json` | integration-test-design | `requirement_points` | 指导覆盖重点 |
 
 ---
 
@@ -104,14 +103,14 @@ UI 还原度由 requirement-traceability §3.4 隐式触发（`design_link` + `c
         │
         ▼
 [requirement-traceability]
-    │  消费: final_cases.json (链路 A 产出，正向通道用例输入)
+    │  消费: test_cases/final_cases.json (链路 A 产出，正向通道用例输入)
     │       design_link + code_dir → §3.4 内置启动 ui-fidelity-checker Agent，
     │                                产出 ui_fidelity_report.json
     │       api_contract_report.json (优先消费上游产出；缺则 §3.2.5 内置启动
     │                                 api-contract-validator Agent)
     │
-    ├─→ forward_verification.json（内嵌正向用例中介验证结果）
-    └─→ traceability_coverage_report.json（含正向验证率 + UI 还原度 + API 契约）
+    ├─→ traceability/<change_set_slug>/forward_verification.json（内嵌正向用例中介验证结果）
+    └─→ traceability/<change_set_slug>/traceability_coverage_report.json（含正向验证率 + UI 还原度 + API 契约）
 ```
 
 ### 数据流映射
@@ -155,7 +154,7 @@ UI 还原度由 requirement-traceability §3.4 隐式触发（`design_link` + `c
 Story 场景:
 [change-analysis]
     │  输入: Story + MR/PR
-    │  可选消费: clarified_requirements.json, requirement_points.json, final_cases.json
+    │  可选消费: clarification/clarified_requirements.json, clarification/requirement_points.json, test_cases/final_cases.json
     │
     ├─→ change_analysis.json
     ├─→ code_change_analysis.md
@@ -176,9 +175,9 @@ Bug 场景:
 
 | 上游 Skill | 输出文件 | 下游 Skill | 输入参数 |
 |---|---|---|---|
-| requirement-clarification | `clarified_requirements.json` | change-analysis | `clarified_requirements` |
-| requirement-clarification | `requirement_points.json` | change-analysis | `requirement_points` |
-| test-case-generation | `final_cases.json` | change-analysis | `existing_test_cases` |
+| requirement-clarification | `clarification/clarified_requirements.json` | change-analysis | `clarified_requirements` |
+| requirement-clarification | `clarification/requirement_points.json` | change-analysis | `requirement_points` |
+| test-case-generation | `test_cases/final_cases.json` | change-analysis | `existing_test_cases` |
 | test-case-review | `review_supplementary_cases.json` | change-analysis | `existing_test_cases` |
 
 ---
@@ -188,7 +187,7 @@ Bug 场景:
 ```
 [test-case-review]
     │  输入: 已有测试用例 + 需求文档
-    │  可选消费: final_cases.json (from test-case-generation)
+    │  可选消费: test_cases/final_cases.json (from test-case-generation)
     │
     ├─→ review_result.json
     ├─→ tc_review_detail.md
@@ -225,7 +224,7 @@ Phase 2: 代码验证（用户回来后）
 [change-analysis] ──────────────┐
 [api-contract-validation]  ─────┘ 条件：前后端协调（与 change-analysis 并行）
     ↓
-[requirement-traceability]（内嵌正向用例中介验证，消费上游 final_cases.json；
+[requirement-traceability]（内嵌正向用例中介验证，消费上游 test_cases/final_cases.json；
                           §3.4 在有 design_link + code_dir 时启动 ui-fidelity-checker Agent；
                           §3.2.5 在缺 api_contract_report 时启动 api-contract-validator Agent）
     → [metersphere-sync mode=execute]
@@ -241,21 +240,31 @@ Phase 3: 收尾
 
 ## 工作目录布局约定
 
-Pipeline 中所有 skill 共享同一工作目录。各 skill 的输出文件直接写入工作目录根（非子目录），下游 skill 在 init/fetch 阶段检查上游文件是否存在。
+Pipeline 中所有 skill 共享同一公共需求工作区 `$TEST_WORKSPACE`。各 skill 按职责写入固定子目录，下游 skill 在 init/fetch 阶段检查对应子目录中的上游文件是否存在。
 
 ```
-work_dir/
-├── clarified_requirements.json    (requirement-clarification)
-├── requirement_points.json        (requirement-clarification)
-├── implementation_brief.json      (requirement-clarification)
-├── final_cases.json               (test-case-generation)
-├── test_cases.json                (test-case-generation)
-├── tc_gen_review.md               (test-case-generation)
-├── review_summary.json            (test-case-generation)
-├── traceability_matrix.json       (requirement-traceability)
-├── traceability_coverage_report.json  (requirement-traceability)
-├── forward_verification.json      (requirement-traceability)
-├── risk_assessment.json           (requirement-traceability)
+requirement_<stable_id>/
+├── manifest.json
+├── source/
+│   └── requirement_doc.md
+├── clarification/
+│   ├── clarified_requirements.json    (requirement-clarification)
+│   ├── requirement_points.json        (requirement-clarification)
+│   └── implementation_brief.json      (requirement-clarification)
+├── test_cases/
+│   ├── final_cases.json               (test-case-generation)
+│   ├── test_cases.json                (test-case-generation)
+│   ├── tc_gen_review.md               (test-case-generation)
+│   └── review_summary.json            (test-case-generation)
+├── traceability/
+│   └── <change_set_slug>/
+│       ├── traceability_matrix.json       (requirement-traceability)
+│       ├── traceability_coverage_report.json  (requirement-traceability)
+│       ├── forward_verification.json      (requirement-traceability)
+│       ├── risk_assessment.json           (requirement-traceability)
+│       ├── ms_sync_report.json            (requirement-traceability / metersphere-sync execute)
+│       ├── pass_with_caveats.md
+│       └── pending_external_validation.md
 ├── bug_risk_assessment.json       (change-analysis Bug)
 ├── change_analysis.json           (change-analysis)
 ├── code_change_analysis.md        (change-analysis, 中间文件)
@@ -270,9 +279,10 @@ work_dir/
 ├── ui_fidelity_report.json        (requirement-traceability §3.4)
 ├── failure_analysis.json          (test-failure-analyzer)
 ├── action_plan.md                 (test-failure-analyzer)
-├── ms_case_mapping.json           (metersphere-sync)
-├── ms_plan_info.json              (metersphere-sync)
-└── ms_sync_report.json            (metersphere-sync)
+└── metersphere/
+    ├── ms_case_mapping.json           (metersphere-sync)
+    ├── ms_plan_info.json              (metersphere-sync)
+    └── ms_import_report.json          (metersphere-sync sync)
 ```
 
 ## 上游文件检测约定

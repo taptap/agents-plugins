@@ -221,7 +221,7 @@ python3 $CODEX --prompt "..." --model gpt-5.4-mini --timeout 300 --max-turns 20
 
 **输出**: stdout JSON，格式 `{"findings": [...], "summary": "...", "engine": "codex", "model": "..."}`。stderr 输出进度日志。
 
-**工具能力**: Codex agent 内部可自主调用 bash（白名单命令）、read_file、grep_search 进行多步分析。
+**工具能力**: Codex agent 内部可自主调用 bash（白名单命令，`shell=False` 执行，不支持 shell 管道/重定向/命令替换）、read_file、grep_search 进行多步分析。该过滤是 best-effort 辅助防护，不应作为安全边界。
 
 **降级**: `OPENAI_API_KEY` 未设置时输出 `{"error": "...", "findings": []}` — 调用方应降级为独立 Claude 分析。
 

@@ -38,7 +38,7 @@
 
 ### 1.3 确认上游需求数据（可选）
 
-检查工作目录是否存在 `requirement_points.json`（上游 requirement-clarification 产出）：
+检查公共工作区是否存在 `clarification/requirement_points.json`（上游 requirement-clarification 产出）：
 - 存在 → Read 作为分类时的辅助参考（用于判断失败是否与需求变更相关）
 - 不存在 → 跳过，不影响核心分类流程
 
@@ -139,7 +139,7 @@
 if 直接关联 or 间接关联:
     → 候选分类：预期变化
     → 进一步检查：失败的预期值是否因需求变更而需要更新
-    → 如有 requirement_points.json，交叉验证变更是否对应某个需求点
+    → 如有 `clarification/requirement_points.json`，交叉验证变更是否对应某个需求点
 elif 匹配不稳定模式:
     → 候选分类：不稳定
     → 检查：超时 / 网络 / 时序 / 随机 / 历史波动

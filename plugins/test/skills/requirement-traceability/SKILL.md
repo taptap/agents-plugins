@@ -27,9 +27,40 @@ description: >
 - 失败门控：代码变更为空时停止；mapping sha 不匹配时停止；fv schema 校验失败时停止；无法确认的映射标记为 `[推测]`；smoke-test 模式下 P0 缺陷 > 0 则 verdict = fail
 - 执行步骤：`init → fetch → map → output(4.1-4.5) → 4.6 兜底 → 4.6a 校验 → 4.7 fail 复核 → writeback`（smoke-test 模式 output 后走 5S.1/5S.2 冒烟报告并跳过 4.7 / writeback；标准模式有未覆盖需求时在 output 后追加 Phase 5 自循环，收敛后再进 writeback；mapping/plan_info 缺失时 writeback 整段 graceful skip）
 - **可能的用户交互（standard 模式）**：
-  - **Phase 4.7 高 conf fail 复核**：每条 `result==fail && confidence>=80` 的 fv 条目触发一次 AskUserQuestion（A 保持 / B 改 Pass / C 改 inconclusive）。N 条高 conf fail 就是 N 次问询
-  - **Phase 5 缺口确认**：每个 `missing/partial` 缺口聚合一次 AskUserQuestion 让用户分类
+  - **Phase 4.7 高 conf fail 复核**：每条 `result==fail && confidence>=80` 的 fv 条目触发一次交互式提问（Claude 用 AskUserQuestion，Codex 用编号选项；A 保持 / B 改 Pass / C 改 inconclusive）。N 条高 conf fail 就是 N 次问询
+  - **Phase 5 缺口确认**：每个 `missing/partial` 缺口聚合一次交互式提问让用户分类
   - **如果 fv fail 多 + 缺口多，一次跑可能弹 N+M 次问题**。提前预告：跑大规模需求前可考虑 (a) 先跑 mode=smoke-test 走完整 4.x 不交互，看下大致情况，再切 standard；(b) 缩小 code_changes 范围分批跑
+
+## 公共需求工作区（CRITICAL）
+
+同一条需求的澄清、用例、MS 同步、需求回溯必须落在同一个 `requirement_<stable_id>/` 工作区。traceability 不再默认创建平级 `requirement_traceability_*` 目录。
+
+### 工作区解析顺序
+
+1. 用户显式传入的 workspace。
+2. 当前目录或父目录中的 `manifest.json`。
+3. 已输入的 `final_cases.json` / `requirement_points.json` / `ms_case_mapping.json` 所在路径反推：
+   - `test_cases/final_cases.json` → 工作区为其上一级。
+   - `clarification/requirement_points.json` → 工作区为其上一级。
+   - `metersphere/ms_case_mapping.json` → 工作区为其上一级。
+4. 当前目录下与需求链接 token / ticket / 标题 slug 匹配的 `requirement_<stable_id>/`。
+5. 如果确实没有上游工作区，才新建 `requirement_<stable_id>/`，并在报告中标记 `workspace_created_by_traceability: true`。
+
+### 产物落点
+
+- 本 skill 的产物写入 `traceability/<change_set_slug>/`。
+- `change_set_slug` 从代码变更来源生成，例如：
+  - `github_PR293_gitlab_MR20675`
+  - `local_diff_2026-05-12`
+- 正向通道优先读取：
+  1. `test_cases/final_cases.json`
+  2. `clarification/requirement_points.json`
+  3. 本次 `traceability/<change_set_slug>/traceability_checklist.md`
+- Phase 6 writeback 优先读取：
+  - `metersphere/ms_case_mapping.json`
+  - `metersphere/ms_plan_info.json`
+- Phase 6 输出仍写在本次 `traceability/<change_set_slug>/`，因为它描述的是这次代码回溯的执行结果。
+- 必须更新根目录 `manifest.json.current_stage = "traceability"`，并向 `manifest.json.traceability_runs[]` 追加本次 `change_set_slug`、`traceability_run_path`、`created_at`、`sources`；不要用单个字段覆盖历史回溯记录。
 
 ## 核心能力
 
@@ -67,8 +98,8 @@ description: >
 
 **用例输入按优先级消费**（详见 PHASES.md 3.1）：
 
-1. **优先**：`final_cases.json`（上游 test-case-generation 产出）—— 直接拿 `steps[].action` 当 input、`steps[].expected` 当 expected
-2. **降级**：`requirement_points.json` 的 `acceptance_criteria` —— 每条标准转 1-2 条简化用例
+1. **优先**：`test_cases/final_cases.json`（上游 test-case-generation 产出）—— 直接拿 `steps[].action` 当 input、`steps[].expected` 当 expected
+2. **降级**：`clarification/requirement_points.json` 的 `acceptance_criteria` —— 每条标准转 1-2 条简化用例
 3. **最弱**：`traceability_checklist.md` 中的需求描述 —— 仅作为最后兜底
 
 不引入独立的"验证用例文件"作为中间产物——直接复用上游 `final_cases.json` 作为正向通道用例。
@@ -96,7 +127,7 @@ description: >
 - **独立 skill** = 用户主动调用做 PR pre-merge gate / 前后端契约 review 等单一目的
 - **traceability §3.2.5** = 跑回溯时自动启动 agent，作为正向通道的副产物
 
-性能优化：如果工作目录已有 `api_contract_report.json`（用户已独立跑过 `test:api-contract-validation`），traceability §3.2.5 会跳过 agent 启动，直接合并已有报告，节省一次 Task 启动开销。详见 PHASES.md §3.2.5。
+性能优化：如果工作目录已有 `api_contract_report.json`（用户已独立跑过 `api-contract-validation`），traceability §3.2.5 会跳过 agent 启动，直接合并已有报告，节省一次 Task 启动开销。详见 PHASES.md §3.2.5。
 
 ## 模型分层
 
@@ -144,7 +175,7 @@ description: >
 | 4. output | 覆盖验证、风险评估和最终产出 | `traceability_matrix.json`、`traceability_coverage_report.json`、`risk_assessment.json` |
 | 4.6 | `forward_verification.json` 兜底落盘（**last-resort**：3.2 已产出则跳过，否则从 coverage_report 合成；正常路径不应走到这里） | `forward_verification.json`（兜底版） |
 | 4.6a | 强制 schema 校验 fv（`metersphere_helper.py validate-fv`） | — |
-| 4.7 | 高 conf fail 复核（result==fail 且 conf≥80 → AskUserQuestion 逐条 ack；改判记 evidence.human_override） | 改写后的 fv |
+| 4.7 | 高 conf fail 复核（result==fail 且 conf≥80 → 逐条交互 ack；改判记 evidence.human_override） | 改写后的 fv |
 | 5S.1 | 缺陷提取与优先级判定（**仅 smoke-test 模式**） | — |
 | 5S.2 | 冒烟测试报告生成 + P0 门控（**仅 smoke-test 模式**） | `defect_list.json`、`smoke_test_report.json` |
 | 5. loop | 回溯自循环：缺口分类 + 用户确认 + 增量重跑（**仅标准模式且存在 missing/partial**） | 更新 `traceability_coverage_report.json` 的 `loop_metadata` |
@@ -162,7 +193,7 @@ description: >
 | 4 output（4.1–4.5） | ✓ | ✓ |
 | 4.6 fv 兜底落盘（仅 input_quality == "low" 时允许） | ✓ | ✓ |
 | 4.6a fv schema 校验（强制） | ✓ | ✓ |
-| 4.7 高 conf fail 复核（AskUserQuestion） | ✓ | ✗ 跳过（smoke 不交互修改 fv） |
+| 4.7 高 conf fail 复核（交互式提问） | ✓ | ✗ 跳过（smoke 不交互修改 fv） |
 | 5S.1 缺陷提取 | ✗ 跳过 | ✓ |
 | 5S.2 冒烟报告 + verdict 五档判定 | ✗ 跳过 | ✓ |
 | 5 loop 自循环 | ✓（仅当存在 missing/partial） | ✗ 跳过（冒烟不做交互式修复） |
@@ -205,7 +236,7 @@ PHASES.md 内涉及 mode 分支的段落（5S.1 / 5S.2 / Phase 5 loop / Phase 6 
 - **change-analysis**：侧重代码变更的影响面分析和测试覆盖评估。本 skill 侧重需求与代码的双通道追溯矩阵，可被 change-analysis 消费（change-analysis 可选引用本 skill 产出的追溯矩阵）
 - **test-case-review**：专注已有测试用例的质量评审。本 skill 的覆盖缺口分析可为 test-case-review 提供补充视角
 - **test-case-generation**：上游产出 `final_cases.json` 是本 skill 正向通道（用例中介验证）的优先输入，AI 拿用例的 `steps[].action / expected` 对照代码追踪
-- **metersphere-sync**：本 skill 的 **Phase 6 writeback** **直接调** `metersphere_helper.py writeback-from-fv` 共享脚本（不调 `Skill(test:metersphere-sync)`——单会话只能调一个 skill）。helper 内部完成三级查找 + P6 状态映射 + 幂等比对 + 重试 + 报告生成。前置条件：上游必须已经跑过 `metersphere-sync mode=sync` 产出 `ms_case_mapping.json`（v2 格式）和 `ms_plan_info.json`。仅 `mode != "smoke-test"` 触发；冒烟测试模式不写 MS
+- **metersphere-sync**：本 skill 的 **Phase 6 writeback** **直接调** `metersphere_helper.py writeback-from-fv` 共享脚本（不调 `Skill(metersphere-sync)`——单会话只能调一个 skill）。helper 内部完成三级查找 + P6 状态映射 + 幂等比对 + 重试 + 报告生成。前置条件：上游必须已经跑过 `metersphere-sync mode=sync` 产出 `ms_case_mapping.json`（v2 格式）和 `ms_plan_info.json`。仅 `mode != "smoke-test"` 触发；冒烟测试模式不写 MS
 - **冒烟测试工作流**：本 skill 的 smoke-test 模式作为冒烟测试的分析引擎，复用双通道追溯能力，追加缺陷提取和 P0 门控。工作流层通过 `mode=smoke-test` 参数触发
 
 ## Closing Checklist（CRITICAL）

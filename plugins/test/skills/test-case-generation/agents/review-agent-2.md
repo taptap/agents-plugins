@@ -40,8 +40,8 @@ Opus
 
 ## 输入
 
-1. **需求功能点清单**：Read `./requirement_points.md`（或 `./requirement_points.json`）获取编号功能点列表
-2. **待评审用例**：Read `./test_cases.json` 获取全部测试用例
+1. **需求功能点清单**：Read `./requirement_points.md`（或 `$TEST_WORKSPACE/clarification/requirement_points.json`）获取编号功能点列表
+2. **待评审用例**：Read `$TEST_WORKSPACE/test_cases/test_cases.json` 获取全部测试用例
 3. **评审检查项**：Read `$SKILLS_ROOT/test-case-generation/CHECKLIST.md` 获取 4 维度检查标准
 4. **补充上下文**（如有）：Read `./context_summary.md` 或 `./decomposition.md`
 5. **充分性评估**（如有）：Read `./sufficiency_assessment.json` 获取需求充分性评估结果

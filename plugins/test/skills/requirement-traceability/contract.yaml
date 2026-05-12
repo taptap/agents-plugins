@@ -1,9 +1,11 @@
 name: requirement-traceability
-version: "2.1"
+version: "2.2"
 description: >
   双向追溯需求与代码变更的映射关系。输入需求描述 + 代码变更（MR/PR 或本地 diff），
   输出 traceability_matrix.json + traceability_coverage_report.json + risk_assessment.json。
   支持 smoke-test 模式：在回溯基础上提取缺陷列表并执行 P0 门控判定。
+  消费 test_cases/final_cases.json 时以 case_id 作为用例主键；需求匹配主要依赖 title + steps[].action + steps[].expected + preconditions，
+  module 仅作分组和辅助上下文。
 
 input:
   any_of:
@@ -34,8 +36,8 @@ input:
     final_cases:
       type: file
       description: >
-        上游测试用例集，正向用例中介验证的优先输入。每条用例的
-        steps[].action / steps[].expected 直接作为追踪输入和断言。
+        上游测试用例集，正向用例中介验证的优先输入。要求稳定 case_id 与非空 module；
+        case_id 是用例主键，steps[].action / steps[].expected 直接作为追踪输入和断言。
       from_upstream: test-case-generation
     design_link:
       type: string
@@ -79,35 +81,50 @@ output:
       description: 风险评估和行动建议
       format: json
     - name: forward_verification.json
+      default_path: traceability/<change_set_slug>/forward_verification.json
       description: 正向用例中介验证结果（v2 schema，含 evidence + external_dependencies）
       format: json
+      schema: ../commons/schemas/forward_verification.schema.json
+      consumed_by: [metersphere-sync]
     - name: forward_verification.enriched.json
+      default_path: traceability/<change_set_slug>/forward_verification.enriched.json
       description: writeback 后的 fv，每条带 ms_id 字段（下次跑可跳过 lookup）
       format: json
       optional: true
+      schema: ../commons/schemas/forward_verification.schema.json
+      produced_when: 标准模式且 mapping/plan_info 就位并执行 writeback
     - name: ms_sync_report.json
       description: writeback-from-fv 输出（含 summary by_target_status / updated / unchanged / failed 明细）
       format: json
       optional: true
+      produced_when: 标准模式且 mapping/plan_info 就位并执行 writeback
     - name: pass_with_caveats.md
       description: 标 pass 但需外部验证（device/server 等）的条目清单（writeback 自动生成，给 QA 看）
       format: markdown
       optional: true
+      produced_when: 标准模式且 mapping/plan_info 就位并执行 writeback；即使无 caveat 条目也应落盘为空清单
     - name: pending_external_validation.md
       description: 同上数据按依赖类型分组（device 一节、server 一节...）
       format: markdown
       optional: true
+      produced_when: 标准模式且 mapping/plan_info 就位并执行 writeback；即使无外部验证依赖也应落盘为空清单
     - name: ui_fidelity_report.json
       description: UI 还原度检查报告（条件产出，仅有设计稿时）
       format: json
+      optional: true
+      produced_when: 同时提供 design_link 与 code_dir
     - name: defect_list.json
       description: 缺陷列表（smoke-test 模式产出，含名称、优先级、实际/预期结果）
       format: json
       optional: true
+      schema: ../commons/contracts/defect-list.schema.json
+      produced_when: mode=smoke-test
     - name: smoke_test_report.json
       description: 冒烟测试报告含 pass/fail 判定（smoke-test 模式产出）
       format: json
       optional: true
+      schema: ../commons/contracts/smoke-test-report.schema.json
+      produced_when: mode=smoke-test
   structured:
     overall_risk:
       type: string
@@ -135,7 +152,7 @@ output:
       description: 验证通道模式（dual_channel | forward_only | reverse_only | forward_synthesized）。`forward_synthesized` 标识 §4.6 兜底合成路径——auto-compute，禁止模型自由填
     input_quality:
       type: string
-      description: 用例输入质量（full | medium | low）。来源 §1.3.d 检测：full=有 final_cases.json；medium=仅 supplementary 或 requirement_points；low=三者全无（走 4.6 兜底）。所有降级行为（4.6 触发条件、verdict 五档、5S.1 priority 继承、4.5 confidence 封顶）的单一权威字段
+      description: 用例输入质量（full | medium | low）。来源 §1.3.d 检测：full=有 test_cases/final_cases.json；medium=仅 supplementary 或 clarification/requirement_points.json；low=三者全无（走 4.6 兜底）。所有降级行为（4.6 触发条件、verdict 五档、5S.1 priority 继承、4.5 confidence 封顶）的单一权威字段
     forward_verification_rate:
       type: string
       description: 正向用例验证通过率

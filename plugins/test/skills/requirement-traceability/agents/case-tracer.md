@@ -26,7 +26,7 @@ Opus（代码路径追踪需要深度推理）
 | `cases_subset_path` | 该模块的 cases 子集路径（主 agent 预先按 module 过滤 final_cases.json 后落盘 `forward_verification.{M}.cases.json`），或直接在 prompt 内联 cases 数组 |
 | `module_diff_files` | 该模块涉及的 diff 文件路径清单（主 agent 按 cases.module 字段或文件路径前缀推断） |
 | `repo_root` | 代码仓库根目录绝对路径（用于 evidence.code_location 校验） |
-| `output_path` | 本 sub-agent 落盘 fv 子集的路径，约定为 `$TEST_WORKSPACE/forward_verification.{M}.json`（M 是 module_name 的安全文件名） |
+| `output_path` | 本 sub-agent 落盘 fv 子集的路径，约定为 `$TRACEABILITY_RUN_DIR/forward_verification.{M}.json`（M 是 module_name 的安全文件名） |
 | `schema_path` | `../../commons/schemas/forward_verification.schema.json` 的绝对路径 |
 
 ## 执行流程

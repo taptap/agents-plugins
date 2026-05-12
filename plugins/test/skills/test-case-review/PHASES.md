@@ -9,11 +9,11 @@
 **测试用例来源**（必须非空）：
 1. `test_cases_json` 参数提供了 JSON 文件 → Read 文件
 2. `test_cases_text` 参数提供了文本 → 解析为结构化数据
-3. 工作目录中已存在上游产出文件（`final_cases.json`、`test_cases.json`）→ 优先消费
+3. 公共工作区中已存在上游产出文件（`test_cases/final_cases.json`、`test_cases/test_cases.json`）→ 优先消费
 4. 以上均不满足 → 停止并提示用户提供测试用例
 
 **需求来源**（推荐但非必须）：
-1. 工作目录中已存在上游产出文件（`clarified_requirements.json`、`requirement_points.json`）→ 优先消费
+1. 公共工作区中已存在上游产出文件（`clarification/clarified_requirements.json`、`clarification/requirement_points.json`）→ 优先消费
 2. `requirement_doc` 参数提供了本地文件 → Read 本地文件
 3. `story_link` 参数为 URL → 调用脚本获取
 4. 以上均不满足 → 降级为纯用例质量评审（无需求覆盖率维度）
@@ -34,7 +34,7 @@
 
 ### 2.1 获取需求文档
 
-- **上游文件存在**：Read `clarified_requirements.json` 和 `requirement_points.json`
+- **上游文件存在**：Read `clarification/clarified_requirements.json` 和 `clarification/requirement_points.json`
 - **本地文件**：Read `requirement_doc` 文件
 - **URL**：使用 `fetch_feishu_doc.py` 获取
 - **无需求来源**：标记"无需求文档，跳过覆盖率评审"

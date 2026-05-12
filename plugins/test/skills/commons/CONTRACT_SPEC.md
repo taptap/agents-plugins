@@ -42,6 +42,11 @@ output:
     - name: string              # 输出文件名
       description: string       # 文件内容说明
       format: json | markdown   # 文件格式
+      optional: boolean         # 可选：是否为条件产物 / 中间产物
+      pattern: boolean          # 可选：name 是否为通配模式（如 module_*_cases.json）
+      schema: string            # 可选：字段级 schema 路径；仅作索引，字段权威仍在 schema 文件
+      produced_when: string     # 可选：生成条件（如 mode=execute / review 阶段启用）
+      consumed_by: string[]     # 可选：主要下游消费者 skill
   structured:                   # 可选：结构化摘要字段，供编排层快速消费
     field_name:
       type: string | number | boolean | string[] | object
@@ -68,18 +73,21 @@ dependencies:
 3. `input.one_of` 中的字段至少需要提供一个（互斥选择，skill 按优先级取第一个命中的），编排层负责校验；skill 内部按 CONVENTIONS.md 定义的输入路由优先级处理
 4. `input.any_of` 中的字段至少需要提供一个（可同时提供多个，skill 合并处理所有提供的输入），编排层负责校验
 5. `input.optional` 中标注 `from_upstream` 的字段，编排层会自动从上游 skill 的输出中填充。`from_upstream` 支持数组语法表示多个可能的上游来源：`from_upstream: [unit-test-design, integration-test-design]`（语义：任一上游都可提供此输入）
-6. `output.files` 列出所有 skill 会产出的文件，文件名必须确定（不使用通配符）
-7. `output.structured` 用于编排层快速判断 skill 执行结果，无需解析文件
-8. `version` 遵循语义化版本：主版本号变更表示接口不兼容，次版本号变更表示向后兼容的功能新增
-9. 所有 `description` 使用中文
-10. 对于支持型 guide 或共享工具型 skill（仅作为参考文档被其他 skill 引用，自身不执行分析流程），`input` 和 `output` 可为空对象 `{}`。此时仍需声明 `dependencies`（如有脚本或环境变量依赖）
+6. `output.files` 列出所有 skill 会产出的文件；默认必产。条件产物必须标 `optional: true` 并写清 `produced_when`
+7. 动态文件名可用 `pattern: true`（如 `module_*_cases.json`），但必须描述命名规则和生成阶段
+8. 字段级约束不要写进 `contract.yaml`；用 `schema` 指向 `commons/contracts/*.schema.json` 或 `commons/schemas/*.schema.json`。若 schema 与 contract 描述冲突，以 schema / CONVENTIONS.md 为准
+9. `consumed_by` 只用于编排索引和审计，不改变执行依赖；真正的可启动输入仍由下游 `input.*.from_upstream` 声明
+10. `output.structured` 用于编排层快速判断 skill 执行结果，无需解析文件
+11. `version` 遵循语义化版本：主版本号变更表示接口不兼容，次版本号变更表示向后兼容的功能新增
+12. 所有 `description` 使用中文
+13. 对于支持型 guide 或共享工具型 skill（仅作为参考文档被其他 skill 引用，自身不执行分析流程），`input` 和 `output` 可为空对象 `{}`。此时仍需声明 `dependencies`（如有脚本或环境变量依赖）
 
 ## 验证方式
 
-使用 `validate_contracts.py` 脚本验证所有 contract.yaml 的格式正确性：
+在 skills 根目录执行 `validate_contracts.py` 脚本，验证所有 contract.yaml 的格式正确性：
 
 ```bash
-python3 plugins/test/skills/test-shared-tools/scripts/validate_contracts.py plugins/test/skills/
+python3 test-shared-tools/scripts/validate_contracts.py --allowlist commons/contracts/known-collisions.yaml
 ```
 
 脚本检查：name 与目录名一致、required/one_of/any_of 字段类型合法、output.files 格式正确、from_upstream 引用的 skill 存在。

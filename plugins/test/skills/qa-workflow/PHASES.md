@@ -15,7 +15,7 @@
 
 1. 确定工作区目录：
    - `$TEST_WORKSPACE` 已设置 → 使用该目录
-   - 未设置 → 请求用户提供需求名（用于创建 `plugins/test/workspace/{name}/`）
+   - 未设置 → 请求用户提供需求名或需求链接稳定 ID（用于创建 `requirement_<stable_id>/`）
 
 2. 根据 `pipeline` 参数选择模板（默认 `qa-full`），参见 [WORKFLOW_DEFS.md](WORKFLOW_DEFS.md)
 
@@ -49,7 +49,7 @@ Skill(skill: "test:requirement-clarification", args: "story_link=<story_link> de
 ```
 
 完成后：
-1. Read `$TEST_WORKSPACE/clarified_requirements.json`
+1. Read `$TEST_WORKSPACE/clarification/clarified_requirements.json`
 2. 提取并更新 `derived_params`：
    - `plan_name` ← JSON 中的需求标题（story_name 或第一层 title）
    - `coordination_needed` ← `platform_scope.coordination_needed`
@@ -72,7 +72,7 @@ Skill(skill: "test:test-case-generation", args: "confirm_policy=accept_all")
 > 如用户明确要求交互式确认，可传入 `confirm_policy=interactive`。
 
 完成后：
-1. 确认 `$TEST_WORKSPACE/final_cases.json` 存在
+1. 确认 `$TEST_WORKSPACE/test_cases/final_cases.json` 存在
 2. 更新 `workflow_state.json`：步骤 #2 标记 `completed`
 
 ### 1.3 MeterSphere 同步（qa-lite 模板跳过此步）
@@ -83,7 +83,7 @@ Skill(skill: "test:metersphere-sync", args: "mode=sync plan_name=<derived_params
 ```
 
 完成后：
-1. Read `$TEST_WORKSPACE/ms_plan_info.json` 获取 `plan_url`
+1. Read `$TEST_WORKSPACE/metersphere/ms_plan_info.json` 获取 `plan_url`
 2. 更新 `workflow_state.json`：步骤 #3 标记 `completed`
 
 ### 1.4 暂停 — 等待编码
@@ -163,9 +163,9 @@ Skill(skill: "test:api-contract-validation", args: "frontend_changes=<...> backe
 
 调用 traceability 前确认 `$TEST_WORKSPACE` 至少存在以下之一：
 
-- `final_cases.json`（来自步骤 #2 test-case-generation；qa-full 模板下默认存在）
+- `test_cases/final_cases.json`（来自步骤 #2 test-case-generation；qa-full 模板下默认存在）
 - `change_supplementary_cases.json`（来自步骤 #5 change-analysis 的可选产出，仅 Story 场景且有覆盖缺口时生成）
-- `requirement_points.json`（来自步骤 #1 requirement-clarification）
+- `clarification/requirement_points.json`（来自步骤 #1 requirement-clarification）
 
 **处理**：
 
@@ -173,7 +173,7 @@ Skill(skill: "test:api-contract-validation", args: "frontend_changes=<...> backe
 - 全部不存在 → chat 输出警告：
 
   ```
-  ⚠️ 上游用例输入全部缺失（final_cases / change_supplementary_cases / requirement_points）。
+  ⚠️ 上游用例输入全部缺失（test_cases/final_cases / change_supplementary_cases / clarification/requirement_points）。
   本次 traceability 会自动降级到 input_quality=low：
     - traceability_coverage_report.json 的 confidence 上限封顶 60
     - risk_assessment.json overall_risk 至少 medium
@@ -186,16 +186,16 @@ Skill(skill: "test:api-contract-validation", args: "frontend_changes=<...> backe
 #### 2.2.1 调用
 
 ```
-Skill(skill: "test:requirement-traceability", args: "code_changes=<...> story_link=<...> final_cases=$TEST_WORKSPACE/final_cases.json plan_name=<derived_params.plan_name>")
+Skill(skill: "test:requirement-traceability", args: "code_changes=<...> story_link=<...> final_cases=$TEST_WORKSPACE/test_cases/final_cases.json plan_name=<derived_params.plan_name>")
 ```
 
 此步骤包含两部分（详见 requirement-traceability/PHASES.md）：
 
 1. **正向用例中介验证**：消费上游 `final_cases.json`（来自步骤 #2 test-case-generation）+ `change_supplementary_cases.json`（来自步骤 #5 change-analysis）作为优先级 1.5 档补充用例池。对每条用例执行代码路径追踪，落盘 `forward_verification.json`，强制走 `validate-fv` schema 校验（4.6a），高 conf fail 触发 4.7 复核
-2. **Phase 6 writeback**：标准模式下直接调 `metersphere_helper.py writeback-from-fv`（不走 Skill(metersphere-sync)），按 P6 状态映射把 fv 写回 MS plan，落盘 `ms_sync_report.json` + `forward_verification.enriched.json` + `pass_with_caveats.md` + `pending_external_validation.md`。前置条件：上游必须已经跑过 `metersphere-sync mode=sync`（即步骤 #3）产出 `ms_case_mapping.json`（v2）和 `ms_plan_info.json`
+2. **Phase 6 writeback**：标准模式下直接调 `metersphere_helper.py writeback-from-fv`（不走 Skill(metersphere-sync)），按 P6 状态映射把 fv 写回 MS plan，落盘 `traceability/<change_set_slug>/ms_sync_report.json` + `forward_verification.enriched.json` + `pass_with_caveats.md` + `pending_external_validation.md`。前置条件：上游必须已经跑过 `metersphere-sync mode=sync`（即步骤 #3）产出 `metersphere/ms_case_mapping.json`（v2）和 `metersphere/ms_plan_info.json`
 
 完成后：
-1. Read `$TEST_WORKSPACE/ms_sync_report.json`
+1. Read `$TEST_WORKSPACE/traceability/<change_set_slug>/ms_sync_report.json`
 2. 提取 `summary.by_target_status.{Pass, Prepare, Failure}` 和 `summary.failed` 用于 §2.3 摘要；如需筛 caveats，回读 `pass_with_caveats.md`
 
 ### 2.3 暂停 — 等待人工验证

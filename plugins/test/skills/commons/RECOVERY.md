@@ -128,12 +128,12 @@ chat 必须输出两段：
 **(A) 已可用的产物清单**：
 ```
 ✅ 已落盘且仍可用：
-  - $TEST_WORKSPACE/traceability_matrix.json
-  - $TEST_WORKSPACE/traceability_coverage_report.json
-  - $TEST_WORKSPACE/risk_assessment.json
-  - $TEST_WORKSPACE/code_analysis.md
-  - $TEST_WORKSPACE/api_contract_report.json (如有)
-  - $TEST_WORKSPACE/ui_fidelity_report.json (如有)
+  - $TEST_WORKSPACE/traceability/<change_set_slug>/traceability_matrix.json
+  - $TEST_WORKSPACE/traceability/<change_set_slug>/traceability_coverage_report.json
+  - $TEST_WORKSPACE/traceability/<change_set_slug>/risk_assessment.json
+  - $TEST_WORKSPACE/traceability/<change_set_slug>/code_analysis.md
+  - $TEST_WORKSPACE/traceability/<change_set_slug>/api_contract_report.json (如有)
+  - $TEST_WORKSPACE/traceability/<change_set_slug>/ui_fidelity_report.json (如有)
 ```
 
 **(B) Phase 4.7 / 5 / 6 已被中断的解释 + 三条修复路径**：
@@ -460,7 +460,7 @@ chat 模板：
   - 若担心 AI 完全失能，用 requirement_doc_link 重跑本 skill 提供需求文档辅助追踪
   - 全 inconclusive 通常意味着 fv 的 inconclusive_reason 字段集中在 1-2 类，可针对性补充上下文
 
-详情：$TEST_WORKSPACE/forward_verification.json，按 inconclusive_reason 分组：
+详情：$TEST_WORKSPACE/traceability/<change_set_slug>/forward_verification.json，按 inconclusive_reason 分组：
   - external_dependency: {n1} 条
   - call_depth_exceeded: {n2} 条
   - dynamic_dispatch: {n3} 条

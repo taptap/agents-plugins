@@ -1,11 +1,13 @@
 name: requirement-clarification
-version: "2.1"
+version: "2.2"
 description: >
   当收到新需求（链接、文档、口述或碎片化信息）时，通过单 Agent 强推理（假设/反例/结论 + 原文引用）
   和多维度结构化问答与用户拉齐对需求的理解，输出结构化澄清结果和编号功能点清单。
+  需要向用户确认时遵守 commons/CONVENTIONS.md 的交互式提问协议：Claude 可用 AskUserQuestion，
+  Codex 用原生对话逐题提问，回答写回相同产物。
 
 input:
-  one_of:
+  any_of:
     story_link:
       type: string
       description: 需求链接（飞书 Story / 文档链接，或其他可通过脚本获取的 URL）
@@ -22,12 +24,12 @@ input:
       description: >
         历史对话中提取的需求相关片段（由编排层或用户提供），
         可单独作为输入触发探索模式，也可与其他输入组合作为补充上下文。
-  optional:
     design_link:
       type: string
       description: >
-        Figma 设计稿链接。单独提供（无 one_of 字段）时触发设计稿澄清模式，
+        Figma 设计稿链接。单独提供（无需求文档）时触发设计稿澄清模式，
         与 story_link / requirement_doc 组合提供时触发文档+设计稿联合澄清。
+  optional:
     platform_scope:
       type: string[]
       description: >
@@ -38,19 +40,29 @@ input:
       description: 模块关系索引文件（module-relations.json），由 spec 插件的 module-discovery 生成维护
 
 output:
+  gate:
+    name: clarification_gate.json
+    description: >
+      consolidate 前的中间门禁文件。必须通过 validate_clarification_gate.py 校验后，
+      才允许生成最终 4 个输出产物；不作为下游消费产物。
+    format: json
   files:
     - name: clarification_log.md
       description: 澄清过程记录（问题 + 回答 + 结论），供人回看
       format: markdown
+      consumed_by: [test-case-generation, requirement-traceability]
     - name: clarified_requirements.json
       description: 结构化澄清结果，含功能点、边界、约束、确认的 Q&A
       format: json
+      consumed_by: [test-case-generation, requirement-traceability]
     - name: requirement_points.json
       description: 编号功能点清单，供下游 skill 消费
       format: json
+      consumed_by: [test-case-generation, requirement-traceability, metersphere-sync]
     - name: implementation_brief.json
       description: 面向 coding agent 的实现任务清单，按平台拆分任务并附带 API 契约和依赖图
       format: json
+      consumed_by: [test-case-generation, requirement-traceability]
   structured:
     mode:
       type: string
@@ -96,6 +108,7 @@ output:
 
 dependencies:
   scripts:
+    - requirement-clarification/scripts/validate_clarification_gate.py
     - test-shared-tools/scripts/fetch_feishu_doc.py
     - test-shared-tools/scripts/gitlab_helper.py  # 条件触发：需求涉及现有代码时
     - test-shared-tools/scripts/github_helper.py  # 条件触发：需求涉及现有代码时

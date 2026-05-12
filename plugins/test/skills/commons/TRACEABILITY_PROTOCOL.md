@@ -11,7 +11,7 @@ requirement-traceability 采用双通道追溯：
 | 正向通道 | 需求 → 代码 | 用例中介验证 | 需求是否被正确实现？ |
 | 反向通道 | 代码 → 需求 | 直接代码追溯 | 代码有没有做需求之外的事？ |
 
-**正向通道**用具体的测试用例作为中介——AI 拿用例的"操作步骤 + 预期结果"逐条对照代码推理"代码是否真能实现这条用例"。按优先级消费：① 上游 `final_cases.json`（test-case-generation 产出）→ ② `requirement_points.json` 的 `acceptance_criteria` → ③ 兜底从需求描述提取。详见 [requirement-traceability/PHASES.md](../requirement-traceability/PHASES.md) 3.1-3.2 节。
+**正向通道**用具体的测试用例作为中介——AI 拿用例的"操作步骤 + 预期结果"逐条对照代码推理"代码是否真能实现这条用例"。按优先级消费：① 上游 `test_cases/final_cases.json`（test-case-generation 产出）→ ② `clarification/requirement_points.json` 的 `acceptance_criteria` → ③ 兜底从需求描述提取。详见 [requirement-traceability/PHASES.md](../requirement-traceability/PHASES.md) 3.1-3.2 节。
 
 **反向通道**主 agent 内联完成（不调 Task sub-agent，详见 `requirement-traceability/PHASES.md` 3.3）：从代码变更出发寻找需求对应，结果直接写进 `code_analysis.md` 的「反向追溯输出（主 agent 内联）」节。
 
@@ -184,7 +184,7 @@ requirement-traceability 正向通道的产出。**权威 schema 在 `schemas/fo
 
 ```bash
 python3 $SKILLS_ROOT/test-shared-tools/scripts/metersphere_helper.py \
-  validate-fv $TEST_WORKSPACE/forward_verification.json
+  validate-fv $TEST_WORKSPACE/traceability/<change_set_slug>/forward_verification.json
 ```
 
 失败 → exit 2 + structured stderr，**不允许带 bug fv 跑下去**。详见 `requirement-traceability/PHASES.md` 4.6a。

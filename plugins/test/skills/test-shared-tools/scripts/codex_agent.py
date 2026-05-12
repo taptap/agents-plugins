@@ -27,6 +27,7 @@ import argparse
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 import time
@@ -45,31 +46,24 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL", "")
 CODEX_MODEL = os.environ.get("CODEX_MODEL", "gpt-5.4-mini")
 
-# Bash 命令白名单（正则匹配命令开头）
-_BASH_ALLOW_PATTERNS = [
-    r'^glab\b',
-    r'^gh\b',
-    r'^python3?\s+\S*_helper\.py\b',
-    r'^grep\b',
-    r'^find\b',
-    r'^wc\b',
-    r'^head\b',
-    r'^tail\b',
-    r'^cat\b',
-    r'^git\s+(diff|show|log|blame|rev-parse|ls-files)\b',
-    r'^ls\b',
-    r'^pwd\b',
-    r'^echo\b',
-    r'^sort\b',
-    r'^uniq\b',
-    r'^cut\b',
-    r'^awk\b',
-    r'^sed\s',
-    r'^diff\b',
-    r'^file\b',
-    r'^stat\b',
-]
-_BASH_ALLOW_RE = re.compile('|'.join(_BASH_ALLOW_PATTERNS))
+# Bash 命令白名单（解析为 argv 后校验，执行时不经过 shell）
+_BASH_ALLOWED_COMMANDS = {
+    'glab', 'gh', 'grep', 'find', 'wc', 'head', 'tail', 'cat', 'ls', 'pwd',
+    'sort', 'uniq', 'cut', 'awk', 'sed', 'diff', 'file', 'stat',
+}
+_BASH_ALLOWED_GIT_SUBCOMMANDS = {
+    'diff', 'show', 'log', 'blame', 'rev-parse', 'ls-files',
+}
+_BASH_ALLOWED_PYTHON = {'python', 'python3'}
+_TRUSTED_HELPER_DIR = Path(__file__).resolve().parent
+_BASH_ALLOWED_HELPERS = {
+    'fetch_feishu_doc.py',
+    'github_helper.py',
+    'gitlab_helper.py',
+    'metersphere_helper.py',
+    'search_mrs.py',
+    'search_prs.py',
+}
 
 # Bash 命令黑名单（危险操作，即使通过白名单也拒绝）
 _BASH_DENY_PATTERNS = [
@@ -82,11 +76,15 @@ _BASH_DENY_PATTERNS = [
     r'\bmkdir\b',
     r'\bsudo\b',
     r'\beval\b',
-    r'>\s*/',           # 重定向到绝对路径
+    r'\bsystem\s*\(',   # awk/sed 等内置 system 调用
+    r'[;&|`<>]',        # shell 分隔符、管道、命令替换、重定向
+    r'\$\(',            # 命令替换
+    r'[\r\n]',          # 多行命令
     r'\bpip\s+install',
     r'\bnpm\s+install',
 ]
 _BASH_DENY_RE = re.compile('|'.join(_BASH_DENY_PATTERNS))
+_BASH_SENSITIVE_PATH_RE = re.compile(r'(^|/)\.env($|[./])')
 
 # 工具输出截断阈值（字符数）
 _TOOL_OUTPUT_MAX_CHARS = 50_000
@@ -186,27 +184,54 @@ TOOLS = [
 # ==================== 工具执行 ====================
 
 def _execute_bash(command: str, work_dir: str, timeout: int = 30) -> str:
-    """执行 Bash 命令（白名单过滤）"""
+    """执行分析命令（白名单过滤，不经过 shell）"""
     cmd_stripped = command.strip()
-
-    # 管道命令：检查第一段
-    first_cmd = cmd_stripped.split('|')[0].strip()
 
     if _BASH_DENY_RE.search(cmd_stripped):
         return f"ERROR: Command blocked by security policy: {cmd_stripped[:100]}"
 
-    if not _BASH_ALLOW_RE.match(first_cmd):
+    try:
+        argv = shlex.split(cmd_stripped)
+    except ValueError as e:
+        return f"ERROR: Invalid command syntax: {e}"
+
+    if not argv:
+        return "ERROR: Empty command"
+
+    if any(_BASH_SENSITIVE_PATH_RE.search(arg) for arg in argv):
+        return "ERROR: Reading .env files is blocked by security policy"
+
+    exe = Path(argv[0]).name
+    allowed = exe in _BASH_ALLOWED_COMMANDS
+    if exe == 'git':
+        allowed = len(argv) > 1 and argv[1] in _BASH_ALLOWED_GIT_SUBCOMMANDS
+    elif exe in _BASH_ALLOWED_PYTHON:
+        allowed = False
+        if len(argv) > 1:
+            helper = Path(argv[1])
+            if helper.name in _BASH_ALLOWED_HELPERS:
+                if helper.parent == Path('.'):
+                    argv[1] = str(_TRUSTED_HELPER_DIR / helper.name)
+                    allowed = True
+                else:
+                    helper_path = helper if helper.is_absolute() else Path(work_dir, helper)
+                    helper_path = helper_path.resolve()
+                    allowed = helper_path.parent == _TRUSTED_HELPER_DIR
+                    if allowed:
+                        argv[1] = str(helper_path)
+
+    if not allowed:
         return (
             f"ERROR: Command not in allowlist. "
             f"Allowed: glab, gh, grep, find, git diff/show/log/blame, cat, head, tail, "
             f"wc, ls, sort, uniq, cut, awk, sed, diff, file, stat, python3 *_helper.py. "
-            f"Got: {first_cmd[:80]}"
+            f"Got: {cmd_stripped[:80]}"
         )
 
     try:
         result = subprocess.run(
-            cmd_stripped,
-            shell=True,
+            argv,
+            shell=False,
             capture_output=True,
             text=True,
             cwd=work_dir,

@@ -28,10 +28,10 @@
 
 ## 阶段 2: analyze — 代码分析
 
-**上游感知**（可选）：如果工作目录中存在 `requirement_points.json`（上游 requirement-clarification 产出）或 `final_cases.json`（上游 test-case-generation 最终产出），先读取这些文件：
+**上游感知**（可选）：如果公共工作区中存在 `clarification/requirement_points.json`（上游 requirement-clarification 产出）或 `test_cases/final_cases.json`（上游 test-case-generation 最终产出），先读取这些文件：
 
-- 从 `requirement_points.json` 中提取 P0/P1 功能点，标记与这些功能点相关的代码模块为高优先级
-- 从 `final_cases.json` 中了解已有的功能测试场景，避免重复覆盖已在功能测试中验证的纯业务逻辑
+- 从 `clarification/requirement_points.json` 中提取 P0/P1 功能点，标记与这些功能点相关的代码模块为高优先级
+- 从 `test_cases/final_cases.json` 中了解已有的功能测试场景，避免重复覆盖已在功能测试中验证的纯业务逻辑
 
 对每个源码文件：
 

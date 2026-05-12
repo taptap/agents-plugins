@@ -38,13 +38,13 @@
 ]
 ```
 
-> qa-lite 下 requirement-traceability 进入 Phase 6 writeback 时会先做软依赖检查：因 qa-lite 跳过 metersphere-sync，工作目录无 `ms_case_mapping.json` 和 `ms_plan_info.json`，Phase 6 **优雅 skip 整段**（标 `writeback_skipped: "missing_ms_case_mapping"` 或 `"missing_ms_plan_info"`），不报错、不影响主产出。详见 requirement-traceability/PHASES.md 6.1.b。
+> qa-lite 下 requirement-traceability 进入 Phase 6 writeback 时会先做软依赖检查：因 qa-lite 跳过 metersphere-sync，工作目录无 `metersphere/ms_case_mapping.json` 和 `metersphere/ms_plan_info.json`，Phase 6 **优雅 skip 整段**（标 `writeback_skipped: "missing_ms_case_mapping"` 或 `"missing_ms_plan_info"`），不报错、不影响主产出。详见 requirement-traceability/PHASES.md 6.1.b。
 
 ## verify-only
 
 仅做代码验证，跳过需求澄清、用例生成和 MS 同步。适合已有测试用例，只需验证代码实现的场景。
 
-前置条件：`$TEST_WORKSPACE` 中需已有 `final_cases.json` 或 `requirement_points.json`。
+前置条件：`$TEST_WORKSPACE` 中需已有 `test_cases/final_cases.json` 或 `clarification/requirement_points.json`。
 
 ```json
 [

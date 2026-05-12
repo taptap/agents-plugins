@@ -145,6 +145,7 @@ def _fail(error_type: str, message: str, *,
 # ==================== 配置 ====================
 
 _REQUIRED_MS_ENV = ('MS_ACCESS_KEY', 'MS_SECRET_KEY')
+_MS_ENV_DOC_URL = 'https://xd.feishu.cn/wiki/K4Cxw8HE5itR16kFFYicSctAnrc'
 
 # 不需要 MS API 凭据的纯本地子命令（schema 校验等）。其余命令默认要求 MS 凭据。
 # 这是白名单——新增 MS 命令时无需更新；新增纯本地命令时显式加进来。
@@ -159,7 +160,11 @@ def _check_ms_credentials(cmd: str) -> None:
     if missing:
         _fail(ERR_PRECONDITION,
               f"missing required environment variables: {', '.join(missing)}",
-              hint='Set via .env file or: export MS_ACCESS_KEY=xxx MS_SECRET_KEY=xxx',
+              hint=(
+                  'Open MeterSphere 配置 (.env) and paste the config block into '
+                  f'test-shared-tools/scripts/.env: {_MS_ENV_DOC_URL}'
+              ),
+              setup_doc_url=_MS_ENV_DOC_URL,
               missing=missing)
 
 
@@ -293,6 +298,7 @@ def _sanitize_quotes(text: str) -> str:
 
 
 CONVENTIONS_DOC = 'skills/commons/CONVENTIONS.md#用例-json-格式'
+DEFAULT_MODULE = '未分类'
 
 # 顶层允许的字段（其他视为拼写错误）
 _ALLOWED_CASE_FIELDS = frozenset({
@@ -302,6 +308,15 @@ _ALLOWED_CASE_FIELDS = frozenset({
 _ALLOWED_STEP_FIELDS = frozenset({'action', 'expected'})
 # MS 内部格式（后端二次转换的回流）允许的步骤字段
 _ALLOWED_MS_STEP_FIELDS = frozenset({'num', 'desc', 'result'})
+
+
+def _normalize_module(value: Any) -> str:
+    """Normalize optional case module to the default MS directory bucket."""
+    if isinstance(value, str):
+        value = value.strip()
+        if value:
+            return value
+    return DEFAULT_MODULE
 
 
 def _validate_case_schema(raw: Any, idx: int) -> list[str]:
@@ -346,6 +361,24 @@ def _validate_case_schema(raw: Any, idx: int) -> list[str]:
     priority = raw.get('priority')
     if priority not in VALID_PRIORITIES:
         errors.append(f'{prefix}: priority 必须是 {sorted(VALID_PRIORITIES)} 之一，收到 {priority!r}')
+
+    case_id = raw.get('case_id')
+    if case_id is not None and not isinstance(case_id, str):
+        errors.append(f'{prefix}: case_id 必须是字符串；AI 生成时可省略，由系统补齐')
+
+    module = raw.get('module')
+    if module is not None and not isinstance(module, str):
+        errors.append(f'{prefix}: module 必须是字符串、null 或省略；缺失/null/空字符串会归为 {DEFAULT_MODULE}')
+
+    for field in ('test_method', 'source'):
+        value = raw.get(field)
+        if value is not None and not isinstance(value, str):
+            errors.append(f'{prefix}: {field} 必须是字符串或省略')
+
+    for field in ('confidence', 'review_confidence'):
+        value = raw.get(field)
+        if value is not None and (not isinstance(value, (int, float)) or isinstance(value, bool)):
+            errors.append(f'{prefix}: {field} 必须是数字或省略')
 
     precond = raw.get('preconditions')
     if precond is None:
@@ -746,12 +779,14 @@ def cmd_ensure_module(parent_id: str, name: str):
 
 def cmd_import_cases(parent_module_id: str, cases_file: str,
                      requirement_name: str = '', tags: list[str] | None = None,
-                     mapping_out: str | None = None):
+                     mapping_out: str | None = None,
+                     report_out: str | None = None):
     """按 module 字段分组导入用例，可选按需求名创建父模块；落盘 v2 ms_case_mapping.json。
 
     tags: 用例标签列表，默认 ['AI 用例生成']。
           变更分析使用 ['AI 变更分析']，用例评审使用 ['AI 用例评审']。
     mapping_out: v2 mapping 文件落盘路径，默认 <cases_file 同目录>/ms_case_mapping.json
+    report_out: import report 落盘路径，默认与 mapping_out 同目录；未传 mapping_out 时与 cases_file 同目录
     """
     if not parent_module_id:
         parent_module_id = _cfg('MS_DEFAULT_NODE_ID')
@@ -800,7 +835,7 @@ def cmd_import_cases(parent_module_id: str, cases_file: str,
     by_module: dict[str, list[tuple[dict, dict]]] = {}
     for raw in raw_cases:
         converted = _convert_case(raw, tags=tags)
-        module_name = raw.get('module', '未分类')
+        module_name = _normalize_module(raw.get('module'))
         by_module.setdefault(module_name, []).append((raw, converted))
 
     # 严格重名校验：同 module 内 (sanitized title) 出现 ≥2 条 → fail，
@@ -909,7 +944,13 @@ def cmd_import_cases(parent_module_id: str, cases_file: str,
     }
 
     # 同时落盘 ms_import_report.json（P12 命名冲突防御：与 writeback 的 ms_sync_report.json 永不撞名）
-    import_report_path = str(cases_path.parent / 'ms_import_report.json')
+    # 如果调用方显式指定 mapping_out（例如公共 workspace 的 metersphere/ 目录），
+    # report 默认跟随 mapping，避免回落到 test_cases/ 造成跨 skill 产物分散。
+    if report_out is None:
+        import_report_path = str(Path(mapping_out).parent / 'ms_import_report.json')
+    else:
+        import_report_path = report_out
+    Path(import_report_path).parent.mkdir(parents=True, exist_ok=True)
     import_report_doc = {
         'ran_at': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
         'source_cases_file': {
@@ -1438,7 +1479,7 @@ def cmd_refresh_mapping(*, mapping_path: str, cases_path: str,
                      if isinstance(e, dict) and 'case_id' in e}
 
     missing = [
-        {'case_id': cid, 'title': c.get('title', ''), 'module': c.get('module', '')}
+        {'case_id': cid, 'title': c.get('title', ''), 'module': _normalize_module(c.get('module'))}
         for cid, c in case_ids_in_cases.items()
         if cid not in entries_by_id
     ]
@@ -1521,7 +1562,7 @@ def cmd_rebuild_mapping(*, plan_id: str, cases_path: str,
             title_collisions.append({
                 'title': sanitized,
                 'case_ids': [existing.get('case_id'), c.get('case_id')],
-                'modules': [existing.get('module'), c.get('module')],
+                'modules': [_normalize_module(existing.get('module')), _normalize_module(c.get('module'))],
             })
             continue  # 后来的不进字典；ambiguous 集体报告
         local_by_title[sanitized] = c
@@ -1562,7 +1603,7 @@ def cmd_rebuild_mapping(*, plan_id: str, cases_path: str,
             'case_id': local.get('case_id') or local.get('title'),
             'ms_id': pc.get('caseId'),
             'title': sanitized,
-            'module': local.get('module', ''),
+            'module': _normalize_module(local.get('module')),
             'module_path': pc.get('nodePath', ''),
             'import_status': 'reused',  # 反向重建一律标记 reused
         })
@@ -1572,7 +1613,7 @@ def cmd_rebuild_mapping(*, plan_id: str, cases_path: str,
         {
             'case_id': c.get('case_id') or c.get('title'),
             'title': _sanitize_title(c.get('title', '')),
-            'module': c.get('module', ''),
+            'module': _normalize_module(c.get('module')),
         }
         for c in cases
         if isinstance(c, dict)
@@ -1953,13 +1994,15 @@ def main():
             if len(args) < 2:
                 _usage("import-cases <parent_module_id> <cases.json> "
                        "[--requirement <需求名>] [--tags 'AI 变更分析'] "
-                       "[--mapping-out PATH]")
+                       "[--mapping-out PATH] [--report-out PATH]")
             req_name = _flag_value(args, '--requirement', '')
             tags_raw = _flag_value(args, '--tags')
             import_tags = [t.strip() for t in tags_raw.split(',') if t.strip()] if tags_raw else None
             mapping_out = _flag_value(args, '--mapping-out')
+            report_out = _flag_value(args, '--report-out')
             cmd_import_cases(args[0], args[1], requirement_name=req_name,
-                             tags=import_tags, mapping_out=mapping_out)
+                             tags=import_tags, mapping_out=mapping_out,
+                             report_out=report_out)
         elif cmd == 'list-stages':
             cmd_list_stages()
         elif cmd == 'find-or-create-plan':

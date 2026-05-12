@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.44
+
+### Test Plugin (0.0.12)
+
+- Promoted the iOS PR #312 QA workflow improvements into the shared test plugin: requirement-scoped workspaces now use `requirement_<stable_id>/` with `manifest.json` and shared `clarification/`, `test_cases/`, `metersphere/`, and `traceability/` subdirectories.
+- Added a cross-runtime `InteractiveQuestion` protocol so Claude can wrap one question in `AskUserQuestion` while Codex asks the same single-question structure in chat; requirement-clarification now gates consolidate with `clarification_gate.json` and `validate_clarification_gate.py`.
+- Added standalone `plugins/test/scripts/cases_mcp_server.py`, a dependency-free stdio MCP adapter for `save_test_cases` with path fencing, schema validation, module normalization, and automatic `case_id` assignment.
+- Hardened `codex_agent.py` command execution with argv parsing, `shell=False`, helper allowlisting, sensitive `.env` read blocking, and best-effort security documentation.
+- Aligned test-case-generation, metersphere-sync, and requirement-traceability around the shared workspace: final cases live under `test_cases/`, MS mapping/import/plan artifacts under `metersphere/`, and traceability runs under `traceability/<change_set_slug>/`.
+- Extended contract metadata with optional outputs, dynamic filename patterns, schema pointers, produced-when conditions, and consumer indexes.
+
 ## 0.1.43
 
 ### Test Plugin (0.0.11)

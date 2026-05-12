@@ -14,7 +14,7 @@
 
 - clarify 阶段先提炼功能点，再按功能点 × 维度矩阵逐项检查
 - 文档已明确说明的标记 `source: "document"`，不向人提问
-- 需要人工确认的按优先级分组批量提问，每次 3-5 个
+- 需要人工确认的问题按优先级排队，每次交互只问 1 个；等用户答复并写回澄清记录后再问下一个
 - 对用户不关心的维度提出默认假设，标记 `source: "assumption"` 让用户确认
 - 探索模式下首轮重点在功能边界、平台范围和设计意图探查，避免过早深挖细节
 
@@ -31,6 +31,6 @@
 
 ### 分类变量正向枚举（必做）
 
-12 维度分析过程中对 `business_rules` / `state_transitions[].rules` / `interaction_rules` 的每条文本做句式 lint：禁止出现「X 不…」「非 X」「除 X 外」「仅 X 才…」等否定/例外句式（隐含的"其他"会塌缩 N 元枚举为 2 元，导致下游开发实现错配）。命中即触发 3.2.6 流程：识别隐含分类变量 → 在源材料中查全集 → 缺失部分通过 AskUserQuestion 追问 → 改写规则为正向枚举 → 把分类变量登记到该功能点的 `enum_factors` 数组（每条含 `id` / `name` / `values[]` / `open_set` / `source` / `covered_by_rules`）。
+12 维度分析过程中对 `business_rules` / `state_transitions[].rules` / `interaction_rules` 的每条文本做句式 lint：禁止出现「X 不…」「非 X」「除 X 外」「仅 X 才…」等否定/例外句式（隐含的"其他"会塌缩 N 元枚举为 2 元，导致下游开发实现错配）。命中即触发 3.2.6 流程：识别隐含分类变量 → 在源材料中查全集 → 缺失部分通过交互式提问协议追问 → 改写规则为正向枚举 → 把分类变量登记到该功能点的 `enum_factors` 数组（每条含 `id` / `name` / `values[]` / `open_set` / `source` / `covered_by_rules`）。
 
 详细执行流程见 [PHASES.md 3.2.6](PHASES.md#326-分类变量的正向枚举必做)。功能点不涉及分类变量时仍须写 `enum_factors: []` 显式声明，禁止省略。
