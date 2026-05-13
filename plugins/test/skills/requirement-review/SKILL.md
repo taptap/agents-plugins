@@ -128,6 +128,15 @@ python3 $SKILLS_ROOT/test-shared-tools/scripts/gitlab_helper.py file-content <pr
 - **output 阶段**：输出飞书文档链接 + 简短结论摘要（评审结论 / 阻断项数 / 各职能问题分布；详细模板见 [PHASES.md 5.2](PHASES.md#52-chat-输出)）
 - **不要**在 chat 中重复输出 report.md 的完整内容（详细评审报告以飞书文档为准；chat 仅给指标摘要）
 
+#### 后台/编排环境执行约束
+
+当本 skill 由 AutoChat、CI、QA workflow 等后台/编排器触发时：
+
+- “让用户确认”只表示在 chat 中输出阶段摘要，不能停在 fetch 或 understand 阶段等待自然语言回复
+- 只有触发数据门控阻断（需求文档、Story 描述、设计稿三者全空）或实际调用 AskUserQuestion 时，才允许暂停等待用户输入
+- 评审发现的阻断项必须写入 `review_checklist.md`、`report.md`、`rr_summary.json`，不要因为存在阻断项而提前结束
+- 结束前必须跑完 Closing Checklist；缺失任一必需文件时先补生成，再声明完成
+
 ### 中间文件输出（持久化模式）
 
 分析过程中必须将关键中间结果写入工作目录的文件，供后续阶段引用：
