@@ -158,8 +158,8 @@ exit 2 → 入参/校验非法，stderr 同上
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
-| `MS_ACCESS_KEY` | API 认证 key | 无（必填，缺失时脚本启动报错） |
-| `MS_SECRET_KEY` | AES 签名 key | 无（必填，缺失时脚本启动报错） |
+| `MS_ACCESS_KEY` | API 认证 key | 无（必填，调用 MS API 子命令时报错；`validate-fv` 等纯本地命令豁免） |
+| `MS_SECRET_KEY` | AES 签名 key | 无（必填，调用 MS API 子命令时报错；`validate-fv` 等纯本地命令豁免） |
 | `MS_BASE_URL` | MeterSphere 地址 | 无（运行时报错，建议填 `https://metersphere.tapsvc.com`） |
 | `MS_PROJECT_ID` | 项目 UUID | 无（运行时报错） |
 | `MS_WORKSPACE_ID` | 工作空间 UUID | 无（创建测试计划时必需） |
