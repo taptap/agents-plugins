@@ -149,7 +149,7 @@
 
 1. 首个：创建 `code_change_analysis.md`
 2. 后续：追加到对应章节
-3. 更新清单标记为 `[x]`，chat 输出进度
+3. 保留清单复选框为 `- [ ]`（飞书文档面向 QA / 评审会，勾选权交给读者；**不要**因为"AI 已分析完"就把 `change_checklist.md` 中的项标 `[x]`），chat 输出进度即可
 
 ### 阶段 3.5: cross-validation — Codex 交叉验证（可选）
 
@@ -175,7 +175,7 @@ Task(subagent_type="generalPurpose", description="Codex 独立分析代码变更
 2. **双方独立发现的相同问题** → confidence += 20，标记 `[Claude+Codex confirmed]`
 3. **仅 Codex 发现** → 补充到 `code_change_analysis.md`，标记 `[Codex]`，人工确认
 4. **仅主分析发现** → 保留，标记 `[Claude]`
-5. 在 `code_change_analysis.md` 末尾按 [TEMPLATES.md §6 交叉验证摘要模板](TEMPLATES.md#6-交叉验证摘要条件触发仅当-codex-子-agent-执行成功时追加) 追加该节（含 6.1/6.2/6.3/6.4，6.4 综合结论必须用嵌套 checkbox）
+5. 在 `code_change_analysis.md` 末尾按 [TEMPLATES.md §6 交叉验证摘要模板](TEMPLATES.md#6-交叉验证摘要条件触发仅当-codex-子-agent-执行成功时追加) 追加该节（含 6.1/6.2/6.3/6.4）。**§6.4 严格按模板写**：一级 bullet 是 `- **{发现简称}**：{描述}`（**无 checkbox**），仅嵌套层用 `- [ ] 有效问题，处理方案：____` / `- [ ] 无效问题，原因：____` 二选一空 checkbox。**禁止**把"整体置信度"、"联合建议"等纯结论描述写成 `- [x] {summary}` 或 `- [ ] {summary}`。
 
 如果 `codex_change_findings.json` 不存在（Agent 未启动或执行失败），跳过合并，继续阶段 4。
 

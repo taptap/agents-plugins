@@ -193,6 +193,8 @@ private enum SelectedModeKey {
 ### 6.4 综合结论（评审会勾选定性）
 
 > 经交叉验证后留下的真正可执行 findings。每条下嵌套二选一 checkbox，由 Dev/PM/QA 在评审会上拍板。
+>
+> ❌ **反例**：禁止把一级 bullet 写成 `- [x] {summary}` 或 `- [ ] {summary}`；一级 bullet 仅用 `- **{发现简称}**：{描述}` 粗体格式，checkbox 仅出现在嵌套二选一子项。也禁止把"整体置信度"、"联合建议"等纯结论描述加 checkbox。
 
 - **{发现简称}**：{具体描述 + 行动方向，例如"R5（新用户 GameJam vs 3W 首发互斥）双方均未在 diff 中发现实现，必须在上线前与 PM/RD 澄清"}
   - [ ] 有效问题，处理方案：____________
