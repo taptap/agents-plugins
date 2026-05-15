@@ -1,28 +1,14 @@
 # Changelog
 
-## 0.1.44
-
-### Test Plugin (0.0.12)
-
-- Promoted the iOS PR #312 QA workflow improvements into the shared test plugin: requirement-scoped workspaces now use `requirement_<stable_id>/` with `manifest.json` and shared `clarification/`, `test_cases/`, `metersphere/`, and `traceability/` subdirectories.
-- Added a cross-runtime `InteractiveQuestion` protocol so Claude can wrap one question in `AskUserQuestion` while Codex asks the same single-question structure in chat; requirement-clarification now gates consolidate with `clarification_gate.json` and `validate_clarification_gate.py`.
-- Added standalone `plugins/test/scripts/cases_mcp_server.py`, a dependency-free stdio MCP adapter for `save_test_cases` with path fencing, schema validation, module normalization, and automatic `case_id` assignment.
-- Hardened `codex_agent.py` command execution with argv parsing, `shell=False`, helper allowlisting, sensitive `.env` read blocking, and best-effort security documentation.
-- Aligned test-case-generation, metersphere-sync, and requirement-traceability around the shared workspace: final cases live under `test_cases/`, MS mapping/import/plan artifacts under `metersphere/`, and traceability runs under `traceability/<change_set_slug>/`.
-- Extended contract metadata with optional outputs, dynamic filename patterns, schema pointers, produced-when conditions, and consumer indexes.
-
-## 0.1.43
-
-### Test Plugin (0.0.11)
-
-- Moved reusable Agent prompt definitions into their owning skill `agents/` directories as the single source of truth and removed the misleading legacy `plugins/test/agents/**` pseudo-registration layer.
-- Moved shared `CONVENTIONS.md` and contract schemas into `skills/commons/` so Codex skill-only installs can resolve them; kept `plugins/test/CONVENTIONS.md` and `plugins/test/contracts` as compatibility symlinks.
-- Documented the cross-runtime protocol: Claude Code and Codex both read the skill-local Agent definition; Claude uses a generic Task agent, while Codex runs inline or, when explicitly delegated, via built-in `default` / `explorer` / `worker` sub-agents.
-- Updated requirement-traceability, test-case-generation, api-contract-validation, and shared Agent protocol references to use skill-local Agent prompt paths.
-
 ## 0.1.42
 
 ### Test Plugin (0.0.10)
+
+**Feishu report formatting — checkbox semantics correctness fixes**
+
+- `change-analysis/PHASES.md`: dropped the `更新清单标记为 [x]` directive that was causing AI to auto-check `change_checklist.md` RP items declared as 待覆盖点 (to-be-covered). Reviewers misread the checked state as "QA test coverage done". Replaced with explicit `保留 [ ]` rule so the review meeting owns the tick.
+- `change-analysis/PHASES.md` §6.4 instruction strengthened + `change-analysis/TEMPLATES.md` §6.4 anti-pattern note added: top-level cross-validation findings must use `- **{finding}**: {desc}` (no checkbox); the binary `[ ] 有效问题 / [ ] 无效问题` checkbox only appears in nested children. Stops AI from emitting `- [x] 整体置信度: ...` / `- [x] 联合建议: ...` summary bullets.
+- `requirement-review/PHASES.md` §3 strengthened: each parent issue is `- **{编号}（{维度}）**: {desc}` (no checkbox) and must nest the binary `[ ] 有效问题 / [ ] 无效问题` children — without them the Feishu report has no actionable tick targets, which silently drops the report's review-meeting value.
 
 **requirement-review / requirement-clarification — single-agent strong-reasoning rewrite**
 
@@ -129,6 +115,22 @@ Continuation of the GameJam fix — even when supplementary cases ARE consumed, 
 - Why ui-fidelity deleted but api-contract kept: ui-fidelity has identical user job in both entries (need design + code); api-contract serves a distinct user job (no requirement, just FE↔BE diff) → standalone skill preserves a real entry point. AI agent skill selection benefits from distinct skill descriptions
 - Cascade cleanup: `qa-workflow` step #6 removed (renumbered downstream steps); `WORKFLOW_DEFS.md` qa-full / qa-lite / verify-only templates updated; `PIPELINES.md` 链路 D rewritten; `known-collisions.yaml` ui_fidelity_report entry deleted; `commons/TRACEABILITY_PROTOCOL.md` UI section rewritten
 - `traceability/contract.yaml`: added `code_dir` input; removed `ui_fidelity_report` upstream input + `from_upstream: ui-fidelity-check`
+
+**Skill-local Agent prompts + commons relocation (cross-runtime ergonomics)**
+
+- Moved reusable Agent prompt definitions into their owning skill `agents/` directories as the single source of truth and removed the misleading legacy `plugins/test/agents/**` pseudo-registration layer.
+- Moved shared `CONVENTIONS.md` and contract schemas into `skills/commons/` so Codex skill-only installs can resolve them; kept `plugins/test/CONVENTIONS.md` and `plugins/test/contracts` as compatibility symlinks.
+- Documented the cross-runtime protocol: Claude Code and Codex both read the skill-local Agent definition; Claude uses a generic Task agent, while Codex runs inline or, when explicitly delegated, via built-in `default` / `explorer` / `worker` sub-agents.
+- Updated requirement-traceability, test-case-generation, api-contract-validation, and shared Agent protocol references to use skill-local Agent prompt paths.
+
+**Requirement-scoped workspace + cases MCP server + codex_agent hardening (iOS PR #312 backport)**
+
+- Promoted the iOS PR #312 QA workflow improvements into the shared test plugin: requirement-scoped workspaces now use `requirement_<stable_id>/` with `manifest.json` and shared `clarification/`, `test_cases/`, `metersphere/`, and `traceability/` subdirectories.
+- Added a cross-runtime `InteractiveQuestion` protocol so Claude can wrap one question in `AskUserQuestion` while Codex asks the same single-question structure in chat; requirement-clarification now gates consolidate with `clarification_gate.json` and `validate_clarification_gate.py`.
+- Added standalone `plugins/test/scripts/cases_mcp_server.py`, a dependency-free stdio MCP adapter for `save_test_cases` with path fencing, schema validation, module normalization, and automatic `case_id` assignment.
+- Hardened `codex_agent.py` command execution with argv parsing, `shell=False`, helper allowlisting, sensitive `.env` read blocking, and best-effort security documentation.
+- Aligned test-case-generation, metersphere-sync, and requirement-traceability around the shared workspace: final cases live under `test_cases/`, MS mapping/import/plan artifacts under `metersphere/`, and traceability runs under `traceability/<change_set_slug>/`.
+- Extended contract metadata with optional outputs, dynamic filename patterns, schema pointers, produced-when conditions, and consumer indexes.
 
 ### Marketplace
 
