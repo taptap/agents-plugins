@@ -1,21 +1,23 @@
 name: metersphere-sync
-version: "1.0"
+version: "1.1"
 description: >
   将 AI 生成的测试用例同步到 MeterSphere：创建模块、导入用例、创建测试计划、关联用例。
   可选执行验证结果回写（高置信度用例自动标记通过）。
-  输入 final_cases.json 或 *_supplementary_cases.json（change_supplementary_cases.json / review_supplementary_cases.json / supplementary_cases.json 均可），输出 ms_sync_report.json。
+  输入 final_cases.json 或 *_supplementary_cases.json（change_supplementary_cases.json / review_supplementary_cases.json / supplementary_cases.json 均可）。
+  sync 模式输出导入、mapping 与测试计划信息；execute 模式复用已有 mapping/plan_info 并输出 writeback 报告。
+  sync 模式成功后，最终用户回复必须直接展示 plan_url、导入成功/失败数和已关联用例数。
+  入参用例必须满足 testcase schema：case_id 稳定存在，module 缺失/null/空字符串已归一为「未分类」；同步时按 module 建目录分组。
   触发：同步到 MS、导入 MeterSphere、创建测试计划、MS 同步、执行回写。
 
 input:
   any_of:
     final_cases:
       type: file
-      description: 测试用例文件（test-case-generation 产出）
+      description: 测试用例文件（test-case-generation 产出）。必须是标准落盘产物：稳定 case_id、非空 module、同 (module,title) 不重名
       from_upstream: test-case-generation
     supplementary_cases:
       type: file
-      description: 补充用例文件。v0.0.10 起按上游 skill 区分文件名以避免撞名 — change-analysis 产出 change_supplementary_cases.json，test-case-review 产出 review_supplementary_cases.json。本字段接受任一文件路径
-      from_upstream: [change-analysis, test-case-review]
+      description: 补充用例文件。按上游 skill 区分文件名以避免撞名 — change-analysis 产出 change_supplementary_cases.json，test-case-review 产出 review_supplementary_cases.json。本字段接受任一文件路径；必须使用 testcase schema
   optional:
     forward_verification:
       type: file
@@ -47,31 +49,50 @@ input:
 output:
   files:
     - name: ms_sync_report.json
+      default_path: traceability/<change_set_slug>/ms_sync_report.json
       description: writeback-from-fv 输出（execute 模式产出，含 summary by_target_status / updated / unchanged / failed）
       format: json
       optional: true
+      produced_when: mode=execute
     - name: ms_case_mapping.json
+      default_path: metersphere/ms_case_mapping.json
       description: 用例 ID 映射 v2（含 generated_at / source_cases_file.sha256 / ms_project_id / entries[{case_id, ms_id, title, module, module_path, import_status}]）
       format: json
+      optional: true
+      produced_when: mode=sync 的 import 阶段；mode=execute 作为前置输入复用，不重新生成
+      consumed_by: [requirement-traceability, metersphere-sync]
     - name: ms_import_report.json
+      default_path: metersphere/ms_import_report.json
       description: sync 模式 import 阶段的报告（imported / failed / modules_created / mapping_path），与 writeback 的 ms_sync_report.json 永不撞名
       format: json
       optional: true
+      produced_when: mode=sync 的 import 阶段
     - name: ms_plan_info.json
+      default_path: metersphere/ms_plan_info.json
       description: 测试计划信息（plan_id, plan_url）
       format: json
+      optional: true
+      produced_when: mode=sync 的 plan 阶段；mode=execute 作为前置输入复用，不重新生成
+      consumed_by: [requirement-traceability, metersphere-sync]
     - name: forward_verification.enriched.json
+      default_path: traceability/<change_set_slug>/forward_verification.enriched.json
       description: writeback 后的 fv，每条带 ms_id 字段（execute 模式产出）
       format: json
       optional: true
+      schema: ../commons/schemas/forward_verification.schema.json
+      produced_when: mode=execute
     - name: pass_with_caveats.md
+      default_path: traceability/<change_set_slug>/pass_with_caveats.md
       description: pass 但需外部验证的条目清单（execute 模式产出，给 QA 看）
       format: markdown
       optional: true
+      produced_when: mode=execute；即使无 caveat 条目也应落盘为空清单
     - name: pending_external_validation.md
+      default_path: traceability/<change_set_slug>/pending_external_validation.md
       description: 同上数据按依赖类型分组（execute 模式产出）
       format: markdown
       optional: true
+      produced_when: mode=execute；即使无外部验证依赖也应落盘为空清单
   structured:
     imported_count:
       type: number
@@ -81,7 +102,10 @@ output:
       description: 导入失败的用例数
     plan_url:
       type: string
-      description: MeterSphere 测试计划链接
+      description: MeterSphere 测试计划链接；sync/execute 成功时必须在最终回复中展示
+    associated_cases:
+      type: number
+      description: 已关联到测试计划的用例数；sync 成功时必须在最终回复中展示
     by_target_status:
       type: object
       description: writeback 写回统计 {Pass, Prepare, Failure}（execute 模式）
@@ -91,7 +115,11 @@ output:
 
 dependencies:
   scripts:
-    - shared-tools/scripts/metersphere_helper.py
+    - test-shared-tools/scripts/metersphere_helper.py
+  setup_docs:
+    - name: MeterSphere 配置 (.env)
+      url: https://xd.feishu.cn/wiki/K4Cxw8HE5itR16kFFYicSctAnrc
+      usage: 缺少 MS 环境变量时，引导用户从该文档获取配置块并粘贴给 AI 写入 test-shared-tools/scripts/.env
   env_vars:
     - MS_BASE_URL
     - MS_ACCESS_KEY

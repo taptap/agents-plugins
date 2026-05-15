@@ -4,16 +4,16 @@
 
 ### 1.0 输入路由
 
-按 [CONVENTIONS.md](../../CONVENTIONS.md#本地文件输入) 定义的优先级确认输入来源：
+按 [CONVENTIONS.md](../commons/CONVENTIONS.md#本地文件输入) 定义的优先级确认输入来源：
 
 **测试用例来源**（必须非空）：
 1. `test_cases_json` 参数提供了 JSON 文件 → Read 文件
 2. `test_cases_text` 参数提供了文本 → 解析为结构化数据
-3. 工作目录中已存在上游产出文件（`final_cases.json`、`test_cases.json`）→ 优先消费
+3. 公共工作区中已存在上游产出文件（`test_cases/final_cases.json`、`test_cases/test_cases.json`）→ 优先消费
 4. 以上均不满足 → 停止并提示用户提供测试用例
 
 **需求来源**（推荐但非必须）：
-1. 工作目录中已存在上游产出文件（`clarified_requirements.json`、`requirement_points.json`）→ 优先消费
+1. 公共工作区中已存在上游产出文件（`clarification/clarified_requirements.json`、`clarification/requirement_points.json`）→ 优先消费
 2. `requirement_doc` 参数提供了本地文件 → Read 本地文件
 3. `story_link` 参数为 URL → 调用脚本获取
 4. 以上均不满足 → 降级为纯用例质量评审（无需求覆盖率维度）
@@ -34,7 +34,7 @@
 
 ### 2.1 获取需求文档
 
-- **上游文件存在**：Read `clarified_requirements.json` 和 `requirement_points.json`
+- **上游文件存在**：Read `clarification/clarified_requirements.json` 和 `clarification/requirement_points.json`
 - **本地文件**：Read `requirement_doc` 文件
 - **URL**：使用 `fetch_feishu_doc.py` 获取
 - **无需求来源**：标记"无需求文档，跳过覆盖率评审"
@@ -141,7 +141,7 @@
 
 为覆盖缺口生成补充用例。
 
-**写入方式（强制）**：调用 MCP tool `mcp__cases__save_test_cases(file_path='<workdir>/review_supplementary_cases.json', cases=[...])`。**禁止用 Write 工具直接写 *_cases.json**，会被 hook 拒绝。tool input_schema 已强约束字段（title/priority/preconditions/steps），违反字段定义会被 API 在生成阶段直接拒绝。详见 [CONVENTIONS.md 用例 JSON 格式](../../CONVENTIONS.md#用例-json-格式)。
+**写入方式（强制）**：调用 MCP tool `mcp__cases__save_test_cases(file_path='<workdir>/review_supplementary_cases.json', cases=[...])`。**禁止用 Write 工具直接写 *_cases.json**，会被 hook 拒绝。tool input_schema 已强约束字段（title/priority/preconditions/steps），违反字段定义会被 API 在生成阶段直接拒绝。详见 [CONVENTIONS.md 用例 JSON 格式](../commons/CONVENTIONS.md#用例-json-格式)。
 
 如果没有需要补充的用例，跳过本步骤、不调用 tool。
 

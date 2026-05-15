@@ -38,7 +38,7 @@
 
 `change_id` 取值：MR/PR 模式下为 MR/PR 标识（如 `project/path!123` 或 `owner/repo#456`）；本地 diff 模式下为文件名或自动生成的序号（如 `diff-1`）。
 
-`confidence` 取值 0-100，量化置信度评分。`confidence_label` 为向后兼容的文本标签，映射关系见 [CONVENTIONS.md](../../CONVENTIONS.md#量化置信度评分)。
+`confidence` 取值 0-100，量化置信度评分。`confidence_label` 为向后兼容的文本标签，映射关系见 [CONVENTIONS.md](../commons/CONVENTIONS.md#量化置信度评分)。
 
 `trace_direction` 取值：`bidirectional`（正反向 Agent 都确认）、`forward-only`（仅正向确认）、`reverse-only`（仅反向确认）。双向确认的映射 confidence 已包含 +20 共识加成。
 
@@ -63,6 +63,8 @@
 
 ```json
 {
+  "input_quality": "full | medium | low",
+  "verification_channel": "dual_channel | forward_only | reverse_only | forward_synthesized",
   "requirement_coverage": { ... },
   "code_traceability": { ... },
   "tracing_metadata": { ... },
@@ -73,6 +75,7 @@
 ```
 
 > `api_contract` 和 `ui_fidelity` 为条件字段，仅在对应检查触发时写入。
+> `input_quality` 与 `verification_channel` 为必填字段，承载诚实性兜底，含义见 §smoke_test_report.json 同名字段说明。standard 模式与 smoke-test 模式都必须写入。
 
 ### requirement_coverage（需求覆盖率）
 
@@ -172,15 +175,16 @@
 
 ## forward_verification.json (v2)
 
-正向用例中介验证结果。**顶层是平铺 JSON 数组**。**权威 schema 在 `_shared/schemas/forward_verification.schema.json`**；本节是人话索引，schema 与本节冲突时以 schema 为准。完整字段表见 [`_shared/TRACEABILITY_PROTOCOL.md`](../_shared/TRACEABILITY_PROTOCOL.md#forward_verificationjson-格式v2)。
+正向用例中介验证结果。**顶层是平铺 JSON 数组**。**权威 schema 在 `../commons/schemas/forward_verification.schema.json`**；本节是人话索引，schema 与本节冲突时以 schema 为准。完整字段表见 [`commons/TRACEABILITY_PROTOCOL.md`](../commons/TRACEABILITY_PROTOCOL.md#forward_verificationjson-格式v2)。
 
 > **v2 关键变化**：pass 必须带 `evidence`；pass + conf<70 schema 拒绝；ext_deps 非空的 pass 下游降级为 MS Prepare（不再是「Pass + caveat」）。
 
 | 路径 | 来源 PHASES 步骤 | `case_id` 命名 | 必有字段 |
 | --- | --- | --- | --- |
 | 用例中介验证（常态） | 3.2.3 | 上游 `final_cases.json` 的 `case_id`（如 `M1-TC-01`） | `case_id` / `requirement_id` / `result` / `confidence` + 按 result 分支必填 evidence / actual / inconclusive_reason |
+| **supplementary 用例追溯** | 3.1 优先级 1.5 + 3.2.3 | 直接复用 ca 的 `TC-{N}` | 同常态，**额外**字段：`case_source: "supplementary"`、`requirement_id` 可为 `FP-UNMAPPED-{N}`、5S.1 优先级继承使用 ca 用例的 priority |
 | 正向降级 / forward fallback | 3.2.4 | `FORWARD-TRACER-{requirement_id}` | 同上 |
-| coverage-report 兜底合成 | 4.6 | `FORWARD-TRACER-FP-{N}` | `case_id` / `requirement_id` / `requirement_name` / `result` / `confidence` / `trace` / `source: "synthesized_from_coverage_report"`；兜底版 evidence 可缺，但下游 4.6a schema 校验会要求补 |
+| coverage-report 兜底合成 | 4.6（仅 input_quality == "low" 时） | `FORWARD-TRACER-FP-{N}` | `case_id` / `requirement_id` / `requirement_name` / `result` / `confidence` / `trace` / `source: "synthesized_from_coverage_report"`；兜底版 evidence 可缺，但下游 4.6a schema 校验会要求补 |
 
 落盘后必须跑 `metersphere_helper.py validate-fv` 校验。
 
@@ -327,6 +331,16 @@ UI 还原度检查报告（条件产出）。
 
 ### defects
 
+> **字段命名硬约束**（schema 显式 ban，违反将被 Write 守门拦截重写）：
+> | ❌ 行业习惯（JIRA / TAPD / Bugzilla 风） | ✅ 本 schema 必须用 |
+> | --- | --- |
+> | `title` | `name` |
+> | `desc` | `description` |
+> | `expected` | `expected_result` |
+> | `actual` | `actual_result` |
+>
+> 写 defect 前先停一拍 —— LLM 训练先验默认会写左列；本 marketplace 为了让规约可 enforce 选了右列。第一遍就写对，不要让 schema 守门替你纠错。权威定义见 `../commons/schemas/defect-list.schema.json`。
+
 ```json
 {
   "id": "DEFECT-1",
@@ -337,11 +351,12 @@ UI 还原度检查报告（条件产出）。
   "expected_result": "密码长度小于 8 位时应拒绝注册并提示'密码长度不足'",
   "actual_result": "代码中 validatePassword() 未检查长度限制，任意长度密码均可通过校验",
   "evidence": {
-    "source": "forward_verification | coverage_gap | api_contract | ui_fidelity",
+    "source": "forward_verification | coverage_gap | api_contract | ui_fidelity | search-a | search-b | search-c",
     "source_id": "VC-3",
     "requirement_ref": "R3",
     "code_location": "src/service/user.py:42",
-    "confidence": 85
+    "confidence": 85,
+    "search_id": "SA-1 | SB-2 | SC-3 (仅 source ∈ {search-a, search-b, search-c} 时必填，schema 强制；详见 PHASES.md §5S.1 来源 8)"
   },
   "related_mr": "project/path!123"
 }
@@ -381,13 +396,15 @@ UI 还原度检查报告（条件产出）。
 
 ## smoke_test_report.json
 
-冒烟测试报告（smoke-test 模式条件产出）。汇总验证统计和缺陷统计，包含 pass/fail 判定。
+冒烟测试报告（smoke-test 模式条件产出）。汇总验证统计和缺陷统计，包含 verdict 五档判定。
 
 ### 完整结构
 
 ```json
 {
-  "verdict": "pass | fail",
+  "verdict": "pass | fail | pass-with-degraded-input | fail-with-degraded-input | inconclusive",
+  "input_quality": "full | medium | low",
+  "verification_channel": "dual_channel | forward_only | reverse_only | forward_synthesized",
   "fail_reason": "发现 1 个 P0 缺陷：用户注册时密码强度校验缺失",
   "verification_summary": {
     "total_points": 20,
@@ -436,11 +453,31 @@ UI 还原度检查报告（条件产出）。
 }
 ```
 
-`verdict` 判定规则：
-- `fail` — `defect_summary.by_priority.P0 > 0`
-- `pass` — `defect_summary.by_priority.P0 == 0`
+`verdict` 判定规则（input_quality × P0 二维计算表，详见 PHASES §5S.2）：
 
-`fail_reason`：仅当 `verdict == "fail"` 时填写，列出 P0 缺陷名称摘要。
+| input_quality | P0 count | verdict |
+| --- | --- | --- |
+| `full` | 0 | `pass` |
+| `full` | > 0 | `fail` |
+| `medium` | 0 | `pass-with-degraded-input` |
+| `medium` | > 0 | `fail-with-degraded-input` |
+| `low` | * | `inconclusive` |
+
+`input_quality` 取值（来源 `_input_quality.json`，详见 PHASES §1.3.d）：
+- `full`：`final_cases.json` 存在且非空
+- `medium`：仅 `change_supplementary_cases.json` 或 `requirement_points.json` 存在（无 final_cases）
+- `low`：以上三类用例文件全部缺失，引擎走 4.6 兜底合成路径
+
+`verification_channel` 取值（由 §4.4 自动计算，禁止模型自由填）：
+- `dual_channel`：fv 全部条目通过 3.2 用例中介验证 + 3.3 反向通道双双确认
+- `forward_only`：仅正向通道有产出
+- `reverse_only`：仅反向通道有产出
+- `forward_synthesized`：fv 含 `source: "synthesized_from_coverage_report"` 条目（即 4.6 兜底，验证未真实执行）
+
+`fail_reason` 写法：
+- `pass` / `fail` 沿用现状（fail 时列 P0 摘要）
+- `pass-with-degraded-input` / `fail-with-degraded-input` → 必须以 "⚠️ 用例输入不完整（仅 {sources_present 列表}），" 开头
+- `inconclusive` → 必须为："本次冒烟测试无任何用例输入（final_cases / change_supplementary_cases / requirement_points 全部缺失），verdict 不可信。请补 final_cases.json（跑 test-case-generation）或 change_supplementary_cases.json（跑 change-analysis）后重跑。"
 
 `low_confidence_items`：forward_verification 中 `result == "fail"` 但 `confidence < 70` 的条目，未纳入 defect_list.json 但需关注。
 
@@ -501,22 +538,30 @@ P0 缺陷数：0；存在 N 个 P1 级别缺陷，需在提测前修复。
 ## 3. 双通道追溯结论
 
 ### 3.1 需求覆盖矩阵
-- **R3** 版本更新页文案和进度展示 — [已覆盖] 置信度 87% [双向]
-- **R6a** 无新宿主+已下载 → 显示"重启" — [已覆盖] 置信度 90% [双向]
-- **R6c** 无新宿主+下载失败 → 显示插件大小 — [已覆盖] 置信度 80% [双向]
-- **R1** 升级提示时机 — [范围外]
-- **R2** 升级提示频率 — [范围外]
+
+| 需求点ID | 描述 | 状态 | 置信度 | 追溯方向 |
+|---|---|---|---|---|
+| **R3** | 版本更新页文案和进度展示 | [已覆盖] | 87% | [双向] |
+| **R6a** | 无新宿主+已下载 → 显示"重启" | [已覆盖] | 90% | [双向] |
+| **R6c** | 无新宿主+下载失败 → 显示插件大小 | [已覆盖] | 80% | [双向] |
+| **R1** | 升级提示时机 | [范围外] | — | — |
+| **R2** | 升级提示频率 | [范围外] | — | — |
 
 > 「[范围外]」说明：R1/R2/S1 属于已有基础设施，不在本 MR 实现范围内，不计入覆盖率缺口。
 
 ### 3.2 代码变更追溯
-- DownSpeed.java → R3 [已覆盖]
-- PluginUpgrade.kt（新增）→ R6b/R6c/R6d/R5 [已覆盖]
-- ...
+
+| 文件名 | 对应需求点 | 状态 |
+|---|---|---|
+| DownSpeed.java | R3 | [已覆盖] |
+| PluginUpgrade.kt（新增） | R6b / R6c / R6d / R5 | [已覆盖] |
+| ... | ... | ... |
 
 未追溯变更：0 个（本次 MR 所有变更文件都映射到了 R1-R7 需求点，无范围外改动）。
 
 ## 4. 缺陷清单
+
+> 每个缺陷下嵌套二选一 checkbox，由评审者勾选定性。**每个缺陷之间用 `---` 水平分隔线**，避免视觉糊在一起。
 
 ### DEF-01 [P1] 弱网/大文件场景下载进度条长时间停在 98% 附近
 
@@ -539,8 +584,18 @@ private const val FAKE_DOWNLOAD_PROGRESS_INTERVAL_MS = 200L
 
 **修复建议**：loop 结束后改为以低速率继续推进假进度（如每隔 1 秒 +0.1%），或切换为不确定性加载动画。
 
+**评审定性**
+- [ ] 有效 bug
+- [ ] 无效 bug，原因：____________
+
+---
+
 ### DEF-02 [P1] 插件 size=0 时下载失败后按钮右侧显示"0 B"无意义文案
 ...
+
+**评审定性**
+- [ ] 有效 bug
+- [ ] 无效 bug，原因：____________
 
 ## 5. 其他观察
 
@@ -561,7 +616,7 @@ private const val FAKE_DOWNLOAD_PROGRESS_INTERVAL_MS = 200L
 
 **第 1 章「核心指标」**
 
-- 用 bullet 列表（**不使用 markdown 表格**）
+- KV 计数指标，用 bullet 列表（不适合表格化）
 - 验证点用 `[通过]/[待定]/[失败]` 标状态计数
 - 缺陷数按 P0/P1/P2 分级
 
@@ -574,9 +629,9 @@ private const val FAKE_DOWNLOAD_PROGRESS_INTERVAL_MS = 200L
 
 **第 3 章「双通道追溯结论」**
 
-- §3.1 需求覆盖矩阵：bullet 列表（**不使用表格**），格式 `- **{需求点ID}** {描述} — [已覆盖] 置信度 X% [双向/单向]` 或 `[范围外]`
-- §3.2 代码变更追溯：bullet 列表，格式 `- {文件名} → {对应需求点列表} [已覆盖]`
-- §3.2 末尾给出未追溯变更明确表述（**禁止"无范围蔓延"等含糊文案**）
+- §3.1 需求覆盖矩阵：5 列表格 `需求点ID / 描述 / 状态 / 置信度 / 追溯方向`，状态为 `[已覆盖]`/`[范围外]`，追溯方向为 `[双向]`/`[单向]`/`—`（范围外时填 `—`）
+- §3.2 代码变更追溯：3 列表格 `文件名 / 对应需求点 / 状态`
+- §3.2 表格末尾用纯文本独立一行给出未追溯变更明确表述（**禁止"无范围蔓延"等含糊文案**）
 
 **第 4 章「缺陷清单」**
 
@@ -586,6 +641,11 @@ private const val FAKE_DOWNLOAD_PROGRESS_INTERVAL_MS = 200L
 - 「预期行为」用粗体小节
 - **代码块前必须加 quote 提示** `> 以下代码块仅 Dev 排查问题时阅读，PM/QA 可跳过`
 - 「修复建议」用粗体小节
+- **「评审定性」必填小节**（所有缺陷必出，评审会上勾选）：
+  - `- [ ] 有效 bug`
+  - `- [ ] 无效 bug，原因：____________`
+  - 选项语义：评审会上判断该缺陷是否真的需要修；"无效 bug" 必须填原因（如已知问题、设计预期、复现条件不成立等）
+- **缺陷之间必须用 `---` 水平分隔线**——H3 标题在飞书 import 后视觉权重不足以分隔多缺陷连排，水平线提供更强的段落断点
 
 **第 5 章「其他观察」**
 
@@ -594,7 +654,11 @@ private const val FAKE_DOWNLOAD_PROGRESS_INTERVAL_MS = 200L
 
 ### 关键约束
 
-- 整份报告使用纯文本和分隔线排版，**不使用 markdown 表格**（飞书 import 后表格被拆成离散 text block，看起来像散文）
+通用渲染规范见 [CONVENTIONS.md「飞书文档渲染规范」](../commons/CONVENTIONS.md#飞书文档渲染规范)（表格 vs bullet 选择规则、禁用元素清单）。本 skill 特定补充：
+
+- §1 核心指标 + §5 其他观察 → 保留 bullet（KV 指标 / 标签化短列表）
+- §3.1 需求覆盖矩阵（5 列）+ §3.2 代码变更追溯（3 列） → 用表格（详见上方各章节格式规则）
+- §2 P0 用例评估 / §4 缺陷清单 → 保留 bullet（描述列长，用例/缺陷之间需要明显分隔，bullet+H3 比表格清晰）
 - 不写 H1 标题（飞书 doc 名已包含「{需求名称}-冒烟测试报告-{YYYYMMDDHH}」）
 - **状态符号统一使用中文方括号**（非 emoji 非 ASCII）：
   - 测试结论：`[通过]` / `[不通过]`
@@ -609,4 +673,3 @@ private const val FAKE_DOWNLOAD_PROGRESS_INTERVAL_MS = 200L
 - **§2 标题必须明确分子分母** `P0 用例评估（共 6/17）`，避免读者误以为只有 P0 用例
 - **§3.2 未追溯变更必须明确表述**，禁止"无范围蔓延"等含糊文案
 - **置信度逐条标注且需汇总到 §0**：每个需求点行尾标置信度 X%，§0 元数据汇总均值 + 极值
-

@@ -10,7 +10,7 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 ## 关于系统预取
 
-通用预取机制见 [CONVENTIONS.md](../../CONVENTIONS.md#系统预取)。本 skill 额外预取：测试用例链接、需求文档内容（预下载到 `requirement_doc.md`）。
+通用预取机制见 [CONVENTIONS.md](../commons/CONVENTIONS.md#系统预取)。本 skill 额外预取：测试用例链接、需求文档内容（预下载到 `requirement_doc.md`）。
 
 ## 阶段 1: init - 初始化
 
@@ -28,8 +28,8 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 2. **已提供** → 执行前置文件校验：
    - 确认工作目录中存在该阶段之前所有阶段的必要产物文件
    - 校验依据：
-     - `understand` → 需要 `requirement_doc.md` 或上游 `clarified_requirements.json`
-     - `decompose` → 需要 `requirement_doc.md` + `sufficiency_assessment.json`
+     - `understand` → 需要 `source/requirement_doc.md` 或上游 `clarification/clarified_requirements.json`
+     - `decompose` → 需要 `source/requirement_doc.md` + `test_cases/sufficiency_assessment.json`
      - `generate` → 需要 `decomposition.md`
      - `review` → 需要 `module_*_cases.json`（至少 1 个）
    - 前置文件缺失 → 停止并报错「重入失败：缺少 {file}，请从更早的阶段开始」
@@ -48,10 +48,10 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 ### 2.0 输入路由
 
-按 [CONVENTIONS.md](../../CONVENTIONS.md#本地文件输入) 定义的优先级确认需求来源：
+按 [CONVENTIONS.md](../commons/CONVENTIONS.md#本地文件输入) 定义的优先级确认需求来源：
 
-1. 工作目录中存在上游产出文件（`clarified_requirements.json`）→ 直接读取，跳过 2.1（需求文档获取）；仍执行 2.2（设计稿）和 2.3（技术文档）以获取最新数据
-2. 如存在 `requirement_points.json` → 读取作为功能点清单的参考
+1. 公共工作区中存在上游产出文件（`clarification/clarified_requirements.json`）→ 直接读取，跳过 2.1（需求文档获取）；仍执行 2.2（设计稿）和 2.3（技术文档）以获取最新数据
+2. 如存在 `clarification/requirement_points.json` → 读取作为功能点清单的参考
 3. `requirement_doc` 参数提供了本地文件 → Read 本地文件作为需求文档，跳过 2.1 的在线获取
 4. `story_link` 参数为 URL → 执行 2.1 在线获取
 5. 以上均不满足 → 停止并报错
@@ -62,7 +62,7 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 - 如 `requirement_doc.md` 已预下载：直接 Read
 - 如未预下载，使用脚本获取：
   ```bash
-  python3 $SKILLS_ROOT/shared-tools/scripts/fetch_feishu_doc.py \
+  python3 $SKILLS_ROOT/test-shared-tools/scripts/fetch_feishu_doc.py \
     --url "<需求文档链接>" --output-dir . 2>fetch_meta.json
   ```
 - 需求文档链接为空且无上游输入和本地文件时停止并报告错误
@@ -79,7 +79,7 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 ### 2.5 需求充分性门控
 
-在进入多视角分析或功能拆解之前，对已收集的全部输入材料（需求文档、设计稿、技术文档、上游澄清结果）进行最低充分性评估。复用 [CONVENTIONS.md](../../CONVENTIONS.md#条件触发章节的数据充分性门控) 的三级判定模式。
+在进入多视角分析或功能拆解之前，对已收集的全部输入材料（需求文档、设计稿、技术文档、上游澄清结果）进行最低充分性评估。复用 [CONVENTIONS.md](../commons/CONVENTIONS.md#条件触发章节的数据充分性门控) 的三级判定模式。
 
 #### 评估维度
 
@@ -92,7 +92,7 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 #### 消费上游信号
 
-**信号来源 1：工作目录中的 `clarified_requirements.json`**（上游 requirement-clarification 产出）
+**信号来源 1：公共工作区中的 `clarification/clarified_requirements.json`**（上游 requirement-clarification 产出）
 
 - `confidence_level == "low"` → 等同于存在 none 维度，触发暂停
 - `open_question_count > 3` → 触发暂停，提示用户先解决未澄清问题
@@ -103,7 +103,7 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 平台后端会把同一 Story 下已完成的 `requirement_review` / `change_analysis` 结构化摘要注入到 prompt 末尾。当存在该块时，按以下规则消费：
 
 - **`requirement_review` 块**（来自 RR workflow `extract_story_output`）：
-  - `verdict == "not_ready"` → **强制暂停**：直接调用 AskUserQuestion 提示用户「需求评审判定 not_ready，建议先解决阻断项后再生成用例」，3 个选项（修复需求 / 继续生成并标注风险 confidence_ceiling=50 / 终止）
+  - `verdict == "not_ready"` → **强制暂停**：按交互式提问协议提示用户「需求评审判定 not_ready，建议先解决阻断项后再生成用例」，3 个选项（修复需求 / 继续生成并标注风险 confidence_ceiling=50 / 终止）
   - `verdict == "ready_with_conditions"` → 不暂停，但在 `context_summary.md` 中标注"基于 RR 条件就绪状态生成"，受影响的功能点 confidence 上限设为 80
   - `blocking_issues` 列表非空 → 在阶段 4 多视角分析时，**优先把每条 blocking_issue 转化为待覆盖的异常场景**，不能漏
 
@@ -122,23 +122,23 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 2. **全部至少 partial（无 none）** → 继续执行但设 `confidence_ceiling = 70`，后续生成的所有用例 confidence 封顶于此值
 3. **任一维度 none 且无上游 clarified_requirements** → 暂停，向用户呈现充分性报告并请求决策：
 
-调用 AskUserQuestion 工具（按 [输出溯源原则](../../CONVENTIONS.md#输出溯源原则) 标注 `evidence_tag` + `evidence_ref`，本场景是固定处置选项，标 `derived` 且 `evidence_ref` 必须含 `sufficiency_assessment.json` 中具体维度名的原文摘录。下方示例的 `{维度名}` 是占位符，AI 必须替换为真实维度名如 `performance` / `error_handling`，保留花括号视为违规）：
+按交互式提问协议提问（Claude 可用 AskUserQuestion，Codex 用编号选项；按 [输出溯源原则](../commons/CONVENTIONS.md#输出溯源原则) 标注 `evidence_tag` + `evidence_ref`，本场景是固定处置选项，标 `derived` 且 `evidence_ref` 必须含 `sufficiency_assessment.json` 中具体维度名的原文摘录。下方示例的 `{维度名}` 是占位符，AI 必须替换为真实维度名如 `performance` / `error_handling`，保留花括号视为违规）：
 
 ```json
 {
-  "questions": [
-    {
-      "question": "需求文档在以下维度信息不足，可能导致生成的用例包含推测性内容：\n{逐维度列出 none/partial 的具体缺失说明}\n\n您希望如何处理？",
-      "header": "充分性检查",
-      "evidence_ref": "sufficiency_assessment.json 中『{具体维度名}: none』",
-      "options": [
-        {"label": "补充需求信息", "description": "请在回复中补充缺失的内容，将重新评估", "evidence_tag": "derived", "evidence_ref": "sufficiency_assessment.json『{维度名}: none』"},
-        {"label": "继续生成（标注风险）", "description": "用例将标记为低置信度（上限 50），需人工逐条确认", "evidence_tag": "derived", "evidence_ref": "sufficiency_assessment.json『{维度名}: none』"},
-        {"label": "终止生成", "description": "建议先完善需求或执行 requirement-clarification 后重试", "evidence_tag": "derived", "evidence_ref": "sufficiency_assessment.json『{维度名}: none』"}
-      ],
-      "multiSelect": false
-    }
-  ]
+  "question_id": "TCG-SUFFICIENCY-001",
+  "question": "需求文档在以下维度信息不足，可能导致生成的用例包含推测性内容：\n{逐维度列出 none/partial 的具体缺失说明}\n\n您希望如何处理？",
+  "header": "充分性检查",
+  "evidence_ref": "sufficiency_assessment.json 中『{具体维度名}: none』",
+  "options": [
+    {"label": "补充需求信息", "description": "请在回复中补充缺失的内容，将重新评估", "evidence_tag": "derived", "evidence_ref": "sufficiency_assessment.json『{维度名}: none』"},
+    {"label": "继续生成（标注风险）", "description": "用例将标记为低置信度（上限 50），需人工逐条确认", "evidence_tag": "derived", "evidence_ref": "sufficiency_assessment.json『{维度名}: none』"},
+    {"label": "终止生成", "description": "建议先完善需求或执行 requirement-clarification 后重试", "evidence_tag": "derived", "evidence_ref": "sufficiency_assessment.json『{维度名}: none』"}
+  ],
+  "multiSelect": false,
+  "allow_free_text": true,
+  "blocking": true,
+  "writes_to": "sufficiency_assessment.json"
 }
 ```
 
@@ -182,39 +182,25 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 使用 Glob 工具确认 `sufficiency_assessment.json` 存在且非空。`user_decision == "aborted"` 时停止 skill。
 
-### 2.4 多视角并行分析（条件启动）
+### 2.4 单 Agent 多维度强推理（条件启动）
 
 > 仅当无上游 `clarified_requirements.json` 且需求复杂（>= 3 个功能点 + 文本 > 2000 字）时启动。
-> 上游已通过 requirement-clarification 做过多视角分析时跳过。
+> 上游已通过 requirement-clarification 做过澄清时跳过。
 
-在**单条消息**中同时发送 3 个 Task 调用，使用 [agents/requirement-understanding/](../../agents/requirement-understanding/) 下的 Agent 定义。
+主 Agent 在自身上下文中按以下三个维度顺序执行结构化推理（与 requirement-review/clarification 的单 Agent 强推理路线对齐，不再使用并行 sub-agent）：
 
-**Task prompt 示例**（以 functional-perspective 为例，其余两个结构相同）：
+1. **功能视角** — 列出每个功能点的核心流程、依赖前置条件、状态转换；标记隐含规则
+2. **异常视角** — 对每个功能点搜索：边界值、并发、网络/超时、权限拒绝、上游失败、数据缺失/脏数据；明确「假设/反例搜索/结论」三段式
+3. **用户视角** — 站在终端用户角度列出可观察行为差异、错误反馈路径、可恢复性
 
-```
-你是功能视角分析 Agent。请先 Read agents/requirement-understanding/functional-perspective.md 获取你的完整角色定义和输出格式要求。
-
-## 需求文档
-请 Read ./requirement_doc.md 获取完整需求文档。
-
-## 任务
-按角色定义中的「分析重点」逐项分析，输出 JSON 格式的 findings。
-每条 finding 必须包含 confidence 评分（0-100）。
-```
-
-- **functional-perspective**：指定 `model="opus"`
-- **exception-perspective**：指定 `model="opus"`
-- **user-perspective**：指定 `model="sonnet"`
-
-主 Agent 在收到 3 个 Task 结果后执行合并：
-1. 收集三个 Agent 的 findings 数组
-2. 按 `category` 分组，比对 — 相同功能点 + 相似描述 → 同一发现，confidence += 20
-3. 合并后的 findings 作为 decompose 阶段的补充输入，交叉验证的发现（2+ Agent 确认，confidence ≥ 80）在拆解时优先考虑
+每个维度产出 `findings` 数组（含 `category`、`description`、`confidence` 0-100）。三个维度完成后执行合并：
+1. 按 `category` 分组，相同功能点 + 相似描述 → 同一发现，confidence += 20（自一致性加成）
+2. confidence ≥ 80 直接进入 decompose 阶段补充输入，60-79 标记待确认，<60 丢弃
+3. 把合并结果与 `sufficiency_assessment` 一并交给 decompose 阶段
 
 **降级回退**：
-- 需求简单（< 3 功能点**且**文本 ≤ 2000 字**且** `sufficiency_assessment.overall == "sufficient"`）→ 跳过多视角 Agent 调用，但主 Agent 仍执行单视角快速分析（功能 + 异常两个维度，各 3-5 条 findings），作为 decompose 阶段的补充输入
-- 需求简单但 `sufficiency_assessment.overall != "sufficient"` → 不跳过，执行完整多视角分析（信息不足的需求需要更多交叉验证）
-- Task 工具不可用 → 在主 Agent 中顺序执行三个视角的分析（功能→异常→用户），不跳过
+- 需求简单（< 3 功能点**且**文本 ≤ 2000 字**且** `sufficiency_assessment.overall == "sufficient"`）→ 跳过本阶段，仅在主 Agent 中做功能 + 异常两个维度的快速扫描（各 3-5 条 findings）
+- 需求简单但 `sufficiency_assessment.overall != "sufficient"` → 不跳过，执行完整三维度推理（信息不足的需求需要更多交叉视角）
 
 ## 阶段 3: decompose - 功能拆解
 
@@ -309,29 +295,29 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 收集所有歧义点后：
 
 - **0 条** → 跳过本阶段，直接进入阶段 4
-- **≥ 1 条** → 调用 AskUserQuestion 一次性提问（按模块分组，每个 (FP, ambiguity) 一道 question）
+- **≥ 1 条** → 按交互式提问协议逐题提问（按模块分组，每个 (FP, ambiguity) 一道 question，每轮只问 1 个）
 
-每道 question 标准选项（按 [输出溯源原则](../../CONVENTIONS.md#输出溯源原则) 标注 `evidence_tag` + `evidence_ref`，`evidence_ref` 必须含 `decomposition.md` / 需求文档中的原文摘录）：
+每道 question 标准选项（按 [输出溯源原则](../commons/CONVENTIONS.md#输出溯源原则) 标注 `evidence_tag` + `evidence_ref`，`evidence_ref` 必须含 `decomposition.md` / 需求文档中的原文摘录）：
 
 ```json
 {
-  "questions": [
-    {
-      "question": "{模块名} - {功能点描述}: {歧义点描述}？",
-      "header": "{模块名} 歧义 {N}/{Total}",
-      "evidence_ref": "decomposition.md『{原文摘录}』",
-      "options": [
-        {"label": "{候选答案 A}", "description": "{说明}", "evidence_tag": "derived", "evidence_ref": "decomposition.md『{原文摘录}』"},
-        {"label": "{候选答案 B}", "description": "{说明}", "evidence_tag": "derived", "evidence_ref": "decomposition.md『{原文摘录}』"},
-        {"label": "标为待确认", "description": "用例中该步骤的预期写为 [待确认] {原因}，避免 AI 推测", "evidence_tag": "derived", "evidence_ref": "decomposition.md『{原文摘录}』"}
-      ],
-      "multiSelect": false
-    }
-  ]
+  "question_id": "TCG-AMBIGUITY-{N}",
+  "question": "{模块名} - {功能点描述}: {歧义点描述}？",
+  "header": "{模块名} 歧义 {N}/{Total}",
+  "evidence_ref": "decomposition.md『{原文摘录}』",
+  "options": [
+    {"label": "{候选答案 A}", "description": "{说明}", "evidence_tag": "derived", "evidence_ref": "decomposition.md『{原文摘录}』"},
+    {"label": "{候选答案 B}", "description": "{说明}", "evidence_tag": "derived", "evidence_ref": "decomposition.md『{原文摘录}』"},
+    {"label": "标为待确认", "description": "用例中该步骤的预期写为 [待确认] {原因}，避免 AI 推测", "evidence_tag": "derived", "evidence_ref": "decomposition.md『{原文摘录}』"}
+  ],
+  "multiSelect": false,
+  "allow_free_text": true,
+  "blocking": true,
+  "writes_to": "test_case_inputs.json"
 }
 ```
 
-候选答案 A/B 由 Agent 基于需求合理推断给出（≤ 3 个），用户也可在回复中自由补充文字。
+候选答案 A/B 只能由 Agent 基于已有证据推导给出（≤ 3 个）；没有证据时不要凑候选，改用 `unknown` 元操作让用户自由补充。
 
 ### 3.5.4 应用回复
 
@@ -384,8 +370,8 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 进入 4.1/4.2 生成之前，按以下优先级读取 `enum_factors`：
 
-1. **优先**：`clarified_requirements.json` 的 `functional_points[].enum_factors[]`（完整 pipeline）
-2. **降级**：`requirement_points.json` 的 `[].enum_factors[]`（lite-pipeline，无 clarified_requirements 时）
+1. **优先**：`clarification/clarified_requirements.json` 的 `functional_points[].enum_factors[]`（完整 pipeline）
+2. **降级**：`clarification/requirement_points.json` 的 `[].enum_factors[]`（lite-pipeline，无 clarified_requirements 时）
 3. **都不存在** → 跳过本步骤，但在 review 阶段（5.1）的覆盖度评分中扣分
 
 读到的 enum_factors 按以下规则处理：
@@ -399,7 +385,7 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 ### 4.1 使用子 Agent 生成（模块 >= 3 个）
 
-对每个功能模块，通过 Task 工具调用 test-case-writer 子 Agent。Agent 的完整行为定义见 [agents/test-case-writer.md](../../agents/test-case-writer.md)。
+对每个功能模块，通过 Task 工具调用 test-case-writer 子 Agent。Agent 的完整行为定义真源见 [agents/test-case-writer.md](agents/test-case-writer.md)。Codex 环境先读取该真源文件，默认主 Agent 内联执行；仅当用户明确要求并行/子 agent 时，使用内置 `worker` 并把定义全文嵌入 prompt。
 
 **Task 调用要点**：
 
@@ -422,7 +408,7 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 ### 4.2 直接生成（模块 < 3 个，或简单需求快速路径）
 
-在主 Agent 中按模块顺序生成所有用例，调用 `mcp__cases__save_test_cases(file_path='<workdir>/module_{N}_cases.json', cases=[...])` 写入对应模块文件（N 从 1 开始）。简单需求快速路径（阶段 3.0）视为单模块，写入 `module_1_cases.json`。**禁止用 Write 工具直接写 *_cases.json**。
+在主 Agent 中按模块顺序生成所有用例，调用 `mcp__cases__save_test_cases(file_path='<workdir>/module_{N}_cases.json', cases=[...])` 写入对应模块文件（N 从 1 开始）。简单需求快速路径（阶段 3.0）视为单模块，写入 `module_1_cases.json`。**禁止用 Write 工具直接写 *_cases.json**。生成时不要手工编造 `case_id`；`module` 应填写模块名称，无法归类时填 `未分类`。
 
 生成前回读 `sufficiency_assessment.json` 获取 `confidence_ceiling`，所有用例的 `confidence` 不得超过此值。
 
@@ -448,13 +434,13 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 将所有 `module_{N}_cases.json` 合并为单个 `test_cases.json`（顶层 JSON 数组）。每条用例的 `module` 字段标识归属模块，`confidence` 字段保留。
 
-**实现方式**：用 Bash 脚本（jq 或 Python）做纯数据合并 —— 读取所有 `module_*_cases.json`、concat 成数组、写入 `test_cases.json`。Bash 脚本不经过 LLM 输出层，避免 token 截断；数据已是 MCP tool 校验过的合法用例，无需再走 schema 校验。
+**实现方式**：用 Bash 脚本（jq 或 Python）做纯数据合并 —— 读取所有 `module_*_cases.json`、concat 成数组、写入 `test_cases.json`。Bash 脚本不经过 LLM 输出层，避免 token 截断；输入数据已是 MCP tool 校验过的合法用例，但合并脚本仍必须保证 `case_id` 稳定存在、`module` 非空（缺失/`null`/空字符串统一填 `未分类`），写入后再次执行用例 schema 校验。
 
 > 模型有强烈偏好走 `mcp__cases__save_test_cases` 时也允许，但用例数 > 50 条会触发 token 截断风险，优先用 Bash。
 
 ### 5.2 快速自审
 
-> 格式校验（priority 合规、steps/expected 配对、字段名拼写）由 `mcp__cases__save_test_cases` 的 input_schema 在生成阶段强制，违反直接被 API 拒绝。本节只关注内容质量（去重、覆盖度、置信度），不必再操心字段格式。
+> 格式校验（priority 合规、steps/expected 配对、字段名拼写）由 `mcp__cases__save_test_cases` 的 input_schema 在生成阶段强制，违反直接被 API 拒绝。本节主要关注内容质量（去重、覆盖度、置信度）；如果通过 Bash/Python 批量改写 `test_cases.json`，改写后仍需重新校验 schema 与 `case_id/module` 规范化结果。
 
 **跨模块去重**（两步法）：
 1. **字面去重**（快速）：使用 Grep 搜索 `test_cases.json` 中的 `"title"` 字段，标记完全相同或高度相似的标题对
@@ -475,7 +461,7 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 ### 5.3 提炼需求功能点清单（供评审使用）
 
-如果工作目录中已存在上游 `requirement_points.json`，直接使用。
+如果公共工作区中已存在上游 `clarification/requirement_points.json`，直接使用。
 
 否则，基于需求文档和 `decomposition.md`，提炼编号功能点清单写入 `requirement_points.md`：
 
@@ -498,16 +484,16 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 #### 5.4.1 Task 调用
 
-在**单条消息**中同时发送 2 个 Task 调用（如分批则每批各 2 个），使用 [agents/test-case-generation/](../../agents/test-case-generation/) 下的 Agent 定义。
+在**单条消息**中同时发送 2 个 Task 调用（如分批则每批各 2 个），使用本 skill [agents/](agents/) 下的 Agent 定义。Codex 环境先读取真源文件，默认主 Agent 顺序内联执行，用户明确要求并行/子 agent 时才用内置 `worker` 模拟。
 
 **Task prompt 示例**（以 review-agent-1 为例，review-agent-2 结构相同）：
 
 ```
-你是测试评审 Agent #1。请先 Read agents/test-case-generation/review-agent-1.md 获取你的完整角色定义和输出格式要求。
+你是测试评审 Agent #1。请先 Read $SKILLS_ROOT/test-case-generation/agents/review-agent-1.md 获取你的完整角色定义和输出格式要求。
 
 ## 输入数据
-1. 请 Read ./requirement_points.md（或 ./requirement_points.json）获取需求功能点清单
-2. 请 Read ./test_cases.json 获取待评审的测试用例
+1. 请 Read ./requirement_points.md（或 $TEST_WORKSPACE/clarification/requirement_points.json）获取需求功能点清单
+2. 请 Read $TEST_WORKSPACE/test_cases/test_cases.json 获取待评审的测试用例
 3. 请 Read $SKILLS_ROOT/test-case-generation/CHECKLIST.md 获取 4 维度评审检查项
 4. 如存在 ./context_summary.md 或 ./decomposition.md，请 Read 获取补充上下文
 5. 如存在 ./sufficiency_assessment.json，请 Read 获取需求充分性评估结果
@@ -517,8 +503,8 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 如 sufficiency_assessment.overall 不为 "sufficient"，在评审过程中启动推测性内容审查（角色定义中的第 3 节），将推测性细节纳入 findings 输出。
 ```
 
-- **review-agent-1**：Agent 定义见 [review-agent-1.md](../../agents/test-case-generation/review-agent-1.md)，指定 `model="opus"`
-- **review-agent-2**：Agent 定义见 [review-agent-2.md](../../agents/test-case-generation/review-agent-2.md)，指定 `model="opus"`
+- **review-agent-1**：Agent 定义见 [review-agent-1.md](agents/review-agent-1.md)，指定 `model="opus"`
+- **review-agent-2**：Agent 定义见 [review-agent-2.md](agents/review-agent-2.md)，指定 `model="opus"`
 
 两个 Agent 接收相同输入，独立按 [CHECKLIST.md](CHECKLIST.md) 的 4 维度评审。
 
@@ -574,9 +560,9 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 ### 6.2 向用户呈现
 
-调用 AskUserQuestion 工具提供结构化选项（格式见 CONVENTIONS.md「[AskUserQuestion 交互式提问](../../CONVENTIONS.md#askuserquestion-交互式提问)」），降低用户认知负担。
+按交互式提问协议提供结构化选项（格式见 CONVENTIONS.md「[AskUserQuestion 交互式提问](../commons/CONVENTIONS.md#askuserquestion-交互式提问)」；Claude 可用工具，Codex 用编号选项），降低用户认知负担。
 
-> **CRITICAL — 选项溯源**：本阶段选项是固定处置选项（接受/驳回/补充），属于元操作。`evidence_tag` 标 `derived`，`evidence_ref` 必须包含 phase 5.6 合并结果中对应 finding 的原文摘录（用 `「」` 圈出 finding 关键描述）。**禁止**在 option label/description 中编造未在 finding 原文出现的具体名词（用例新字段、新版本号、新 API 路径 等）。详见 [输出溯源原则](../../CONVENTIONS.md#输出溯源原则)。
+> **CRITICAL — 选项溯源**：本阶段选项是固定处置选项（接受/驳回/补充），属于元操作。`evidence_tag` 标 `derived`，`evidence_ref` 必须包含 phase 5.6 合并结果中对应 finding 的原文摘录（用 `「」` 圈出 finding 关键描述）。**禁止**在 option label/description 中编造未在 finding 原文出现的具体名词（用例新字段、新版本号、新 API 路径 等）。详见 [输出溯源原则](../commons/CONVENTIONS.md#输出溯源原则)。
 >
 > **占位符必须替换**：下方示例的 `{N}` / `{finding_id}` / `{finding 原文摘录}` 等花括号占位符，AI 生成时**必须**替换为真实的 finding 编号和原话。保留花括号会通过 schema 但属于违规。
 
@@ -584,19 +570,19 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 ```json
 {
-  "questions": [
-    {
-      "question": "评审发现 {N} 个待确认问题，您希望如何处理？",
-      "header": "批量处理",
-      "evidence_ref": "phase 5.6 合并结果『发现 {N} 个待确认 findings』",
-      "options": [
-        {"label": "接受全部建议修改", "description": "一次性采纳所有评审建议", "evidence_tag": "derived", "evidence_ref": "phase 5.6 findings『{N} 个待确认』"},
-        {"label": "逐条确认", "description": "逐个展示每个问题", "evidence_tag": "derived", "evidence_ref": "phase 5.6 findings『{N} 个待确认』"},
-        {"label": "驳回全部", "description": "保持原样", "evidence_tag": "derived", "evidence_ref": "phase 5.6 findings『{N} 个待确认』"}
-      ],
-      "multiSelect": false
-    }
-  ]
+  "question_id": "TCG-REVIEW-BATCH",
+  "question": "评审发现 {N} 个待确认问题，您希望如何处理？",
+  "header": "批量处理",
+  "evidence_ref": "phase 5.6 合并结果『发现 {N} 个待确认 findings』",
+  "options": [
+    {"label": "接受全部建议修改", "description": "一次性采纳所有评审建议", "evidence_tag": "derived", "evidence_ref": "phase 5.6 findings『{N} 个待确认』"},
+    {"label": "逐条确认", "description": "逐个展示每个问题", "evidence_tag": "derived", "evidence_ref": "phase 5.6 findings『{N} 个待确认』"},
+    {"label": "驳回全部", "description": "保持原样", "evidence_tag": "derived", "evidence_ref": "phase 5.6 findings『{N} 个待确认』"}
+  ],
+  "multiSelect": false,
+  "allow_free_text": true,
+  "blocking": true,
+  "writes_to": "tc_gen_review.md"
 }
 ```
 
@@ -604,19 +590,19 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 
 ```json
 {
-  "questions": [
-    {
-      "question": "{问题描述}（涉及用例 {case_id}，共识置信度 {merged_confidence}）",
-      "header": "问题 1",
-      "evidence_ref": "tc_gen_review.md {finding_id}『{finding 原文摘录}』",
-      "options": [
-        {"label": "接受建议修改", "description": "{suggestion}", "evidence_tag": "derived", "evidence_ref": "tc_gen_review.md {finding_id}『{finding 原文摘录}』"},
-        {"label": "驳回（保持原样）", "description": "不做修改，保留当前用例", "evidence_tag": "derived", "evidence_ref": "tc_gen_review.md {finding_id}『{finding 原文摘录}』"},
-        {"label": "补充说明（请在回复中补充）", "description": "用户在回复中补充", "evidence_tag": "unknown", "evidence_ref": null}
-      ],
-      "multiSelect": false
-    }
-  ]
+  "question_id": "TCG-REVIEW-{finding_id}",
+  "question": "{问题描述}（涉及用例 {case_id}，共识置信度 {merged_confidence}）",
+  "header": "问题 1",
+  "evidence_ref": "tc_gen_review.md {finding_id}『{finding 原文摘录}』",
+  "options": [
+    {"label": "接受建议修改", "description": "{suggestion}", "evidence_tag": "derived", "evidence_ref": "tc_gen_review.md {finding_id}『{finding 原文摘录}』"},
+    {"label": "驳回（保持原样）", "description": "不做修改，保留当前用例", "evidence_tag": "derived", "evidence_ref": "tc_gen_review.md {finding_id}『{finding 原文摘录}』"},
+    {"label": "补充说明（请补充）", "description": "用户在回复中补充", "evidence_tag": "unknown", "evidence_ref": null}
+  ],
+  "multiSelect": false,
+  "allow_free_text": true,
+  "blocking": true,
+  "writes_to": "tc_gen_review.md"
 }
 ```
 
@@ -673,9 +659,9 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
 1. 从 `test_cases.json` 中保留所有用例（已含 review 阶段的修改）
 2. 追加 `supplementary_cases.json` 中的补充用例（如有）
 3. 为每条用例标记 `source` 字段（`generated` 或 `supplementary`）
-4. 写入 `final_cases.json`
+4. 写入公共工作区 `test_cases/final_cases.json`
 
-**实现方式（强制 Bash 路径）**：用 Bash 执行 Python/jq 脚本合并 —— 读取 `test_cases.json` + `supplementary_cases.json`、添加 `source` 字段、写入 `final_cases.json`。Bash 路径不经过 LLM 输出层，避免 token 截断；输入数据已是 MCP tool 校验过的合法用例，无需再走 schema 校验。
+**实现方式（强制 Bash 路径）**：用 Bash 执行 Python/jq 脚本合并 —— 读取 `test_cases/test_cases.json` + `test_cases/supplementary_cases.json`、添加 `source` 字段、补齐/保留稳定 `case_id`、将缺失/`null`/空字符串 `module` 归一为 `未分类`，写入 `test_cases/final_cases.json`。Bash 路径不经过 LLM 输出层，避免 token 截断；写入后必须再次执行用例 schema 校验和 `(module, title)` 重名检查。
 
 > 禁止用 Write 直接写 `final_cases.json`（会被 hook 拒绝）；也不建议用 `mcp__cases__save_test_cases` —— 用例总数通常超过 50 条，纯 LLM 输出路径会触发 token 截断。
 
@@ -702,3 +688,90 @@ Write 工具的 `content` 参数受 LLM 输出 token 上限约束。超限时 JS
   "priority_distribution": {"P0": 0, "P1": 0, "P2": 0, "P3": 0}
 }
 ```
+
+### 阶段 7 完成检查（强制）
+
+使用 Glob 工具确认以下文件存在：
+
+1. `test_cases/final_cases.json` — 必须存在且非空；缺失则回退到阶段 7.2 重新合并
+2. `review_summary.json` — 必须存在且非空；缺失则回退到阶段 7.3 重新生成
+3. `tc_gen_review.md` — 必须存在且非空；缺失则回退到阶段 5 补评审
+4. **停止条件**：`final_cases.json` 补生成后仍为空 → **停止整个 skill**，输出错误「最终用例生成失败，无法继续」
+
+完成阶段 7 后，不要直接结束。除非用户明确要求“只生成不导入”“先别同步 MS”“不要导入”，否则必须继续执行阶段 8。
+
+## 阶段 8: sync-ms - 默认同步 MeterSphere
+
+本阶段是默认终止前置步骤。`test-case-generation` 的默认交付不是只落 `final_cases.json`，而是生成后导入 MeterSphere。只有用户明确要求不导入 MS 时才跳过。
+
+### 8.1 触发判断
+
+- 用户明确说“只生成不导入”“先别同步 MS”“不要导入” → 跳过阶段 8，并在最终输出中说明“按用户要求未导入 MS”
+- 其他情况 → 必须执行阶段 8
+
+### 8.2 准备同步输入
+
+1. `cases.json`：使用阶段 7 生成的 `test_cases/final_cases.json`
+2. `plan_name`：优先使用需求标题 / Story 名称；没有标题时使用输出目录名
+3. `mode`：sync
+4. `tags`：默认 `AI 用例生成`
+
+### 8.3 调用 metersphere-sync
+
+使用 `metersphere-sync` skill 执行 sync 模式，目标是：
+
+1. 按 `module` 字段在 MS 中创建或复用模块
+2. 导入 `final_cases.json` 中的全部用例
+3. 查找或创建测试计划
+4. 将导入用例关联到测试计划
+
+`metersphere-sync` 的 sync 产物必须落在同一公共工作区的 `metersphere/`：
+
+- `ms_case_mapping.json`
+- `ms_plan_info.json`
+- `ms_import_report.json`
+
+同步成功后，主 Agent 必须回读 `ms_plan_info.json` 和 `ms_import_report.json`，提取：
+
+- `ms_plan_info.json.plan_url`
+- `ms_plan_info.json.associated_cases`
+- `ms_import_report.json.imported`
+- `ms_import_report.json.failed`
+
+这些字段是最终用户回复的必填信息，不能只保存在本地文件中。
+
+### 8.4 同步失败处理
+
+如果 MS 连通性、配置、权限、依赖或网络失败：
+
+1. 保留 `final_cases.json` 和所有生成产物
+2. 不要声明“测试用例生成并导入完成”
+3. 在最终输出中明确写出：
+   - 本地用例已生成
+   - MS 导入失败
+   - 失败命令或错误类型
+   - 需要用户补充的配置或下一步修复方式
+
+### 阶段 8 完成检查（强制）
+
+除非用户明确要求跳过 MS 导入，否则必须确认以下文件存在且非空：
+
+1. `metersphere/ms_case_mapping.json`
+2. `metersphere/ms_plan_info.json`
+3. `metersphere/ms_import_report.json`
+
+缺失任一文件时，必须回到 `metersphere-sync` 补执行或报告同步失败原因，不能把本 skill 标记为完全完成。
+
+### 阶段 8 用户回复格式（CRITICAL）
+
+MS 同步成功时，最终回复必须包含以下内容：
+
+```markdown
+已导入 MeterSphere：
+- 成功导入：{ms_import_report.imported} 条
+- 失败：{ms_import_report.failed} 条
+- 已关联测试计划：{ms_plan_info.associated_cases} 条
+- MS 测试计划：{ms_plan_info.plan_url}
+```
+
+如果 `ms_plan_info.json` 缺少 `plan_url`，必须先回到 `metersphere-sync` 补齐或报告同步产物不完整；不能输出不带计划链接的完成总结。

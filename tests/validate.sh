@@ -1200,7 +1200,7 @@ while IFS= read -r -d '' skill_md; do
     fail "${rel} frontmatter name='${fname}' != dir='${dir}'"
     check10_failed=1
   fi
-done < <(find "${REPO_ROOT}/plugins/test" -path '*/skills/*/SKILL.md' -not -path '*/_shared/*' -print0)
+done < <(find "${REPO_ROOT}/plugins/test" -path '*/skills/*/SKILL.md' -not -path '*/commons/*' -print0)
 if [[ $check10_failed -eq 0 ]]; then
   pass "all SKILL.md frontmatter name matches directory"
 fi
@@ -1224,7 +1224,7 @@ while IFS= read -r -d '' skill_md; do
       check11_failed=1
     fi
   done < <(grep -E '^[[:space:]]+skill:[[:space:]]*[a-z][a-z0-9_-]*:[a-z][a-z0-9_-]*' "$skill_md" 2>/dev/null)
-done < <(find "${REPO_ROOT}/plugins/test" -path '*/skills/*/SKILL.md' -not -path '*/_shared/*' -print0)
+done < <(find "${REPO_ROOT}/plugins/test" -path '*/skills/*/SKILL.md' -not -path '*/commons/*' -print0)
 if [[ $check11_failed -eq 0 ]]; then
   pass "all handoffs targets resolve"
 fi
@@ -1247,7 +1247,7 @@ while IFS= read -r -d '' f; do
       check12_failed=1
     fi
   done < <(grep -oE 'subagent_type[[:space:]]*=[[:space:]]*"[^"]+"' "$f" 2>/dev/null | sed -E 's/.*"([^"]+)".*/\1/' | sort -u)
-done < <(find "${REPO_ROOT}/plugins/test" \( -path '*/skills/*/SKILL.md' -o -path '*/skills/*/PHASES.md' -o -path '*/skills/*/references/*.md' \) -not -path '*/_shared/*' -print0)
+done < <(find "${REPO_ROOT}/plugins/test" \( -path '*/skills/*/SKILL.md' -o -path '*/skills/*/PHASES.md' -o -path '*/skills/*/references/*.md' \) -not -path '*/commons/*' -print0)
 if [[ $check12_failed -eq 0 ]]; then
   pass "all subagent_type references resolve"
 fi
@@ -1296,12 +1296,12 @@ fi
 
 # ============================================================
 # 14. [test 插件] contract.yaml 跨 skill 一致性 + 输出文件名冲突
-# 委托给 plugins/test/skills/shared-tools/scripts/validate_contracts.py
+# 委托给 plugins/test/skills/test-shared-tools/scripts/validate_contracts.py
 # 含白名单（plugins/test/contracts/known-collisions.yaml）豁免设计认可的共享 helper 输出
 # ============================================================
 echo "=== Check 14: [test] contract.yaml cross-skill consistency ==="
 
-CONTRACT_VALIDATOR="${REPO_ROOT}/plugins/test/skills/shared-tools/scripts/validate_contracts.py"
+CONTRACT_VALIDATOR="${REPO_ROOT}/plugins/test/skills/test-shared-tools/scripts/validate_contracts.py"
 COLLISION_ALLOWLIST="${REPO_ROOT}/plugins/test/contracts/known-collisions.yaml"
 if [[ ! -f "$CONTRACT_VALIDATOR" ]]; then
   fail "validate_contracts.py not found at ${CONTRACT_VALIDATOR}"
@@ -1341,6 +1341,97 @@ else
     sed 's/^/    /' "$schema_log"
   fi
   rm -f "$schema_log"
+fi
+
+# ============================================================
+# Check N+2: validate-fv A/B/D completeness constraints (C is model self-check, not validated mechanically)
+# ============================================================
+echo "=== Check N+2: validate-fv A/B/D completeness ==="
+HELPER="${REPO_ROOT}/plugins/test/skills/test-shared-tools/scripts/metersphere_helper.py"
+if [[ ! -f "$HELPER" ]]; then
+  fail "metersphere_helper.py not found at ${HELPER}"
+elif ! command -v python3 >/dev/null 2>&1; then
+  echo "  SKIP: python3 not installed"
+elif ! python3 -c 'import jsonschema' >/dev/null 2>&1; then
+  echo "  SKIP: jsonschema not installed"
+else
+  abcd_tmpdir="$(new_tmpdir)"
+  # 准备一个真实存在的文件供 boundary 校验通过
+  echo "dummy" > "${abcd_tmpdir}/file.txt"
+  # 4 个 case：3 个故意违反 A/B/D，1 个合规
+  cat > "${abcd_tmpdir}/abcd_test.json" <<'JSON'
+[
+  {
+    "case_id": "TEST-A-violation",
+    "requirement_id": "FP-1",
+    "result": "pass",
+    "confidence": 80,
+    "trace": "applyCoupon 直接返回 50",
+    "evidence": {
+      "code_location": ["file.txt:1"],
+      "verification_logic": "直接返回常量"
+    }
+  },
+  {
+    "case_id": "TEST-B-violation",
+    "requirement_id": "FP-2",
+    "result": "pass",
+    "confidence": 90,
+    "trace": "admin 操作 → grpc → service → user 端展示",
+    "evidence": {
+      "code_location": ["file.txt:1"],
+      "verification_logic": "test",
+      "considered_failure_modes": [{"mode": "序列化版本错位", "ruled_out_by": "x"}]
+    }
+  },
+  {
+    "case_id": "TEST-D-violation",
+    "requirement_id": "FP-3",
+    "result": "pass",
+    "confidence": 90,
+    "trace": "调用 ConsumeCredit → 进入 transaction tx → 写 user_event",
+    "evidence": {
+      "code_location": ["file.txt:1", "file.txt:1"],
+      "verification_logic": "test",
+      "considered_failure_modes": [{"mode": "输入校验", "ruled_out_by": "x"}]
+    }
+  },
+  {
+    "case_id": "TEST-OK",
+    "requirement_id": "FP-4",
+    "result": "fail",
+    "confidence": 80,
+    "trace": "纯 fail case，A/B/D 不强制 fail 条目，仅 pass+conf>=70 才走 A、pass+conf>=85 才走 B/D",
+    "actual": "diff 中无对应实现",
+    "expected": "应有实现",
+    "evidence": {
+      "code_location": ["file.txt:1"],
+      "verification_logic": "fail 路径，A/B/D 完整性约束放宽（C 是模型自检建议）"
+    }
+  }
+]
+JSON
+  abcd_log="${abcd_tmpdir}/abcd.log"
+  if python3 "$HELPER" validate-fv "${abcd_tmpdir}/abcd_test.json" --repo-root "${abcd_tmpdir}" >"$abcd_log" 2>&1; then
+    fail "A/B/D validator: 应该报错但通过了校验（说明 validator 漏检）"
+    cat "$abcd_log"
+  else
+    # 校验确实失败，确认含 A/B/D 三类违反。
+    # 注意：grep -c 在零匹配时退出码为 1，与 `|| echo 0` 组合会输出双行 "0\n0"，
+    # 后续 [[ -ge ]] 报 "integer expression expected"。grep -F + grep -v 模式不变更退出码，再用 wc -l 计数。
+    has_a=$(grep -Fc 'completeness/A' "$abcd_log" 2>/dev/null; true)
+    has_b=$(grep -Fc 'completeness/B' "$abcd_log" 2>/dev/null; true)
+    has_d=$(grep -Fc 'completeness/D' "$abcd_log" 2>/dev/null; true)
+    has_a=${has_a:-0}
+    has_b=${has_b:-0}
+    has_d=${has_d:-0}
+    if [[ "$has_a" -ge 1 && "$has_b" -ge 1 && "$has_d" -ge 1 ]]; then
+      pass "A/B/D validator catches violations (A=$has_a, B=$has_b, D=$has_d; C is model self-check, not mechanically validated)"
+    else
+      fail "A/B/D validator: 漏检某类违反 (A=$has_a, B=$has_b, D=$has_d, 期望各 >=1)"
+      cat "$abcd_log"
+    fi
+  fi
 fi
 
 # ============================================================

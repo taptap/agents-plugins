@@ -27,6 +27,8 @@ test-*/
 # test 插件运行时产出
 plugins/test/workspace/
 plugins/test/skills/*/output/
+requirement_*/
+.qa-workflows/
 
 # Secrets
 .env

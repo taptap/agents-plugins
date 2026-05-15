@@ -2,7 +2,7 @@
 
 本文件提供 `test-case-review` 在 `review` 阶段使用的检查项。SKILL.md 保留维度概览表，逐项检查时读取本文件。
 
-4 维度详细检查项见 [共享评审框架](../_shared/REVIEW_4_DIMENSIONS.md)。
+4 维度详细检查项见 [共享评审框架](../commons/REVIEW_4_DIMENSIONS.md)。
 
 ## 本 skill 补充说明
 

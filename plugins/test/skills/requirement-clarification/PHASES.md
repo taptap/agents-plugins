@@ -2,15 +2,15 @@
 
 ## 关于系统预取
 
-通用预取机制见 [CONVENTIONS.md](../../CONVENTIONS.md#系统预取)。本 skill 无额外预取字段（使用通用 Story 预取字段集）。
+通用预取机制见 [CONVENTIONS.md](../commons/CONVENTIONS.md#系统预取)。本 skill 无额外预取字段（使用通用 Story 预取字段集）。
 
 ## 阶段 1: init - 初始化
 
 ### 1.0 输入路由与模式识别
 
-按 [CONVENTIONS.md](../../CONVENTIONS.md#本地文件输入) 定义的优先级确认需求来源，并据此确定执行模式：
+按 [CONVENTIONS.md](../commons/CONVENTIONS.md#本地文件输入) 定义的优先级确认需求来源，并据此确定执行模式：
 
-1. 工作目录中已存在上游产出文件（如 `clarified_requirements.json`）→ 本 skill 为首环节，一般不存在上游文件，跳过
+1. 公共工作区中已存在上游产出文件（如 `clarification/clarified_requirements.json`）→ 本 skill 为首环节，一般不存在上游文件，跳过
 2. `requirement_doc` 参数提供了本地文件 → **文档模式**，跳过在线获取，直接进入阶段 2 的文档解析
 3. `story_link` 参数为 URL → **文档模式**，识别链接类型后进入阶段 2 的在线获取
 4. `design_link` 参数为 Figma URL 且无 story_link / requirement_doc → **设计稿模式**，进入阶段 2 的设计稿获取
@@ -44,12 +44,12 @@
 **路径 C：在线获取**
 
 **预检**（首次调用脚本前执行）：
-1. 确认 `FEISHU_APP_ID` 和 `FEISHU_APP_SECRET` 已设置。脚本会自动从 `.env` 文件加载（参见 [env.example](../shared-tools/scripts/env.example)），但若 shell 环境和 `.env` 均未配置，需提示用户并停止
+1. 确认 `FEISHU_APP_ID` 和 `FEISHU_APP_SECRET` 已设置。脚本会自动从 `.env` 文件加载（参见 [env.example](../test-shared-tools/scripts/env.example)），但若 shell 环境和 `.env` 均未配置，需提示用户并停止
 2. 确保输出目录已创建（`mkdir -p`）
 
 ```bash
 mkdir -p "$OUTPUT_DIR"
-python3 $SKILLS_ROOT/shared-tools/scripts/fetch_feishu_doc.py \
+python3 $SKILLS_ROOT/test-shared-tools/scripts/fetch_feishu_doc.py \
   --url "<需求文档链接>" --output-dir "$OUTPUT_DIR" 2>"$OUTPUT_DIR/fetch_meta.json"
 ```
 
@@ -111,13 +111,13 @@ python3 $SKILLS_ROOT/shared-tools/scripts/fetch_feishu_doc.py \
 **设计稿模式**：从设计稿反推功能点列表：
 1. 基于 `design_analysis` 中提取的页面/组件树，为每个独立页面或功能模块生成功能点
 2. 从交互流中识别隐含的业务逻辑（如状态变体暗示的业务规则）
-3. 通过 AskUserQuestion 工具让用户确认功能点列表：「从设计稿中识别出以下功能点：① ... ② ...，是否准确？有遗漏的业务逻辑吗？」
+3. 通过交互式提问协议让用户确认功能点列表：「从设计稿中识别出以下功能点：① ... ② ...，是否准确？有遗漏的业务逻辑吗？」
 4. 用户确认后编号（FP-1, FP-2, ...）
 5. 设计稿中能确定的交互规则直接标记 `source: "design"`，无法从设计稿推断的业务规则进入维度深挖
 
 **探索模式**：通过问答构建功能点列表：
 1. 基于已有文本提出初步功能点列表
-2. 通过 AskUserQuestion 工具让用户确认/补充/删减：「根据你的描述，我梳理出以下功能点：① ... ② ... ③ ...，是否准确？有遗漏吗？」
+2. 通过交互式提问协议让用户确认/补充/删减：「根据你的描述，我梳理出以下功能点：① ... ② ... ③ ...，是否准确？有遗漏吗？」
 3. 用户确认后编号（FP-1, FP-2, ...），作为后续维度分析的基础
 
 ### 3.1.5 文档-设计稿交叉比对（文档+设计稿联合模式专属）
@@ -151,41 +151,34 @@ python3 $SKILLS_ROOT/shared-tools/scripts/fetch_feishu_doc.py \
 
 差异列表纳入 3.3 渐进式确认的问题池，优先级等同于功能边界维度。
 
-### 3.2 按维度分析每个功能点（支持多视角并行）
+### 3.2 按维度分析每个功能点（单 Agent 强推理）
 
-**复杂度判断**：如果功能点 >= 3 个且需求文本 > 2000 字 → 启动多视角并行分析；否则 → 单 Agent 分析。
+对每个功能点，逐一检查 [CHECKLIST.md](CHECKLIST.md) 中的 12 个维度。每个维度**必须**走完三步推理（不允许省略任一步）：
 
-#### 3.2.1 多视角并行分析（复杂需求）
+1. **假设**：基于已有信息（需求文档、设计稿、对话历史）的什么内容做出该维度判断？必须包含**原文摘录**（用 `『』` 圈出关键片段）；信息缺失时显式写「未在已有信息中找到」。
+2. **反例搜索**：是否有场景会推翻假设？显式列出 1-2 个潜在反例（如"用户切换设备时该状态如何同步？"、"高并发下该约束是否仍成立？"）；确无反例时显式写「无反例」。反例搜索是单 Agent 模拟"异常视角 + 功能视角"的关键。
+3. **结论**：根据假设 + 反例搜索结果，按以下分支处理：
+   - 信息明确 + 无反例 → 记录答案，标记 `source: "document"`（文档模式）或 `source: "human"`（探索模式首轮已确认），confidence 按 [3.2.1 评分规则](#321-confidence-评分规则单-agent) 计算
+   - 信息有歧义或反例可能命中 → 生成具体的澄清问题（不允许"建议关注 X"这种模糊表述）
+   - 信息缺失但可提合理默认 → 生成带默认值的确认问题，标记 `source: "assumption"`
 
-在**单条消息**中同时发送 3 个 Task 调用，使用 [agents/requirement-understanding/](../../agents/requirement-understanding/) 下的 Agent 定义：
+**为什么强制三步**：单 Agent 模式下若直接下结论，容易把"我没注意到"误判为"没问题"。强制原文引用 + 反例搜索是业界 2025 推荐的"single-agent + structured reasoning"模式的关键 — 用结构化推理替代多 Agent 并行带来的视角多样性，成本低、可重复、可审计。
 
-- **functional-perspective**（Opus）：分析功能边界、输入输出、状态流转、数据约束
-- **exception-perspective**（Opus）：分析错误路径、边界条件、异常场景、容错机制
-- **user-perspective**（Sonnet）：分析用户场景、交互流程、可用性、多角色行为
+#### 3.2.1 confidence 评分规则（单 Agent）
 
-每个 Agent 接收完整需求文档，独立输出 findings（含 confidence 评分）。
+每个功能点的 `confidence`（0-100）按以下**可重复规则**计算，不依赖模型主观打分：
 
-**交叉验证**（由主 Agent 在收到 3 个 Task 结果后执行）：
+| 条件 | 加分 |
+| --- | --- |
+| 基础分 | 50 |
+| 该功能点的功能边界（in_scope/out_of_scope）已明确，且有原文引用 | +15 |
+| 该功能点的验收标准（acceptance_criteria）非空，且来源 `document` 或 `human` | +15 |
+| 该功能点至少 2 个核心维度（功能边界/状态流转/异常处理/数据约束）来源 `document` 或 `human`（非 `assumption`） | +10 |
+| 反例搜索环节命中风险且已转化为澄清问题 | +5 |
+| 该功能点存在 `unconfirmed` 状态的核心维度 | -10 |
+| 该功能点 `assumption` 来源占比 > 50% | -10 |
 
-1. 收集三个 Agent 的 findings 数组
-2. **结构化匹配**：要求各视角 Agent 在 findings 中标注 `target_id`（关联的 FP-N 编号）。合并时先按 `target_id + category` 做初步分组，同一分组内再做语义去重（相似描述合并）
-3. 同一发现被 2+ 个 Agent 独立识别 → confidence += 20（封顶 100）
-4. 合并后的 findings 按 confidence 排序：
-   - ≥80：标记为已确认的需求缺口，直接写入功能点的对应维度
-   - 60-79：转化为需向用户提出的澄清问题
-   - <60：记录但不主动提问
-5. 为每个功能点计算 `confidence` 分数：已确认维度占比 × 100
-
-**降级回退**：Task 工具不可用 → 单 Agent 逐维度分析（下方 3.2.2 流程）。
-
-#### 3.2.2 单 Agent 分析（简单需求或降级模式）
-
-对每个功能点，逐一检查 [CHECKLIST.md](CHECKLIST.md) 中的 12 个维度。对每个维度：
-
-1. 在已有信息中搜索相关内容
-2. 如果已明确说明 → 记录答案，标记 `source: "document"`（文档模式）或 `source: "human"`（探索模式首轮已确认）
-3. 如果未说明或存在歧义 → 生成具体的澄清问题
-4. 如果该维度可提出合理默认假设 → 生成带默认值的确认问题，标记待确认为 `source: "assumption"`
+最低 0、最高 100。这套规则同时避免了"LLM 拍脑袋打分"和"非多 Agent 不可量化"两个极端。下游 `test-case-generation` 据此调整用例生成激进度。
 
 ### 3.2.3 影响范围分析（条件触发）
 
@@ -236,7 +229,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/fetch_feishu_doc.py \
 - 功能点涉及实时数据更新（WebSocket、推送）→ 需要通信协议
 - 功能点涉及状态同步（如支付状态回调）→ 需要回调接口
 
-**Step 1.5：数据充分性检查**（参见 [CONVENTIONS.md 数据充分性门控](../../CONVENTIONS.md#条件触发章节的数据充分性门控)）
+**Step 1.5：数据充分性检查**（参见 [CONVENTIONS.md 数据充分性门控](../commons/CONVENTIONS.md#条件触发章节的数据充分性门控)）
 
 在提取契约前，扫描所有源材料（需求文档、设计稿、已有代码），查找 API 相关的**具体技术证据**：
 - 显式 API 路径（`/api/xxx`、`POST /xxx`）
@@ -262,7 +255,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/fetch_feishu_doc.py \
 **Step 3：生成契约草案和澄清问题**
 
 为每个前后端交互点生成初步契约草案：
-- 如 `api_evidence_level` 为 `"sufficient"` 且 method、path、核心字段已知 → 生成完整契约草案（每个字段标注 source），通过 AskUserQuestion 工具确认
+- 如 `api_evidence_level` 为 `"sufficient"` 且 method、path、核心字段已知 → 生成完整契约草案（每个字段标注 source），通过交互式提问协议确认
 - 如 `api_evidence_level` 为 `"partial"` → 仅输出有 source 标注的字段，缺失部分生成针对性的澄清问题：「{功能}需要调用后端接口，请确认接口路径和核心字段」。不填充推测值作为占位
 - 如 `api_evidence_level` 为 `"none"` → 此步骤已在 Step 1.5 跳过，不会到达
 
@@ -270,17 +263,17 @@ python3 $SKILLS_ROOT/shared-tools/scripts/fetch_feishu_doc.py \
 
 ### 3.2.5 PRD 文档质量校对（必做）
 
-12 维度功能点分析完成后、进入渐进式确认之前，对 PRD 文档**文本本身**做一次校对，按 [REQUIREMENT_DIMENSIONS.md 附加项](../_shared/REQUIREMENT_DIMENSIONS.md#附加项prd-文档质量校对) 的 5 类检查项执行：错别字 / 术语一致性 / 易读性 / 文案-设计稿一致性 / 数字单位一致性。
+12 维度功能点分析完成后、进入渐进式确认之前，对 PRD 文档**文本本身**做一次校对，按 [REQUIREMENT_DIMENSIONS.md 附加项](../commons/REQUIREMENT_DIMENSIONS.md#附加项prd-文档质量校对) 的 5 类检查项执行：错别字 / 术语一致性 / 易读性 / 文案-设计稿一致性 / 数字单位一致性。
 
 执行规则：
 1. 仅基于 PRD 原文判定，每条发现必须含**原文摘录**（用 `『』` 圈出）；找不到原文 = 不写这条
-2. 所有发现先在内存中暂存，按 `severity` 区分后续处理：
-   - `blocking`（错别字、数字单位歧义、占位符不一致）→ 必须在 3.3 渐进式确认中通过 AskUserQuestion 单独提问（option 提供「按建议修正 / 维持原文 / PM 线下确认」三个元操作，`evidence_tag = derived`，`evidence_ref` 必须包含 PRD 原文摘录）；用户答复后将决策合并到该条的 `resolution` 字段
-   - `concern`（术语漂移、易读性）→ 不主动追问，直接进入 4.1 consolidate 阶段
-3. 4.1 consolidate 阶段把所有发现（含 blocking 决策结果）写入 `clarified_requirements.json` 的 `doc_quality_issues` 数组
+2. 所有发现先在内存中暂存，按 `severity` 区分后续处理（中文枚举，详见 [commons/REQUIREMENT_DIMENSIONS.md 术语映射](../commons/REQUIREMENT_DIMENSIONS.md#术语映射)）：
+   - `阻断`（错别字、数字单位歧义、占位符不一致）→ 必须在 3.3 渐进式确认中按交互式提问协议单独提问（option 提供「按建议修正 / 维持原文 / PM 线下确认」三个元操作，`evidence_tag = derived`，`evidence_ref` 必须包含 PRD 原文摘录）；用户答复后将决策合并到该条的 `resolution` 字段
+   - `关注`（术语漂移、易读性）→ 不主动追问；若无其他 P0/P1 澄清问题且 3.6 门禁通过，再进入 4.1 consolidate 阶段
+3. 4.1 consolidate 阶段把所有发现（含『阻断』决策结果）写入 `clarified_requirements.json` 的 `doc_quality_issues` 数组
 4. 该步骤无条件触发，不允许跳过；若 PRD 完全无文案问题，仍须在 4.1 写入 `doc_quality_issues: []`
 
-`doc_quality_issues` 每条字段：`category`（错别字/术语/易读性/文案一致性/单位）、`evidence`（PRD 原文摘录）、`suggestion`（建议改写或 `null`）、`severity`（`blocking` / `concern`）、`resolution`（仅 blocking 项有值，用户决策原文）。
+`doc_quality_issues` 每条字段：`category`（错别字/术语/易读性/文案一致性/单位）、`evidence`（PRD 原文摘录）、`suggestion`（建议改写或 `null`）、`severity`（`阻断` / `关注`）、`resolution`（仅『阻断』项有值，用户决策原文）。
 
 ### 3.2.6 分类变量的正向枚举（必做）
 
@@ -303,7 +296,7 @@ python3 $SKILLS_ROOT/shared-tools/scripts/fetch_feishu_doc.py \
 2. **识别隐含分类变量**：从命中文本提取被否定的名词（如「Review 不…」→ 变量是 `通知类型`，被否定值是 `Review`）
 3. **查全集**：在已收集的源材料（PRD / 设计稿 / 代码 / 上游 qa_pairs）中检索该变量的全部可能取值
    - **找到完整列表** → 直接改写规则为正向枚举形式，登记到 `enum_factors`
-   - **只找到部分** → AskUserQuestion 在 3.3 渐进式确认中追问：「`{变量名}` 有哪些取值？我已识别 `[A, B, C]`，是否还有其他类型？」option 提供「就这 N 个 / 还有更多（请列出）/ 是开放集合（默认 X 行为）」三选项
+   - **只找到部分** → 在 3.3 渐进式确认中按交互式提问协议追问：「`{变量名}` 有哪些取值？我已识别 `[A, B, C]`，是否还有其他类型？」option 提供「就这 N 个 / 还有更多（请列出）/ 是开放集合（默认 X 行为）」三选项
    - **完全没找到** → 同上追问，但 evidence_ref 标 unknown
 4. **标记开放集**：如果用户确认枚举不闭合（如"未来可能新增类型"），在 `enum_factors[].open_set: true` + 必填 `default_behavior` 字段说明默认分支
 5. **改写后回填**：原 business_rule 文本改写为正向枚举形式，并在 `enum_factors[].covered_by_rules` 反向引用规则索引
@@ -328,9 +321,11 @@ python3 $SKILLS_ROOT/shared-tools/scripts/fetch_feishu_doc.py \
 
 ### 3.3 渐进式确认
 
-按 SKILL.md 中定义的问题编排策略执行。所有提问**必须**通过调用 AskUserQuestion 工具完成，格式见 CONVENTIONS.md「[AskUserQuestion 交互式提问](../../CONVENTIONS.md#askuserquestion-交互式提问)」。
+按 SKILL.md 中定义的问题编排策略执行。所有提问**必须**走交互式提问协议：Claude 环境可调用 AskUserQuestion；Codex 环境用原生对话逐题提问；两者都必须把回答写回相同产物。格式见 CONVENTIONS.md「[AskUserQuestion 交互式提问](../commons/CONVENTIONS.md#askuserquestion-交互式提问)」。
 
-> **CRITICAL — 选项溯源**：每个 option 必须填 `evidence_tag`（`quoted` / `derived` / `unknown`）+ `evidence_ref`。`quoted` / `derived` 的 `evidence_ref` **必须包含成对引号包裹的原文摘录**（如 `"需求第 9 行『发现改为动态』"`），仅写定位会被 schema 拒收。**AI 没依据时不要编候选让用户选**——改用 `unknown` + 开放式追问（候选写到 `question` 文本里作为提示词，`option` 留给元操作）。详见 [输出溯源原则](../../CONVENTIONS.md#输出溯源原则) 与 [反捏造模板](../../CONVENTIONS.md#反捏造模板何时不要列候选)。
+> **CRITICAL — 不能把提问降级为 open_questions**：`open_questions` 是交互后的剩余风险记录，不是提问替代品。只要存在 P0/P1 澄清问题，且用户没有明确允许跳过确认，必须先停下来问用户；禁止直接进入 4.x 生成最终文件。
+>
+> **CRITICAL — 选项溯源**：每个 option 必须填 `evidence_tag`（`quoted` / `derived` / `unknown`）+ `evidence_ref`。`quoted` / `derived` 的 `evidence_ref` **必须包含成对引号包裹的原文摘录**（如 `"需求第 9 行『发现改为动态』"`），仅写定位会被 schema 拒收。**AI 没依据时不要编候选让用户选**——改用 `unknown` + 开放式追问（候选写到 `question` 文本里作为提示词，`option` 留给元操作）。详见 [输出溯源原则](../commons/CONVENTIONS.md#输出溯源原则) 与 [反捏造模板](../commons/CONVENTIONS.md#反捏造模板何时不要列候选)。
 >
 > **占位符必须替换**：下方示例中的 `{N}` / `{xxx}` 是占位符，AI 实际生成时**必须**替换为真实的行号和原文摘录。schema 只校验引号格式，不会发现 `『{阻断项原文摘录}』` 这种未替换的占位符——但留下花括号即视为违规，会在 review 时被打回。
 
@@ -343,42 +338,30 @@ python3 $SKILLS_ROOT/shared-tools/scripts/fetch_feishu_doc.py \
 - 3-4 个开放式问题
 - 探索模式下此轮与 3.1 合并执行
 
-首轮提问示例（调用 AskUserQuestion 工具）：
+首轮提问示例（单个 InteractiveQuestion；Claude 可包装到 AskUserQuestion，Codex 直接渲染为编号选项）：
 
 ```json
 {
-  "questions": [
-    {
-      "question": "本次需求涉及哪些平台？",
-      "header": "平台范围",
-      "evidence_ref": null,
-      "options": [
-        {"label": "仅前端", "description": "iOS/Android/Web/PC 平台", "evidence_tag": "unknown", "evidence_ref": null},
-        {"label": "仅后端", "description": "服务端逻辑变更", "evidence_tag": "unknown", "evidence_ref": null},
-        {"label": "前后端同时修改", "description": "前后端联动变更", "evidence_tag": "unknown", "evidence_ref": null},
-        {"label": "多端同步（请在回复中列出具体平台）", "description": "用户在回复中补充", "evidence_tag": "unknown", "evidence_ref": null}
-      ],
-      "multiSelect": false
-    },
-    {
-      "question": "核心变更属于以下哪种类型？",
-      "header": "变更类型",
-      "evidence_ref": "需求第 N 行变更点清单",
-      "options": [
-        {"label": "新增功能模块", "description": "全新的功能模块开发", "evidence_tag": "derived", "evidence_ref": "需求第 N 行『新增 XX』中的『新增』"},
-        {"label": "修改现有逻辑", "description": "对已有功能的行为变更", "evidence_tag": "derived", "evidence_ref": "需求第 N 行『XX 改为 YY』中的『改为』"},
-        {"label": "UI/交互调整", "description": "界面或交互流程变化", "evidence_tag": "derived", "evidence_ref": "需求第 N 行『XX 吸顶 / 去掉 XX』等界面措辞"},
-        {"label": "性能优化/重构", "description": "非功能性改进", "evidence_tag": "derived", "evidence_ref": "需求第 N 行『loading 骨架屏替换』"}
-      ],
-      "multiSelect": true
-    }
-  ]
+  "question_id": "RC-Q-001",
+  "question": "本次需求涉及哪些平台？",
+  "header": "平台范围",
+  "evidence_ref": null,
+  "options": [
+    {"label": "仅前端", "description": "iOS/Android/Web/PC 平台", "evidence_tag": "unknown", "evidence_ref": null},
+    {"label": "仅后端", "description": "服务端逻辑变更", "evidence_tag": "unknown", "evidence_ref": null},
+    {"label": "前后端同时修改", "description": "前后端联动变更", "evidence_tag": "unknown", "evidence_ref": null},
+    {"label": "多端同步（请补充）", "description": "用户在回复中补充具体平台", "evidence_tag": "unknown", "evidence_ref": null}
+  ],
+  "multiSelect": false,
+  "allow_free_text": true,
+  "blocking": true,
+  "writes_to": "clarifications.json"
 }
 ```
 
 **中间轮（维度深挖）**：
 - 按优先级逐维度提问：功能边界 + 平台范围 → 交互与 UI 规则 → 依赖关系（含 API 契约） → 状态流转 → 验收标准 → 异常处理 → 影响范围 → 其他
-- 每次调用 AskUserQuestion 工具控制在 1-4 个问题
+- **每次交互仅 1 个问题**（CRITICAL，避免序列化抖动；Claude 用 AskUserQuestion 时也只放一个 `questions[0]`）。需要问多个时依次发起，等用户答复一个再发起下一个
 - 每个问题必须提供选项或默认值
 
 **条件触发：多变体一致性追问**（CRITICAL — 类继承 / 父组件级联防御）
@@ -393,16 +376,19 @@ python3 $SKILLS_ROOT/shared-tools/scripts/fetch_feishu_doc.py \
 
 ```json
 {
-  "questions": [{
-    "question": "{页面/列表名} 的所有 tab / 子页面 / 列表变体是否都需要 {新增的 UI 元素 / 行为}？是否有特定 tab 不应展示？",
-    "header": "多变体一致性",
-    "options": [
-      {"label": "全部适用", "description": "所有 tab / 变体都需要该改动"},
-      {"label": "部分适用", "description": "某些 tab 不该展示，请在回复中列出例外"},
-      {"label": "不确定", "description": "需 PM 与开发对齐每个变体的预期"}
-    ],
-    "multiSelect": false
-  }]
+  "question_id": "RC-VARIANT-001",
+  "question": "{页面/列表名} 的所有 tab / 子页面 / 列表变体是否都需要 {新增的 UI 元素 / 行为}？是否有特定 tab 不应展示？",
+  "header": "多变体一致性",
+  "evidence_ref": "需求/设计稿『{原文摘录}』",
+  "options": [
+    {"label": "全部适用", "description": "所有 tab / 变体都需要该改动", "evidence_tag": "derived", "evidence_ref": "需求/设计稿『{原文摘录}』"},
+    {"label": "部分适用", "description": "某些 tab 不该展示，请在回复中列出例外", "evidence_tag": "unknown", "evidence_ref": null},
+    {"label": "不确定", "description": "需 PM 与开发对齐每个变体的预期", "evidence_tag": "unknown", "evidence_ref": null}
+  ],
+  "multiSelect": false,
+  "allow_free_text": true,
+  "blocking": true,
+  "writes_to": "clarifications.json"
 }
 ```
 
@@ -456,9 +442,47 @@ python3 $SKILLS_ROOT/shared-tools/scripts/fetch_feishu_doc.py \
 
 如果人的回答引发新的问题（如确认了某个功能后需要追问细节），进行补充轮次。结合退出条件判断是否继续，避免无限循环。
 
-### 3.6 阶段衔接（CRITICAL）
+### 3.6 consolidate 前门禁（CRITICAL）
 
-clarify 阶段结束后，**必须立即进入阶段 4: consolidate**。
+在进入阶段 4 前，必须生成中间门禁文件 `clarification_gate.json`，并运行校验脚本：
+
+```bash
+python3 $SKILLS_ROOT/requirement-clarification/scripts/validate_clarification_gate.py \
+  path/to/clarification_gate.json \
+  --log path/to/clarification_log.md
+```
+
+`clarification_gate.json` 格式：
+
+```json
+{
+  "asked_user_questions": true,
+  "user_confirmed_to_skip": false,
+  "question_rounds": 1,
+  "p0_open_questions": [],
+  "p1_open_questions": ["埋点参数表未确认"],
+  "skip_reason": null,
+  "can_consolidate": true
+}
+```
+
+门禁规则：
+- `can_consolidate` 必须为 `true`
+- 校验脚本必须同时读取 `clarification_gate.json` 和 `clarification_log.md`，交叉验证问答轮次与人工回答记录
+- 若 `asked_user_questions` 为 `false`，则 `user_confirmed_to_skip` 必须为 `true`，且 `skip_reason` 必须非空
+- 若存在 P0 问题，必须继续向用户提问；只有用户明确允许跳过时才能保留到 `p0_open_questions`
+- 若存在 P1 问题，至少要完成一轮用户提问；用户未答或明确后置时可保留到 `p1_open_questions`
+- 校验失败时，禁止生成最终 4 个文件，必须回到 3.3 继续提问或取得用户明确跳过许可
+
+门禁通过后，把 `clarification_gate.json` 的结果摘要写入 `clarification_log.md` 基本信息，例如：
+
+```markdown
+- 澄清门禁：通过，已提问 1 轮，剩余 P0 0 个 / P1 1 个
+```
+
+### 3.7 阶段衔接（CRITICAL）
+
+clarify 阶段结束且 3.6 门禁通过后，**必须立即进入阶段 4: consolidate**。
 
 > 不要在此处创建实施计划、不要调用 CreatePlan、不要开始编码。
 > consolidate 阶段生成的产物文件是整个 skill 的核心输出，跳过等同于 skill 执行失败。
@@ -484,7 +508,7 @@ clarify 阶段结束后，**必须立即进入阶段 4: consolidate**。
 
 字段按实际澄清结果填写，未涉及的维度留空数组或 null，不强制填充。
 
-`doc_quality_issues` 字段从 3.2.5 阶段暂存的发现回填，blocking 项需带上用户在 3.3 给出的决策（写入 `resolution` 字段）。无发现时写入空数组 `[]`，**禁止**省略该字段。
+`doc_quality_issues` 字段从 3.2.5 阶段暂存的发现回填，『阻断』项需带上用户在 3.3 给出的决策（写入 `resolution` 字段）。无发现时写入空数组 `[]`，**禁止**省略该字段。
 
 `enum_factors` 字段从 3.2.6 阶段的 lint 与改写结果回填到每个功能点。功能点若不涉及分类变量需写入空数组 `[]` 显式声明，**禁止**省略。每条 `enum_factors` 元素须含 `id` / `name` / `values[]` / `open_set` / `source`；`open_set: true` 时必须有非空的 `default_behavior`；`covered_by_rules` 反向引用本功能点中已展开该枚举的规则索引（用于下游 traceability / test-case-generation 做覆盖检查）。
 

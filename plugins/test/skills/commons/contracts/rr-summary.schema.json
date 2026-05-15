@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RequirementReviewSummary",
+  "description": "需求评审结构化摘要 (rr_summary.json)。requirement-review skill 在 output 阶段产出。被 ai-case requirement_review workflow 的 post_complete (回灌前端 output_data) 和 extract_story_output (注入下游 TC 生成 prompt) 同时消费。设计取舍：value 必须短小 — 注入 prompt 时整体被截断到 2000 字符 / 单 value 200 字符 (见 ai_assistant_service._build_upstream_context)。",
+  "type": "object",
+  "required": ["verdict", "issue_count", "blocking_issues", "confidence"],
+  "additionalProperties": true,
+  "not": {
+    "anyOf": [
+      {"required": ["result"]},
+      {"required": ["conclusion"]},
+      {"required": ["issues_count"]},
+      {"required": ["blockers"]}
+    ]
+  },
+  "properties": {
+    "verdict": {
+      "enum": ["ready", "ready_with_conditions", "not_ready"],
+      "description": "需求就绪度判定，对齐 skill TEMPLATES 中的 Go-No-Go 三档"
+    },
+    "issue_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "评审发现的问题总数 (阻断 + 关注 + 待确认)"
+    },
+    "confidence": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "评审置信度 (0-100)，按 PHASES.md 5.1.5.1 评分规则计算，禁止 LLM 主观打分。verdict 与 confidence 之间有硬规则约束 (见同节)。"
+    },
+    "blocking_issues": {
+      "type": "array",
+      "description": "阻断级问题简要清单。即使无阻断项也必须显式写入空数组 []，避免 AI 偷懒省略字段。注入下游 prompt 时会被截断，建议每项 <= 80 字。",
+      "items": {
+        "type": "object",
+        "required": ["title", "category"],
+        "additionalProperties": true,
+        "properties": {
+          "title": {"type": "string", "minLength": 1, "maxLength": 200},
+          "category": {"type": "string", "description": "评审维度名"},
+          "owner": {"type": "string", "description": "PM / Dev / QA / Design"}
+        }
+      }
+    }
+  }
+}

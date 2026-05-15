@@ -1,0 +1,122 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DefectList",
+  "description": "缺陷列表文件 schema (defect_list.json)。requirement-traceability 在 smoke-test 模式下产出，被 ai-case smoke_test workflow 消费。源真实样本：session 239。设计取舍：additionalProperties=true 允许 skill 演进加新字段；not.anyOf.required 是显式 ban 已知拼错（actual / expected / desc / title）的黑名单，不是穷举——发现新拼错模式时追加。",
+  "type": "object",
+  "required": ["defects"],
+  "properties": {
+    "defects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "priority"],
+        "additionalProperties": true,
+        "not": {
+          "anyOf": [
+            {"required": ["actual"]},
+            {"required": ["expected"]},
+            {"required": ["desc"]},
+            {"required": ["title"]}
+          ]
+        },
+        "if": {
+          "type": "object",
+          "properties": {
+            "evidence": {
+              "type": "object",
+              "required": ["source"],
+              "properties": {
+                "source": {"enum": ["search-a", "search-b", "search-c"]}
+              }
+            }
+          },
+          "required": ["evidence"]
+        },
+        "then": {
+          "properties": {
+            "evidence": {
+              "required": ["search_id"]
+            }
+          }
+        },
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "缺陷 ID，如 DEFECT-1"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "缺陷名称（canonical 字段名，参见 requirement-traceability/TEMPLATES.md）。注意 schema 显式 ban `title`——尽管 JIRA / TAPD 等行业习惯用 title，marketplace 内部约定用 name，schema ban 是为了让规约可 enforce"
+          },
+          "priority": {
+            "enum": ["P0", "P1", "P2", "P3"],
+            "description": "缺陷优先级。v0.0.13 扩展加入 P3：requirement-traceability §5S.1 supplementary 来源直接继承 ca 用例的 priority，ca 实际产物含 P3 用例（如 TC-30 ExpireUserEvents 大批过期回归、TC-31 admin remark 解析等次要场景）。P0/P1/P2 仍按 5S.1 既有判定规则；P3 仅可能来自 supplementary 继承"
+          },
+          "category": {
+            "type": "string",
+            "description": "缺陷类型，常见值：implementation_missing / logic_error / api_inconsistency / ui_deviation / cross_component_break。v0.0.14 新增 cross_component_break——按 §5S.1 来源 7 派生的跨组件数据流断链或字段语义偏离（如 GameJam Info-Consume 不一致）；与 api_inconsistency 互斥（后者是字段名/类型/路径表面契约不一致，前者是字段对得上但行为偏离）"
+          },
+          "description": {
+            "type": "string",
+            "description": "完整描述"
+          },
+          "expected_result": {
+            "type": "string",
+            "description": "预期结果"
+          },
+          "actual_result": {
+            "type": "string",
+            "description": "实际结果"
+          },
+          "evidence": {
+            "type": "object",
+            "description": "证据元信息（来源、置信度、代码位置等）",
+            "additionalProperties": true,
+            "properties": {
+              "source": {"type": "string"},
+              "source_id": {"type": "string"},
+              "requirement_ref": {"type": "string"},
+              "code_location": {"type": "string"},
+              "confidence": {"type": "number"},
+              "search_id": {
+                "type": "string",
+                "pattern": "^S[ABC]-\\d+$",
+                "description": "low quality 模式 5S.1 来源 8 静态搜索的命中编号，格式 S{A|B|C}-N（如 SA-1 / SB-2 / SC-3）。当 evidence.source ∈ {search-a, search-b, search-c} 时 schema 强制要求；目的是把 SEARCH 检出与 'agent 凭灵感写 defect' 区分开，让每条 search 来源 defect 都能挂回 PHASES.md §5S.1 来源 8 的某条 pattern"
+              }
+            }
+          },
+          "related_mr": {
+            "type": "string",
+            "description": "关联 MR/PR 标识"
+          },
+          "related_test_case": {
+            "type": "string",
+            "description": "关联测试用例描述"
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "total": {"type": "integer", "minimum": 0},
+        "by_priority": {
+          "type": "object",
+          "additionalProperties": {"type": "integer"}
+        },
+        "by_category": {
+          "type": "object",
+          "additionalProperties": {"type": "integer"}
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

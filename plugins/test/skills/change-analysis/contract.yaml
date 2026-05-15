@@ -69,15 +69,15 @@ output:
       description: 根因分析和修复完整性评估（Bug 场景）
       format: json
     - name: bug_risk_assessment.json
-      description: Bug 场景的残余风险评估和行动建议（v0.0.10 起改名以避免与 requirement-traceability 的 risk_assessment.json 撞名）
+      description: Bug 场景的残余风险评估和行动建议（命名带 bug_ 前缀以避免与 requirement-traceability 的 risk_assessment.json 撞名）
       format: json
       optional: true
     - name: change_supplementary_cases.json
-      description: 为代码变更覆盖缺口生成的补充用例（Story 场景，可选；v0.0.10 起从 supplementary_cases.json 改名以避免与 test-case-generation / test-case-review 撞名）。schema 在 contracts/testcase.schema.json
+      description: 为代码变更覆盖缺口生成的补充用例（Story 场景，可选；带 change_ 前缀以避免与 test-case-generation / test-case-review 撞名）。schema 在 ../commons/contracts/testcase.schema.json
       format: json
       optional: true
     - name: ca_summary.json
-      description: 结构化窄摘要（changed_modules / risk_count / risk_breakdown / new_features），供 ai-case change_analysis workflow 的 extract_story_output 消费给下游 TC 生成 prompt 注入。schema 在 contracts/ca-summary.schema.json
+      description: 结构化窄摘要（changed_modules / risk_count / risk_breakdown / new_features），供 ai-case change_analysis workflow 的 extract_story_output 消费给下游 TC 生成 prompt 注入。schema 在 ../commons/contracts/ca-summary.schema.json
       format: json
   structured:
     scenario:
@@ -104,16 +104,16 @@ output:
 
 dependencies:
   skills:
-    - shared-tools
+    - test-shared-tools
   scripts:
-    - shared-tools/scripts/fetch_feishu_doc.py
-    - shared-tools/scripts/gitlab_helper.py
-    - shared-tools/scripts/github_helper.py
-    - shared-tools/scripts/search_mrs.py
-    - shared-tools/scripts/search_prs.py
-    - shared-tools/scripts/codex_agent.py  # Phase 3.5 cross-validation fallback
+    - test-shared-tools/scripts/fetch_feishu_doc.py
+    - test-shared-tools/scripts/gitlab_helper.py
+    - test-shared-tools/scripts/github_helper.py
+    - test-shared-tools/scripts/search_mrs.py
+    - test-shared-tools/scripts/search_prs.py
+    - test-shared-tools/scripts/codex_agent.py  # Phase 3.5 cross-validation fallback
   agents:
-    - change-analysis/codex-change-analyzer  # Phase 3.5 cross-validation
+    - change-analysis/agents/codex-change-analyzer  # Phase 3.5 cross-validation
   env_vars:
     - FEISHU_APP_ID
     - FEISHU_APP_SECRET

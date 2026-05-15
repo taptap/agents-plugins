@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "TapTap 插件库 - 面向 AI 开发工具的工作流自动化插件集",
-    "version": "0.1.41",
+    "version": "0.1.42",
     "pluginRoot": "./plugins"
   },
   "plugins": [
@@ -19,7 +19,10 @@
         "name": "TapTap AI Team"
       },
       "category": "productivity",
-      "keywords": ["spec", "sdd"],
+      "keywords": [
+        "spec",
+        "sdd"
+      ],
       "strict": true
     },
     {
@@ -31,7 +34,13 @@
         "name": "TapTap AI Team"
       },
       "category": "version-control",
-      "keywords": ["git", "commit", "review", "code-review", "agent-team"],
+      "keywords": [
+        "git",
+        "commit",
+        "review",
+        "code-review",
+        "agent-team"
+      ],
       "strict": true
     },
     {
@@ -43,19 +52,33 @@
         "name": "TapTap AI Team"
       },
       "category": "productivity",
-      "keywords": ["sync", "mcp", "lsp", "config"],
+      "keywords": [
+        "sync",
+        "mcp",
+        "lsp",
+        "config"
+      ],
       "strict": true
     },
     {
       "name": "test",
       "source": "./plugins/test",
       "description": "QA 工作流插件，提供需求评审与澄清、测试用例生成（含冗余对评审）、用例评审、变更分析、代码级测试生成（单元/集成）、需求回溯（含冒烟测试模式）、Bug 修复分析等 QA 全流程 Skill",
-      "version": "0.0.9",
+      "version": "0.0.10",
       "author": {
         "name": "TapTap AI Team"
       },
       "category": "testing",
-      "keywords": ["test", "qa", "unit-test", "integration-test", "test-case-generation", "test-review", "verification", "ui-fidelity"],
+      "keywords": [
+        "test",
+        "qa",
+        "unit-test",
+        "integration-test",
+        "test-case-generation",
+        "test-review",
+        "verification",
+        "ui-fidelity"
+      ],
       "strict": true
     }
   ]

@@ -1,5 +1,5 @@
 name: api-contract-validation
-version: "1.0"
+version: "1.1"
 description: >
   深度校验前后端 API 契约一致性。输入前端代码变更 + 后端代码变更（或 OpenAPI spec），
   输出 api_contract_report.json。
@@ -35,6 +35,7 @@ output:
     - name: api_contract_report.json
       format: json
       description: API 契约校验报告（逐端点对比结果 + 整体一致性）
+      consumed_by: [requirement-traceability]
   structured:
     overall_consistency:
       type: string
@@ -51,8 +52,8 @@ output:
 
 dependencies:
   scripts:
-    - shared-tools/scripts/gitlab_helper.py
-    - shared-tools/scripts/github_helper.py
+    - test-shared-tools/scripts/gitlab_helper.py
+    - test-shared-tools/scripts/github_helper.py
   env_vars:
     - GITLAB_URL
     - GITLAB_TOKEN

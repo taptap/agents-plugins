@@ -1,27 +1,32 @@
 name: test-case-generation
-version: "2.1"
+version: "2.2"
 description: >
   根据需求文档和澄清结果拆解功能模块，由并行子 Agent 生成各模块用例文件 module_{N}_cases.json，
-  并合并出 review 前的中间版本 test_cases.json，可选地走 review 阶段产出评审结果。
-  输入需求链接、本地需求文档或上游澄清结果。
+  并合并出 review 前的中间版本 test_cases.json，随后走 review / confirm / output 生成最终用例集。
+  默认在 output 后继续调用 metersphere-sync，把 final_cases.json 导入 MeterSphere 并创建/复用测试计划；
+  只有用户明确要求“只生成不导入”“先别同步 MS”“不要导入”时才跳过。
+  同步成功后，最终用户回复必须直接展示 MeterSphere 测试计划链接（ms_plan_info.json.plan_url）、
+  成功/失败导入数和已关联用例数，不能只把链接写进本地文件。
+  输入需求链接、本地需求文档或上游澄清结果。用例字段级权威见 commons/CONVENTIONS.md「用例 JSON 格式」：
+  AI 生成时不要手工编造 case_id；标准落盘产物必须有稳定 case_id，module 缺失/null/空字符串归一为「未分类」。
 
 input:
-  one_of:
+  any_of:
     story_link:
       type: string
       description: 需求链接（飞书 Story / 文档链接，或其他可通过脚本获取的 URL）
     requirement_doc:
       type: file
       description: 本地需求文档（AI 对话生成或手动提供的 .md / .json 文件）
-  optional:
     clarified_requirements:
       type: file
-      description: 上游 requirement-clarification 的澄清结果
+      description: 上游 requirement-clarification 的澄清结果（通常与 requirement_points 成对出现，任一存在即可启动 session）
       from_upstream: requirement-clarification
     requirement_points:
       type: file
-      description: 上游功能点清单
+      description: 上游功能点清单（通常与 clarified_requirements 成对出现，任一存在即可启动 session）
       from_upstream: requirement-clarification
+  optional:
     design_link:
       type: string
       description: Figma 设计稿链接
@@ -54,30 +59,58 @@ output:
     - name: context_summary.md
       description: decompose 阶段的全局上下文摘要（>=3 模块时生成）
       format: markdown
+      optional: true
+      produced_when: 模块数 >= 3，需要并行子 Agent 共享全局上下文
+    - name: clarifications.json
+      description: scan-ambiguities 阶段的歧义确认记录（confirmed/pending），供 generate 阶段填充 expected 或标记待确认
+      format: json
+      optional: true
+      produced_when: 阶段 3.5 扫到 >= 1 条歧义
     - name: "module_*_cases.json"
-      description: generate 阶段各功能模块的用例文件（N 由模块拆解数决定，由并行子 Agent 写入）。schema 在 contracts/testcase.schema.json
+      description: generate 阶段各功能模块的用例文件（N 由模块拆解数决定，由并行子 Agent 写入）。落盘前由 MCP/脚本补齐稳定 case_id 并规范化 module
       format: json
       pattern: true
-    - name: test_cases.json
-      description: generate 收尾时由 Bash 合并 module_*_cases.json 产出的中间用例集（review 前快照）。schema 在 contracts/testcase.schema.json
+      schema: ../commons/contracts/testcase.schema.json
+      produced_when: generate 阶段，按模块拆分后每个模块 1 个文件
+    - name: final_cases.json
+      default_path: test_cases/final_cases.json
+      description: output 阶段的最终用例集（合并 review 后的所有模块用例 + 补充用例），对外可入库。必须满足稳定 case_id、非空 module、同 (module,title) 不重名
       format: json
-    # ===== 可选产物（仅 review 阶段实际执行时产出）=====
+      schema: ../commons/contracts/testcase.schema.json
+      consumed_by: [metersphere-sync, requirement-traceability]
+    # 默认 MS 同步产物由 metersphere-sync/contract.yaml 声明。
+    # 本 skill 只负责在 output 后触发 metersphere-sync sync 模式，并在收尾检查中读取
+    # metersphere/ms_case_mapping.json、metersphere/ms_plan_info.json、metersphere/ms_import_report.json。
+    # ===== 中间/可选产物 =====
+    - name: test_cases.json
+      default_path: test_cases/test_cases.json
+      description: generate 收尾时由 Bash 合并 module_*_cases.json 产出的中间用例集（review 前快照，已被 final_cases.json 覆盖；保留作审计）。需与 final_cases.json 使用同一 testcase schema
+      format: json
+      schema: ../commons/contracts/testcase.schema.json
+      produced_when: generate 收尾阶段
+    # ===== review/output 产物 =====
     - name: tc_gen_review.md
-      description: review 阶段的 4 维度冗余对评审结果（review 未启用时不产出）
+      default_path: test_cases/tc_gen_review.md
+      description: review 阶段的 4 维度冗余对评审结果
       format: markdown
-      optional: true
+      produced_when: review 阶段
     - name: review_summary.json
+      default_path: test_cases/review_summary.json
       description: review 阶段的评审摘要统计（用例数/覆盖率/问题数/维度评分）
       format: json
-      optional: true
+      produced_when: output 阶段
     - name: supplementary_cases.json
-      description: output 阶段的补充用例（如有覆盖缺口）。schema 在 contracts/testcase.schema.json
+      default_path: test_cases/supplementary_cases.json
+      description: output 阶段的补充用例（如有覆盖缺口）。需与 final_cases.json 使用同一 testcase schema，并在合并前补齐 case_id/module
       format: json
       optional: true
+      schema: ../commons/contracts/testcase.schema.json
+      produced_when: output 阶段发现覆盖缺口
     - name: requirement_points.md
       description: understand 阶段的功能点清单 fallback 产出（仅当工作目录无上游 requirement_points.json 时产出；与 test-case-review 同名同 schema，primary+fallback 模式）
       format: markdown
       optional: true
+      produced_when: 缺少上游 requirement_points.json 时
   structured:
     total_modules:
       type: number
@@ -115,12 +148,27 @@ output:
     user_confirmed_count:
       type: number
       description: 用户确认的问题数
+    ms_sync_status:
+      type: string
+      description: MeterSphere 同步状态（synced | skipped_by_user | failed）
+    ms_plan_url:
+      type: string
+      description: MeterSphere 测试计划链接；ms_sync_status=synced 时必须在最终回复中展示
+    ms_imported_cases:
+      type: number
+      description: 成功导入 MeterSphere 的用例数；最终回复必须展示
+    ms_failed_cases:
+      type: number
+      description: 导入 MeterSphere 失败的用例数；最终回复必须展示
+    ms_associated_cases:
+      type: number
+      description: 已关联到测试计划的用例数；最终回复必须展示
 
 dependencies:
   scripts:
-    - shared-tools/scripts/fetch_feishu_doc.py
-    - shared-tools/scripts/gitlab_helper.py  # 条件触发：获取技术文档涉及代码时
-    - shared-tools/scripts/github_helper.py  # 条件触发：获取技术文档涉及代码时
+    - test-shared-tools/scripts/fetch_feishu_doc.py
+    - test-shared-tools/scripts/gitlab_helper.py  # 条件触发：获取技术文档涉及代码时
+    - test-shared-tools/scripts/github_helper.py  # 条件触发：获取技术文档涉及代码时
   env_vars:
     - FEISHU_APP_ID
     - FEISHU_APP_SECRET

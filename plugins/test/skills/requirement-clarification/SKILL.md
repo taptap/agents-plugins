@@ -8,7 +8,7 @@ description: >
   触发：帮我理清需求、需求澄清、这个需求不太明确、我有个新需求、澄清一下、拉齐需求。
 handoffs:
   - label: 生成测试用例
-    skill: test:test-case-generation
+    skill: test-case-generation
     when: 需求已澄清，准备进入用例设计阶段
     prompt_hint: "基于本次产出的 clarified_requirements.json / requirement_points.json 生成用例"
     recommended: true
@@ -26,19 +26,73 @@ handoffs:
   - `clarified_requirements.json` — 结构化结果，供下游 skill 消费
   - `requirement_points.json` — 功能点清单，供 test-case-generation
   - `implementation_brief.json` — 实现任务清单，供 coding agent
+- 阶段门禁：进入 consolidate 前必须生成并通过校验 `clarification_gate.json`（中间门禁文件，不算最终输出产物）
 - 完成标志：4 个文件全部生成且通过验证
 - 失败门控：需求正文不可读且用户无法补充信息时停止；所有未经确认的信息标记为 `unconfirmed`
 - 执行步骤：`init → fetch → clarify → consolidate`（阶段不可跳过）
 - 澄清维度检查项：[CHECKLIST.md](CHECKLIST.md)
 - 参考样例：[output/](output/) 目录下的 `clarified_requirements.json` / `requirement_points.json` / `implementation_brief.json` / `clarification_log.md` 是预制的格式参考样例，**非运行时产出**，仅供初次使用者了解输出形态
 
+## 公共需求工作区（CRITICAL）
+
+同一条需求的澄清、用例、MS 同步、需求回溯必须落在同一个需求工作区下。目录以**需求为主键**，不要以 skill 名称为主键。
+
+### 工作区命名
+
+- 默认目录名：`requirement_<stable_id>/`
+- `stable_id` 优先级：
+  1. 飞书/知识库 URL 中的文档 token（如 `EAR0wGRssiZFQdkEnMUcuxFNnkh`）
+  2. story / issue / ticket 编号
+  3. 需求标题的安全化 slug
+- 如果用户显式指定 workspace，必须复用用户指定目录。
+- 如果当前目录已有匹配 `manifest.json.requirement_id/source_url/title` 的 `requirement_<stable_id>/`，必须复用，不要新建同级目录。
+
+### 目录结构
+
+```text
+requirement_<stable_id>/
+  manifest.json
+  source/
+  clarification/
+  test_cases/
+  metersphere/
+  traceability/
+```
+
+本 skill 是链路起点：必须创建或复用公共工作区，并把澄清产物写入 `clarification/`。原始需求正文、下载的文档或截图索引写入 `source/`。
+
+### manifest.json
+
+工作区根目录必须维护 `manifest.json`，至少包含：
+
+```json
+{
+  "requirement_id": "<stable_id>",
+  "title": "<需求标题>",
+  "source_url": "<原始需求链接或空字符串>",
+  "created_by_skill": "requirement-clarification",
+  "current_stage": "clarification",
+  "paths": {
+    "source_dir": "source/",
+    "clarification_dir": "clarification/",
+    "test_cases_dir": "test_cases/",
+    "metersphere_dir": "metersphere/",
+    "traceability_dir": "traceability/"
+  },
+  "artifacts": {},
+  "traceability_runs": []
+}
+```
+
+后续 skill 必须读取并更新同一个 manifest，而不是创建新的平级产物目录。
+
 ## 核心能力
 
 - 多形态输入处理 — 支持链接、文档、自由文本、对话碎片等多种输入形式
 - 需求文档深度解析 — 识别功能边界、状态流转、业务规则、数据约束
-- 多视角并行分析 — 复杂需求时启动功能/异常/用户 3 个视角 Agent 并行分析，交叉验证提升置信度
+- 单 Agent 强推理 — 每维度强制走「假设 → 反例搜索 → 结论」三步并要求原文引用，用结构化推理替代多 Agent 并行的视角多样性
 - 结构化问题生成 — 按 12 个维度生成针对性的澄清问题
-- 交互式确认 — 通过 AskUserQuestion 工具渐进式确认，记录人工回答
+- 交互式确认 — 通过交互式提问协议渐进式确认（Claude 用 AskUserQuestion，Codex 用原生对话），记录人工回答
 - 结构化输出 — 产出可被下游 skill 直接消费的 JSON 数据
 
 ## 执行模式
@@ -50,7 +104,7 @@ handoffs:
 | **文档澄清模式** | 输入为 story_link 或 requirement_doc | 先解析文档，再针对模糊点提问 |
 | **设计稿澄清模式** | 输入仅为 design_link（无需求文档） | 从设计稿反推功能点，识别交互规则和状态，再澄清业务逻辑 |
 | **文档+设计稿联合模式** | 同时提供 story_link/requirement_doc 和 design_link | 解析文档和设计稿，交叉比对识别差集和矛盾，再针对性提问 |
-| **探索式澄清模式** | 输入为 requirement_text 或碎片化信息 | 先通过多轮 AskUserQuestion 工具调用构建需求骨架，再逐维度深挖 |
+| **探索式澄清模式** | 输入为 requirement_text 或碎片化信息 | 先通过多轮交互式提问构建需求骨架，再逐维度深挖 |
 
 各模式的阶段流程和输出产物一致，区别在于信息获取方式和问答侧重点。详见 [PHASES.md](PHASES.md)。
 
@@ -89,40 +143,48 @@ handoffs:
 - 用户明确表示"够了" → 立即结束，剩余标记 unconfirmed
 - 达到 5 轮仍有关键维度未确认 → 结束并标记风险
 
+### 交互门禁（CRITICAL）
+
+- 文档/设计稿解析后，只要存在 P0/P1 澄清问题，**必须先向用户提问**，禁止直接把问题写入 `open_questions` 后进入 consolidate。
+- Codex 环境没有 AskUserQuestion 时，必须用普通对话停下来逐题提问；等待用户回答后再继续。
+- 只有以下情况允许 0 轮提问进入 consolidate：
+  - 源材料已明确覆盖功能边界、平台范围、验收标准，且没有 P0/P1 澄清问题；
+  - 用户明确说「先按未确认输出」「够了」「不需要继续问」等同义表达。
+- 若跳过提问，必须在 `clarification_gate.json.skip_reason` 写明原因，并在 `clarification_log.md` 的基本信息中记录。
+
 ### 提问质量要求
 
 - 每个问题必须具体、可回答，不能是模糊的「是否需要考虑异常情况」
 - 提供选项或默认值帮助回答，如「支付超时后订单状态：A) 保持待支付 B) 自动取消 C) 其他」
 - 对用户不关心的维度，AI 提出默认假设让用户确认，而非追问到底
 - 标注问题来源维度和关联功能点
-- **每个 option 必须带 evidence 标注**：遵循 [输出溯源原则](../../CONVENTIONS.md#输出溯源原则) 的三级标签 `quoted` / `derived` / `unknown`。`quoted` / `derived` 的 `evidence_ref` 必须包含成对引号包裹的原文摘录（不能只写定位）。**AI 没依据时不要编候选让用户选**——改用 `unknown` + [反捏造模板](../../CONVENTIONS.md#反捏造模板何时不要列候选)的开放式追问。
+- **每个 option 必须带 evidence 标注**：遵循 [输出溯源原则](../commons/CONVENTIONS.md#输出溯源原则) 的三级标签 `quoted` / `derived` / `unknown`。`quoted` / `derived` 的 `evidence_ref` 必须包含成对引号包裹的原文摘录（不能只写定位）。**AI 没依据时不要编候选让用户选**——改用 `unknown` + [反捏造模板](../commons/CONVENTIONS.md#反捏造模板何时不要列候选)的开放式追问。
 
 ## 模型分层
 
 | 任务 | 推荐模型 | 理由 |
 | --- | --- | --- |
-| 需求文档解析和澄清 | Opus | 需求理解是整个 pipeline 质量天花板 |
-| 多视角分析 Agent（功能/异常） | Opus | 遗漏隐含需求的代价极高 |
-| 多视角分析 Agent（用户） | Sonnet | 用户体验分析风险较低 |
+| 需求文档解析和澄清 | Opus | 需求理解是整个 pipeline 质量天花板；单 Agent 强推理模式（假设/反例/结论）对模型推理深度要求高 |
 
 ## 可用工具
 
-共享脚本（飞书/GitLab/GitHub）用法见 [shared-tools/SKILL.md](../shared-tools/SKILL.md)。以下为本 skill 特有工具：
+共享脚本（飞书/GitLab/GitHub）用法见 [test-shared-tools/SKILL.md](../test-shared-tools/SKILL.md)。以下为本 skill 特有工具：
 
 ### Figma MCP
 
-仅当 fetch 阶段发现 Figma 链接时使用，按分级协议获取，详见 [shared-tools/SKILL.md](../shared-tools/SKILL.md#figma-设计稿获取)。
+仅当 fetch 阶段发现 Figma 链接时使用，按分级协议获取，详见 [test-shared-tools/SKILL.md](../test-shared-tools/SKILL.md#figma-设计稿获取)。
 
 ## 执行保障（CRITICAL）
 
 1. **阶段不可跳过**：4 个阶段（init → fetch → clarify → consolidate）必须按序执行，不允许跳过任何阶段。
-2. **consolidate 是最终阶段**：clarify 阶段的退出条件满足后，MUST 立即进入 consolidate 阶段，禁止在 consolidate 完成前执行任何下游操作（如创建实施计划、开始编码、调用其他 skill）。
-3. **输出文件校验**：skill 执行完毕前，必须验证以下 4 个文件均已生成：
+2. **clarify 交互门禁**：consolidate 前必须先生成 `clarification_gate.json` 并运行 `scripts/validate_clarification_gate.py`。校验失败时，必须回到 3.3 向用户提问或取得用户明确跳过许可。
+3. **consolidate 是最终阶段**：clarify 阶段的退出条件满足且门禁通过后，MUST 立即进入 consolidate 阶段，禁止在 consolidate 完成前执行任何下游操作（如创建实施计划、开始编码、调用其他 skill）。
+4. **输出文件校验**：skill 执行完毕前，必须验证以下 4 个文件均已生成：
    - [ ] `clarification_log.md`
    - [ ] `clarified_requirements.json`（包含 `doc_quality_issues` 与 `functional_points[].enum_factors` 字段，无发现时均为 `[]`，禁止省略；`business_rules` / `state_transitions[].rules` / `interaction_rules` 文本中**禁止**出现「X 不…」「非 X」「除 X 外」等否定句式，命中视为 3.2.6 未走完）
    - [ ] `requirement_points.json`
    - [ ] `implementation_brief.json`
-4. **完成标志与 Next Steps 输出**：所有输出文件生成后，**必须**按以下格式输出（这是 skill 的唯一合法终止点，不允许只输出一行总结）：
+5. **完成标志与 Next Steps 输出**：所有输出文件生成后，**必须**按以下格式输出（这是 skill 的唯一合法终止点，不允许只输出一行总结）：
 
    ````markdown
    ## ✓ 需求澄清完成
@@ -135,7 +197,7 @@ handoffs:
    **推荐：生成测试用例** —— 基于已确认的功能点和验收标准设计测试用例
 
    ```
-   Skill(skill: "test:test-case-generation")
+   Skill(skill: "test-case-generation")
    ```
 
    是否现在直接执行？回复"是"自动接力，回复"看看产物再决定"则停在此处。
@@ -262,8 +324,8 @@ handoffs:
       "category": "错别字 | 术语 | 易读性 | 文案一致性 | 单位",
       "evidence": "PRD 原文摘录（用『』圈出关键片段）",
       "suggestion": "建议改写或 null",
-      "severity": "blocking | concern",
-      "resolution": "仅 blocking 项有值；记录用户在 3.3 渐进式确认中的决策原文，concern 项为 null"
+      "severity": "阻断 | 关注",
+      "resolution": "仅『阻断』项有值；记录用户在 3.3 渐进式确认中的决策原文，『关注』项为 null"
     }
   ]
 }
@@ -271,7 +333,7 @@ handoffs:
 
 字段按实际澄清结果填写，未涉及的维度留空数组或 null，不需要强制填充。探索模式下 `confidence_level` 通常为 `medium` 或 `low`，下游 skill 据此调整容忍度。
 
-`functional_points[].confidence`（0-100）：功能点级别的置信度。多视角模式下为交叉验证后的合并评分（2+ Agent 确认 +20 加成）；单 Agent 模式下基于文档明确度评分。下游 test-case-generation 据此调整用例生成的激进程度。
+`functional_points[].confidence`（0-100）：功能点级别的置信度。按 [PHASES.md 3.2.1 confidence 评分规则](PHASES.md#321-confidence-评分规则单-agent) 的可重复规则计算（基础分 + 边界明确/验收标准/核心维度有原文/反例命中等加分项 + assumption 占比/unconfirmed 减分项），不依赖 LLM 主观打分。下游 test-case-generation 据此调整用例生成的激进程度。
 
 `qa_pairs` 中 `source` 为 `assumption` 表示 AI 提出的默认假设被用户确认。
 
@@ -380,9 +442,9 @@ handoffs:
 
 ## 注意事项
 
-- 回读中间文件、中断恢复等通用约定见 [CONVENTIONS](../../CONVENTIONS.md)
-- 条件触发的分析章节（如 API 契约提取）在源材料信息不足时跳过，不生成推测性内容。详见 [CONVENTIONS.md 数据充分性门控](../../CONVENTIONS.md#条件触发章节的数据充分性门控)
+- 回读中间文件、中断恢复等通用约定见 [CONVENTIONS](../commons/CONVENTIONS.md)
+- 条件触发的分析章节（如 API 契约提取）在源材料信息不足时跳过，不生成推测性内容。详见 [CONVENTIONS.md 数据充分性门控](../commons/CONVENTIONS.md#条件触发章节的数据充分性门控)
 - 澄清过程中，从需求文档能直接获得答案的问题标记 `source: "document"`，不需要向人提问
-- 只在文档无法回答的问题上调用 AskUserQuestion 工具，避免过度打扰
+- 只在文档无法回答的问题上发起交互式提问，避免过度打扰
 - 每个功能点的 `clarification_status` 反映当前澄清程度，`unconfirmed` 的项目会传递给下游 skill 作为风险标记
 - 探索模式下，首轮问答侧重功能范围而非细节，避免在信息不足时过早深挖

@@ -1,6 +1,6 @@
 {
   "name": "test",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "QA 工作流插件，提供需求评审与澄清、测试用例生成（含冗余对评审）、用例评审、变更分析、代码级测试生成（单元/集成）、需求回溯（含冒烟测试模式）、Bug 修复分析等 QA 全流程 Skill",
   "author": {
     "name": "TapTap AI Team"
@@ -12,6 +12,9 @@
     "longDescription": "Skills covering the full QA loop: clarify requirements, generate and review test cases (with redundancy pair review), analyze diff impact, generate unit/integration tests at code level, trace requirements (including smoke mode), and analyze bug fixes.",
     "developerName": "TapTap AI Team",
     "category": "Productivity",
-    "capabilities": ["Read", "Write"]
+    "capabilities": [
+      "Read",
+      "Write"
+    ]
   }
 }

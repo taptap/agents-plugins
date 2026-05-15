@@ -1,5 +1,142 @@
 # Changelog
 
+## 0.1.42
+
+### Test Plugin (0.0.10)
+
+**Feishu report formatting — checkbox semantics correctness fixes**
+
+- `change-analysis/PHASES.md`: dropped the `更新清单标记为 [x]` directive that was causing AI to auto-check `change_checklist.md` RP items declared as 待覆盖点 (to-be-covered). Reviewers misread the checked state as "QA test coverage done". Replaced with explicit `保留 [ ]` rule so the review meeting owns the tick.
+- `change-analysis/PHASES.md` §6.4 instruction strengthened + `change-analysis/TEMPLATES.md` §6.4 anti-pattern note added: top-level cross-validation findings must use `- **{finding}**: {desc}` (no checkbox); the binary `[ ] 有效问题 / [ ] 无效问题` checkbox only appears in nested children. Stops AI from emitting `- [x] 整体置信度: ...` / `- [x] 联合建议: ...` summary bullets.
+- `requirement-review/PHASES.md` §3 strengthened: each parent issue is `- **{编号}（{维度}）**: {desc}` (no checkbox) and must nest the binary `[ ] 有效问题 / [ ] 无效问题` children — without them the Feishu report has no actionable tick targets, which silently drops the report's review-meeting value.
+
+**requirement-review / requirement-clarification — single-agent strong-reasoning rewrite**
+
+- Replaced multi-perspective subagent design with single-agent + structured reasoning across `requirement-review` and `requirement-clarification`; aligns with industry practice that single agent + strong schema + grounded reasoning beats parallel subagents for requirement-style analysis where context fits one window
+- Removed three perspective subagent definitions (`agents/requirement-understanding/{user,functional,exception}-perspective.md`); only consumers were the two skills above, both refactored
+- Promoted `requirement-review` 4.1b serial review to canonical path with mandatory 假设 / 反例搜索 / 结论 + original-text quoting
+- Added `requirement-review` §4.1.7 enum normalization (anti-collapse) and §4.1.8 multi-variant consistency (class-inheritance defense against UI implicit propagation)
+- Added `rr_summary.confidence` (0-100) with reproducible scoring formula in §5.1.5.1
+- Replaced verdict OR rule with priority chain (hit-and-stop) so verdict is unique under any (confidence, blocking) combination — previously `confidence=50, 阻断=6` would land in both `not_ready` and `ready_with_conditions`
+- Renamed mode wording from disparaging "degraded" to neutral "设计稿评审模式 / 描述评审模式" (review keeps 3 modes; no exploratory mode since Story context is required)
+- `test-case-generation/PHASES.md §2.4` rewritten as single-Agent multi-dimension strong-reasoning (functional / exception / user dimensions executed serially in main Agent context); removed all `Read agents/requirement-understanding/...` / `Task` calls that referenced the deleted perspective subagent files — same single-agent pattern as `requirement-review` / `requirement-clarification`
+- `commons/AGENT_PROTOCOL.md` directory tree and naming convention list updated to drop the deleted `requirement-understanding/` directory; added a note explaining the consolidation
+
+**Feishu report formatting — checkbox feedback loop**
+
+- `requirement-review/TEMPLATES.md` §3 各职能问题列表改为 list + P0/P1 + 二选一 checkbox 反馈结构; added Closing Checklist Next Steps with handoffs to `test-case-generation`
+- `test-case-review/TEMPLATES.md` §6 修复 to-do uses MeterSphere edit links + `[已修复/无需修复]` checkbox; rewrote todo lines to use action verbs (修步骤/补步骤/改预期 etc.) instead of internal dimension tags; converted §2 coverage matrix to tables
+- `requirement-traceability/TEMPLATES.md` §4 缺陷清单 adds `[有效 bug/无效 bug]` checkbox per defect with `---` dividers; converted §3.1 coverage matrix and §3.2 code traceability to tables
+- `change-analysis/TEMPLATES.md` converted §2.5 model fields, §4.1/§4.2 impact domains, §3 coverage to tables; added §6 cross-validation summary template with §6.4 综合结论 checkbox
+
+**Conventions / shared / contracts**
+
+- New `CONVENTIONS.md`「飞书文档渲染规范」section as the single source of truth on table-vs-bullet selection, banned elements, severity terminology; replaces obsolete "no markdown table" rule that lived in each skill (Feishu import has supported tables for some time, verified end-to-end)
+- `commons/REQUIREMENT_DIMENSIONS.md` terminology mapping table aligns severity (阻断/关注 with P0/P1 alias for `report.md`), status (per-FP vs per-dimension), and verdict↔confidence mapping; deprecates blocking/concern English and the 4-tier 阻断/高/中/低
+- `contracts/rr-summary.schema.json` makes `confidence` and `blocking_issues` required (must be explicit empty array if none)
+- `contracts/rr-summary.schema.json` fixture in `tests/check-schemas.sh` updated to include `confidence` plus out-of-range / missing rejection cases
+- `requirement-clarification` redesigned single-agent confidence formula; aligned severity to Chinese 阻断/关注
+
+**`AI_CODING_BEST_PRACTICES.md` — engineer-perspective rewrite**
+
+- Added "按问题查" entry table at the top so half-flow readers can jump directly to the section they need (Quickstart / phase / troubleshooting / glossary / anti-patterns)
+- New §0 Quickstart (5 steps to launch): plugin install command, `TEST_WORKSPACE` env setup, MS credential pointer, copy-paste first prompt, navigation hint
+- Each phase gains a copy-paste prompt template (fillable variables) replacing the abstract "用 X skill 帮我..." phrasings
+- Phase 3 walkthrough expanded with concrete plan-mode 三段式: design prompt template, review checklist (影响面 / 分步顺序 / 回滚成本) as a 3-row table with what-to-ask-AI and remediation, implementation discipline (compile per task)
+- New 「反模式」 section with 6 anti-patterns; new Troubleshooting table (8 common failure modes); new 术语小词典 (11 entries)
+- 进一步阅读 split into 必读 (5 entries) vs 选读 (5 entries); unified visual callouts (💡 原则 / ⚠️ 坑 / ✅ 产出 / 📥 输入)
+- **Team-internal content moved to Feishu** (case study with internal ticket IDs, RACI assuming specific org structure, internal contacts) — repo doc points to Feishu supplement via single line; rationale: these don't generalize for an open marketplace plugin
+- README ↔ AI_CODING_BEST_PRACTICES dedup: README scoped strictly to *catalog* (skills / how to pick / where files live / how to configure / version history); BP owns *task-driven SOP*. Dropped 6-step pipeline diagram and 链路 A data-flow box from README
+
+**MeterSphere config — fixed misleading "zero-config" claim**
+
+- `metersphere-sync/SKILL.md` and `AI_CODING_BEST_PRACTICES.md` previously claimed MS credentials were "built-in / zero-config / 已内置". This was false: `metersphere_helper.py` reads from `plugins/test/skills/shared-tools/scripts/.env`, and only `MS_DEFAULT_MAINTAINER` (admin) / `MS_DEFAULT_STAGE` (smoke) actually have built-in defaults. The other 11 `MS_*` vars cause runtime failures when missing
+- Both docs now describe the actual lazy-path UX: don't pre-configure; on first run the script throws `missing required environment variables`, at which point user pastes the Feishu config block to the AI agent, which writes it into `.env`. Same end state as manual config but no upfront friction
+- `metersphere-sync/SKILL.md` "环境变量" table expanded from 6 to 11 rows; 默认值 column corrected; added `MS_WORKSPACE_ID` and 4 `MS_FIELD_ID_*` rows that were missing
+- `metersphere_helper.py`: lazy MS env credential check at `main()` dispatch time instead of module load. New `_LOCAL_ONLY_COMMANDS = {'validate-fv'}` whitelist lets pure local subcommands skip the check; everything else still fails early with the same `precondition_failed` payload. Allowlist is "local only" rather than "MS only" so future MS-bound subcommands inherit the check by default — safer than the inverse
+- `metersphere-sync/PHASES.md §4.0` smoke-test prelude now handles all five `verdict` enum values (`fail` / `fail-with-degraded-input` / `inconclusive` / `pass` / `pass-with-degraded-input`) rather than only `fail` vs `pass`. `fail-with-degraded-input` and `inconclusive` both trigger the same Prepare downgrade as `fail`; comment text now includes the actual verdict so reviewers can distinguish honest degraded fails from clean fails
+
+**`test-case-generation/contract.yaml` input/output revision**
+
+- `clarified_requirements` and `requirement_points` moved from `optional` to `required` (they appear together; either presence is enough to start a session)
+- New `final_cases.json` output entry (final case set produced at output stage; the artifact downstream consumers may import)
+- `test_cases.json` marked `optional`; description rewritten as "pre-review snapshot, superseded by `final_cases.json`"
+
+**Rename `shared-tools` → `test-shared-tools` (avoid cross-plugin name collision)**
+
+- Skill name and directory renamed from `shared-tools` to `test-shared-tools`; the original name was too generic and risked colliding with downstream repos installing this plugin alongside other "shared tools" skills
+- Synced all references across plugin docs (`README.md`, `CONTRACT_SPEC.md`, `AI_CODING_BEST_PRACTICES.md`), every consumer skill (`SKILL.md`/`PHASES.md`/`contract.yaml` for change-analysis, requirement-clarification/review/traceability, test-case-generation/review, metersphere-sync, api-contract-validation, qa-workflow), agent prompts (`case-tracer.md`, `codex-change-analyzer.md`), `commons/TRACEABILITY_PROTOCOL.md`, `tests/validate.sh`, and `.pre-commit-config.yaml`
+- No script-internal logic changes; only path/name updates so all `$SKILLS_ROOT/shared-tools/...` invocations now resolve as `$SKILLS_ROOT/test-shared-tools/...`
+
+**Rename `skills/_shared/` → `skills/commons/`**
+
+- The `_shared/` directory name visually clashed with sibling skill `test-shared-tools/` and was unclear about what kind of "shared" content it held (junk drawer of cluster-shared docs, schemas, scripts across the test plugin). Renamed to `commons/` for a clearer, broader semantic that matches its actual contents (frameworks, protocols, guidelines, schemas)
+- `git mv plugins/test/skills/_shared → plugins/test/skills/commons`; updated all `../_shared/` → `../commons/` refs in skill files (22 files); updated `plugins/test/CONVENTIONS.md`, `tests/validate.sh` path filters (`*/_shared/*` → `*/commons/*`), and `metersphere_helper.py` path string `'_shared'` → `'commons'`
+- Plugin README directory tree updated (`skills/commons/`)
+
+**Smoke-test honest-verdict overhaul — close GameJam-class silent fallback**
+
+Root cause discovered via forensic review of session 311/312 artifacts: when smoke-test ran without any test case input (no `final_cases.json` / `change_supplementary_cases.json` / `requirement_points.json`), it silently fell back to coverage-report synthesis (PHASES §4.6) and still emitted a hard `verdict: fail`. In one real case (GameJam project), change-analysis had already produced a supplementary case (`TC-11`) precisely targeting an Info-vs-Consume cross-path consistency bug, but smoke-test's input router never consumed it. This release introduces a single authoritative field `input_quality` (full/medium/low) and routes all downstream degradation behavior through it.
+
+- `requirement-traceability/PHASES.md`:
+  - **§3.1**: input router now has 4 priority tiers; new tier 1.5 consumes `change_supplementary_cases.json`. Cases inherit ca's `case_id` (`TC-{N}`). `module` reverse-lookups `traceability_checklist.md` for `requirement_id`; falls back to `FP-UNMAPPED-{N}`. Each derived fv entry tagged `case_source: "supplementary"` for §5S.1 priority inheritance
+  - **§1.3**: applies in all modes (smoke-test no longer skips entire 1.3); only the `mapping_sha` check is mode-gated. New §1.3.d "case input integrity check" sets `input_quality` and writes `_input_quality.json` for downstream consumption
+  - **§3.1.5**: enum_coverage_gap now exempts gaps covered by supplementary cases — prevents real fail from being downgraded to inconclusive when ca had filled the gap
+  - **§4.4**: `traceability_coverage_report.json` now writes `input_quality` and `verification_channel`. The latter is auto-computed from fv content — model is no longer free to label it `dual_channel` for cosmetic reasons
+  - **§4.5**: `risk_assessment.json` confidence cap when `input_quality == "low"` (60) or `medium` (80); standard mode now also gets honest degradation, not just smoke-test
+  - **§4.6**: bottom-out synthesis only triggers when `input_quality == "low"`. If fv is empty but `input_quality != "low"` → STOP and surface "§3.2 has a bug, don't mask via fallback" — eliminates the silent-bypass class entirely
+  - **§5S.1**: new priority inheritance for supplementary cases — directly inherits ca's `priority` (P0/P1/P2/P3) instead of confidence-based bumping. GameJam TC-11 P0 now correctly enters defect_list
+  - **§5S.2**: verdict expanded from binary (pass/fail) to five-tier table by `input_quality × P0 count`: `pass` / `fail` / `pass-with-degraded-input` / `fail-with-degraded-input` / `inconclusive`. Engine refuses hard verdict on degraded input
+- `commons/schemas/forward_verification.schema.json`: `requirement_id.pattern` relaxed to `^(FP-\d+|FP-UNMAPPED-\d+)$`; new optional `case_source` enum field
+- `contracts/smoke-test-report.schema.json`: `verdict.enum` expanded to five values; new `input_quality` and `verification_channel` enums. **Downstream impact**: ai-case backend's frontend mapping needs to handle the 3 new verdict values
+- `requirement-traceability/PHASES.md §5S.1 source 8` — low-input-quality compensation searches (CRITICAL, fires only when `input_quality == "low"`). Empirical: GameJam case (session 253) recall 0/3 against QA-tracked P1/P2 bugs in low-input-quality mode; same input under new source 8 (session 254) recall 3/3:
+  - **SEARCH-A**: new data-source coverage check (new tables/fields ↔ all read aggregation paths)
+  - **SEARCH-B**: time-field boundary check (`StartTime`/`EndTime`/`ExpiresTime` ↔ consume/display paths missing `now ⋛ boundary` guard)
+  - **SEARCH-C**: batch-operation bounds (for-range / batch SQL / loop-write ↔ `batch_size` / field-range / transaction boundaries)
+  - Execution constraint to avoid N×3 full-repo greps: classify diff hunks once into 3 buckets, then run each search once per bucket; grep scoped to diff-affected packages first, widen only on miss
+- `contracts/defect-list.schema.json`: `evidence.search_id` added (string, pattern `^S[ABC]-\d+$`); `if/then` enforces `search_id` required when `evidence.source ∈ {search-a, search-b, search-c}` — verified with 6 fixtures (4 reject / 2 accept)
+- `requirement-traceability/TEMPLATES.md`: new defects naming hard-constraints table (`title→name`, `desc→description`, `expected→expected_result`, `actual→actual_result`) above defects example; defects example shows `evidence.source` enum including `search-a/b/c` and `search_id` field; removed redundant "(注意是 X 不是 Y)" tails from defect templates (TEMPLATES.md naming hard-constraints table is canonical)
+
+**Output-spec evidence completeness (A/B/D enforced + C self-check), cross-component data flow tracing**
+
+Continuation of the GameJam fix — even when supplementary cases ARE consumed, single-component追溯 still misses cross-end data flow bugs (frontend↔backend, admin↔C-end, read-path↔write-path). The fix is **output-spec validation, not process-spec prompts**: the model picks any tracing strategy, but produced evidence must satisfy 4 completeness constraints, A/B/D validated mechanically.
+
+- `requirement-traceability/PHASES.md §3.2.0a (NEW)`: Evidence completeness contract. (A) Data-flow closure: pass + conf>=70 trace must contain ≥1 → / -> (≥2 hops). (B) Cross-boundary natural recording: pass + conf>=85 + multi-actor trace → code_location ≥2 entries distributed across ≥2 directory roots. (C) Per-expected reconciliation: model self-check (validator does NOT mechanically check — keyword match would create false safety). (D) considered_failure_modes path-driven: trace contains grpc/cache/transaction/async/state-mgmt/db patterns → modes must contain matching keywords
+- `commons/scripts/metersphere_helper.py validate-fv`: implements A/B/D mechanical checks. `_validate_completeness()` runs after schema + boundary checks. Synthesized entries (4.6 fallback) skip A/B/D as schema already exempts their evidence. Each violation produces `schema_path: completeness/{A|B|D}` with case_id and structured fix hint
+- `requirement-traceability/PHASES.md §5S.1 source 7 (NEW)`: cross_component_break defect source. (7a) Trace covers ≥2 components but a hop has no implementation in diff → P0 if hop touches data contract (read/write asymmetry like GameJam Info-Consume), P1 otherwise. (7b) FE↔BE field semantic divergence
+- `contracts/defect-list.schema.json`: documented `cross_component_break` as new category value (additive — schema is permissive on category)
+- `tests/validate.sh`: new Check N+2 builds 4 synthetic fv entries (3 violations + 1 fail-path compliant) and asserts validator produces ≥1 of each A/B/D error class. Regression-locks the validator behavior
+
+**ui-fidelity-check skill removed; UI/API checks consolidated into traceability via shared agents**
+
+- `plugins/test/skills/ui-fidelity-check/` directory removed entirely. UI fidelity check is now exclusively triggered inside `requirement-traceability §3.4`. Rationale: TapTap multi-platform stack rarely has a deployed `page_url` available — most scenarios are static code + design draft. Removing the page_url path and unifying on structural-only mode covers all platforms / all dev phases. With page_url gone, ui-fidelity-check and traceability §3.4 became truly equivalent (same agent, same input, same output) → standalone skill no longer justified
+- `agents/ui-fidelity-checker.md` retained and simplified: dropped Browser MCP inputs; now compares Figma structured design data vs static code style declarations only (CSS / SCSS / Tailwind / SwiftUI Modifiers / Compose Modifiers). Confidence cap 60 (no runtime validation)
+- `agents/api-contract-validator.md` (new): extracted from `api-contract-validation/PHASES.md §3` (signature extraction + 4-dim cross-comparison + breaking change + naming normalization). Stateless calc unit, returns findings JSON. `api-contract-validation` skill **kept** as standalone entry; `requirement-traceability §3.2.5` rewritten to launch the same agent. Upstream-first kept as performance optimization (if `api_contract_report.json` exists in workspace, skip agent launch)
+- Why ui-fidelity deleted but api-contract kept: ui-fidelity has identical user job in both entries (need design + code); api-contract serves a distinct user job (no requirement, just FE↔BE diff) → standalone skill preserves a real entry point. AI agent skill selection benefits from distinct skill descriptions
+- Cascade cleanup: `qa-workflow` step #6 removed (renumbered downstream steps); `WORKFLOW_DEFS.md` qa-full / qa-lite / verify-only templates updated; `PIPELINES.md` 链路 D rewritten; `known-collisions.yaml` ui_fidelity_report entry deleted; `commons/TRACEABILITY_PROTOCOL.md` UI section rewritten
+- `traceability/contract.yaml`: added `code_dir` input; removed `ui_fidelity_report` upstream input + `from_upstream: ui-fidelity-check`
+
+**Skill-local Agent prompts + commons relocation (cross-runtime ergonomics)**
+
+- Moved reusable Agent prompt definitions into their owning skill `agents/` directories as the single source of truth and removed the misleading legacy `plugins/test/agents/**` pseudo-registration layer.
+- Moved shared `CONVENTIONS.md` and contract schemas into `skills/commons/` so Codex skill-only installs can resolve them; kept `plugins/test/CONVENTIONS.md` and `plugins/test/contracts` as compatibility symlinks.
+- Documented the cross-runtime protocol: Claude Code and Codex both read the skill-local Agent definition; Claude uses a generic Task agent, while Codex runs inline or, when explicitly delegated, via built-in `default` / `explorer` / `worker` sub-agents.
+- Updated requirement-traceability, test-case-generation, api-contract-validation, and shared Agent protocol references to use skill-local Agent prompt paths.
+
+**Requirement-scoped workspace + cases MCP server + codex_agent hardening (iOS PR #312 backport)**
+
+- Promoted the iOS PR #312 QA workflow improvements into the shared test plugin: requirement-scoped workspaces now use `requirement_<stable_id>/` with `manifest.json` and shared `clarification/`, `test_cases/`, `metersphere/`, and `traceability/` subdirectories.
+- Added a cross-runtime `InteractiveQuestion` protocol so Claude can wrap one question in `AskUserQuestion` while Codex asks the same single-question structure in chat; requirement-clarification now gates consolidate with `clarification_gate.json` and `validate_clarification_gate.py`.
+- Added standalone `plugins/test/scripts/cases_mcp_server.py`, a dependency-free stdio MCP adapter for `save_test_cases` with path fencing, schema validation, module normalization, and automatic `case_id` assignment.
+- Hardened `codex_agent.py` command execution with argv parsing, `shell=False`, helper allowlisting, sensitive `.env` read blocking, and best-effort security documentation.
+- Aligned test-case-generation, metersphere-sync, and requirement-traceability around the shared workspace: final cases live under `test_cases/`, MS mapping/import/plan artifacts under `metersphere/`, and traceability runs under `traceability/<change_set_slug>/`.
+- Extended contract metadata with optional outputs, dynamic filename patterns, schema pointers, produced-when conditions, and consumer indexes.
+
+### Marketplace
+
+- Bumped version from 0.1.41 to 0.1.42
+- Updated test plugin to version 0.0.10
+
 ## 0.1.41
 
 ### Test Plugin (0.0.9)
@@ -36,7 +173,7 @@
 - Added `re_entry_phase` + `requirement_change_summary` optional inputs to `qa-workflow` for "rerun after requirement change" scenarios, passthrough to `test-case-generation`
 - Updated README selection guide to surface the demand-driven (tcg) vs change-driven (ca) split; dropped stale "v0.0.10+" version gates from architecture features section
 - Added quickstart note in `requirement-clarification/SKILL.md` clarifying that `output/*.json` files are pre-shipped format samples, not runtime artifacts
-- Added inline annotation in `agents/` tree (README + `_shared/AGENT_PROTOCOL.md`) explaining why files in `plugins/test/agents/` are not auto-registered as Claude/Codex subagents (no YAML frontmatter; loaded explicitly via Task tool calls inside skills)
+- Added inline annotation in the legacy `plugins/test/agents/` tree (README + `_shared/AGENT_PROTOCOL.md`) explaining why those files are not auto-registered as Claude/Codex subagents (no YAML frontmatter; loaded explicitly via Task tool calls inside skills)
 
 **Test plugin audit + CI hardening**
 

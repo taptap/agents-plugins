@@ -77,9 +77,8 @@ dependencies:
     - metersphere-sync
     - change-analysis
     - requirement-traceability
-    - ui-fidelity-check
     - api-contract-validation
-    - shared-tools
+    - test-shared-tools
     - git:code-reviewing      # 跨插件依赖
     - git:commit-push-pr      # 跨插件依赖（可选步骤）
   env_vars:

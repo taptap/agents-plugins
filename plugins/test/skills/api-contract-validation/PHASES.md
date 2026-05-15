@@ -2,7 +2,7 @@
 
 ## 关于系统预取
 
-通用预取机制见 [CONVENTIONS.md](../../CONVENTIONS.md#系统预取)。本 skill 额外预取：关联代码变更列表（GitLab MR / GitHub PR）。预取数据仅在 MR/PR 模式下可用；本地 diff 模式无预取。
+通用预取机制见 [CONVENTIONS.md](../commons/CONVENTIONS.md#系统预取)。本 skill 额外预取：关联代码变更列表（GitLab MR / GitHub PR）。预取数据仅在 MR/PR 模式下可用；本地 diff 模式无预取。
 
 ## 阶段 1: init - 输入验证
 
@@ -40,9 +40,9 @@ MR/PR 模式下：
 
 ```bash
 # GitLab
-python3 $SKILLS_ROOT/shared-tools/scripts/gitlab_helper.py mr-diff <project_path> <mr_iid>
+python3 $SKILLS_ROOT/test-shared-tools/scripts/gitlab_helper.py mr-diff <project_path> <mr_iid>
 # GitHub
-python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-diff <owner/repo> <pr_number>
+python3 $SKILLS_ROOT/test-shared-tools/scripts/github_helper.py pr-diff <owner/repo> <pr_number>
 ```
 
 ### 2.2 获取后端 diff（可选）
@@ -77,103 +77,49 @@ python3 $SKILLS_ROOT/shared-tools/scripts/github_helper.py pr-diff <owner/repo> 
 
 非 API 相关的文件（纯 UI、配置、测试等）不纳入检查范围。
 
-## 阶段 3: analyze - 接口签名提取与交叉比对
+## 阶段 3: analyze - 启动 api-contract-validator Agent
 
-### 3.1 提取前端接口签名
+通过 Task 工具启动 `api-contract-validator` Agent（Agent 定义见 [test-shared-tools/agents/api-contract-validator.md](../test-shared-tools/agents/api-contract-validator.md)），把签名提取、4 维度交叉比对、Breaking Change 检测、命名风格归一全部委托给 Agent。这个 Agent 是无副作用的纯计算单元，同时被 `requirement-traceability` §3.2.5 复用，避免逻辑重复实现。
 
-对 `contract_checklist.md` 中的每个前端 API 相关文件，从 diff 中提取：
+### 3.1 启动 Agent
 
-1. **端点签名**：
-   - 请求路径（URL path）
-   - HTTP 方法（GET/POST/PUT/DELETE）
-   - 请求参数（参数名、类型、是否必填）
-   - 响应模型（字段名、类型、是否可选）
+通过 Task 工具启动子 Agent，指定 `model="opus"`。Codex 环境不注册自定义 agent 类型：先 Read `$SKILLS_ROOT/test-shared-tools/agents/api-contract-validator.md`，默认由主 Agent 内联执行；仅当用户明确要求并行/子 agent 时，使用 Codex 内置 `worker` 并将该 Agent 定义全文嵌入 prompt。
 
-2. **变更类型**：
-   - `added` — 新增端点或字段
-   - `modified` — 修改已有端点的参数或响应
-   - `removed` — 删除端点或字段
+**Task prompt**：
 
-### 3.2 提取后端接口签名
+```
+你是 API 契约校验 Agent。请先 Read $SKILLS_ROOT/test-shared-tools/agents/api-contract-validator.md 获取你的完整角色定义和输出格式要求。
 
-同上规则提取后端的接口签名。如为 OpenAPI 基准模式，直接从 spec 中读取。
+## 前端 diff
+{从阶段 2.1 获取的 diff 内容；按 contract_checklist.md 中识别出的 API 相关文件过滤}
 
-### 3.3 交叉比对
+## 后端来源
+{二选一}
+{后端 diff：从阶段 2.2 获取的内容；同样按 API 相关文件过滤}
+{OpenAPI spec：从阶段 2.3 解析后的端点定义}
 
-对每个涉及的端点，执行以下对比：
+## 任务
+按 agent 定义中的 4 个维度（路径、请求参数、响应字段、Breaking Change）做交叉比对，输出 JSON 格式的 findings。每个 issue 必须包含 confidence 评分（0-100）。
+```
 
-**3.3.1 路径一致性**
+### 3.2 写入分析记录
 
-| 检查项 | 前端 | 后端/OpenAPI | 严重度 |
-| --- | --- | --- | --- |
-| 路径值不匹配 | `/api/v2/user` | `/api/v2/users` | high |
-| HTTP 方法不匹配 | `POST` | `PUT` | high |
-| 路径参数名不匹配 | `:userId` | `:user_id` | medium |
+将 Agent 返回的 findings JSON 落盘到 `contract_analysis.md`（中间文件，便于人工排查 Agent 推理路径），同时保留原始 JSON 用于阶段 4 包装。
 
-**3.3.2 请求参数一致性**
+## 阶段 4: output - 包装 Agent findings 为最终报告
 
-| 检查项 | 前端 | 后端/OpenAPI | 严重度 |
-| --- | --- | --- | --- |
-| 后端必填参数前端未传 | 缺失 `page_size` | `required: true` | high |
-| 参数类型不匹配 | `String` | `Integer` | high |
-| 参数名不匹配（非风格差异） | `userName` | `nickname` | high |
-| 参数名风格差异 | `userName` | `user_name` | low（信息级别） |
+### 4.1 取 Agent 输出
 
-**3.3.3 响应字段一致性**
+从阶段 3 取 Agent 返回的 JSON。Agent 已经计算好 `overall_consistency` / `checked_endpoints` / `issues_found` / `endpoints[]`，主 skill 不重新计算。
 
-| 检查项 | 前端 | 后端/OpenAPI | 严重度 |
-| --- | --- | --- | --- |
-| 字段类型不匹配 | `String` | `Int` | high |
-| 前端期望的必填字段后端不提供 | `avatar_url: String` | 字段不存在 | high |
-| 字段名不匹配（非风格差异） | `user_name` | `display_name` | high |
-| 字段名风格差异 | `userName` | `user_name` | low（信息级别） |
-| 前端有冗余可选字段 | `extra_info: String?` | 字段不存在 | low |
-| 后端新增字段前端未处理 | 未声明 | `new_field: String` | medium |
+### 4.2 包装为 api_contract_report.json
 
-**3.3.4 Breaking Change 检测**
+在 Agent 输出基础上添加元数据字段：
+- `frontend_source` ← 阶段 1.1 确定的前端来源（type + ref）
+- `backend_source` ← 阶段 1.2 确定的后端来源（type + ref）
+- `metadata` ← skill 名 / 版本号 / 生成时间戳
 
-仅在有变更前后对比（diff 的 +/- 行）时执行：
-
-| Breaking Change 类型 | 严重度 |
-| --- | --- |
-| 删除已有必填响应字段 | high |
-| 修改已有字段的类型 | high |
-| 新增必填请求参数 | high |
-| 修改路径或 HTTP 方法 | high |
-| 将可选响应字段改为不返回 | medium |
-| 修改枚举值范围 | medium |
-
-### 3.4 命名风格自动转换
-
-在比对前，尝试自动识别命名风格并做标准化：
-
-1. 检测前端命名风格（camelCase / PascalCase / snake_case）
-2. 检测后端命名风格
-3. 将两端转换为统一风格后再比较
-4. 纯风格差异标记为 `low` severity，附带原始名和转换后名
-
-### 3.5 写入分析记录
-
-将逐端点的分析结果追加到 `contract_analysis.md`。
-
-## 阶段 4: output - 报告生成
-
-### 4.1 汇总问题
-
-回读 `contract_analysis.md`，汇总所有端点的对比结果。
-
-### 4.2 计算 overall_consistency
-
-| 条件 | overall_consistency |
-| --- | --- |
-| 所有端点无问题 | `consistent` |
-| 存在 high severity 问题 | `inconsistent` |
-| 仅存在 medium/low severity 问题 | `partial` |
-| 降级模式（无法做对比） | `N/A` |
-
-### 4.3 生成 api_contract_report.json
-
-格式见 [TEMPLATES.md](TEMPLATES.md#api_contract_reportjson)。
+最终 schema 见 [TEMPLATES.md](TEMPLATES.md#api_contract_reportjson)，与历史版本兼容。
 
 ### 4.4 生成摘要
 
