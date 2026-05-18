@@ -102,6 +102,25 @@
 - [ ] 阶段 3A.2 Urhox 有效改动筛选（仅 Urhox 项目）
 - [ ] 阶段 5 覆盖率计算结果（精确数字 + 缺口数）
 
+### 命中检测详情子节（A section 内嵌，按需）
+
+各阶段的"命中检测"步骤要求写入详细信息（命中文件路径、命中模块名等）时，**作为 A section 的子节追加**，不要写成独立 H2，否则会出现"既不在 A 也不在 B"的中间节，飞书 import 后人 review 会找不到归属。示例：
+
+#### 前端变更命中检测（阶段 2.2）
+- 命中文件：`src/views/HotListPage.vue`、`src/components/SubscribeButton.tsx`
+- 跳过文件：`src/api/hotlist.ts`（API 客户端，纯逻辑）
+
+#### 三方交互命中检测（阶段 3A.1）
+- 命中模块：⚠️ 正版验证（`IInAppBillingService.aidl`、`IabAppLicenseManager.kt`）
+- 未命中其余规则
+
+#### Urhox 有效改动筛选（阶段 3A.2）
+- 命中目录：`engine/Source/Urho3D/Graphics`、`game/src/Game/Bootstrap`
+- 剔除 PR：无（全部命中）
+
+#### 外部影响评估待办（命中时写入，由阶段 4 消费）
+- 见 EXTERNAL-IMPACT.md 步骤 1 / 步骤 2
+
 ## B. 人工评审 Checklist（**保持 [ ]，AI 禁止勾选**）
 
 > 本节是给 QA / 评审会逐项核对的清单，勾选权归读者。**AI 不允许把这些项标 `[x]`**——AI 完成分析≠人类评审通过。
