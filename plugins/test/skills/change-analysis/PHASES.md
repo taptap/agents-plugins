@@ -97,21 +97,29 @@
 - 评估风险（高: API 签名/DB Schema/核心逻辑；中: 新功能/业务调整；低: 文档/格式）
 - 提取变更点列表，使用**完整自然语言描述**
 
-**3A 附加：Android 三方交互命中检测（强制步骤，不可跳过）**
+**3A 附加：三方交互命中检测（Android / iOS / PC，强制步骤，不可跳过）**
 
-> ⚠️ **凡处理 Android 项目的 MR，此步骤必须执行，不得省略、跳过或静默忽略。**
+> ⚠️ **凡处理 Android / iOS / PC 主站客户端项目的 MR，此步骤必须执行，不得省略、跳过或静默忽略。**
 
-**判断依据**：MR 所属仓库名称/路径包含 `android`（如 `taptap-android`、`cps/taptap-android`）即视为 Android 项目。
+**平台判定依据**（任一信号匹配即视为该平台 MR）：
+
+| 平台 | 仓库/路径包含 |
+| ---- | ---- |
+| Android | `android`（如 `taptap-android`、`cps/taptap-android`） |
+| iOS | `ios`、`tap-main/ios`、`tap-main/ios/cn` |
+| PC | `pc`、`tap-main/pc`、`launcher/`、`launcher-intl/`、`emulator-connector/`、`overlay/`、`minigame/`、`sdk/tapsdk/`（PC SDK） |
 
 **执行步骤**（按序完成）：
 
-1. 读取 [EXTERNAL-IMPACT.md](EXTERNAL-IMPACT.md) 中的「命中判断规则」表
+1. 读取 [EXTERNAL-IMPACT.md](EXTERNAL-IMPACT.md) 中对应平台的「命中判断规则」表（章节一 Android / 二 iOS / 三 PC）
 2. 将本次 diff 的**所有变更文件路径**与规则表逐条比对
 3. 在 `change_checklist.md` 中**必须新增**「三方交互命中检测」节，**无论命中与否都必须写入结果**：
-   - **未命中**：写入"经检测，本次 diff 未命中任何三方交互高风险文件，跳过外部影响评估"
-   - **命中**：写入命中的模块名称和对应文件路径，并新增「外部影响评估待办」节；后续阶段 4 和阶段 6 将激活外部影响评估模块
+   - **未命中**：写入"经检测，本次 diff 未命中 {平台} 任何三方交互高风险文件，跳过外部影响评估"
+   - **命中**：写入命中的模块名称、对应文件路径和**平台**，并新增「外部影响评估待办」节；后续阶段 4 和阶段 6 将激活外部影响评估模块
+4. 跨平台 MR（极少数同时改多个平台）：每个命中平台独立列出，并在「外部影响评估待办」节标注涉及哪些平台
 
 > 禁止在未执行文件路径比对的情况下直接跳过本步骤。检测结果必须体现在 `change_checklist.md` 中，作为可验证的执行痕迹。
+> 非 Android / iOS / PC 客户端项目（如纯服务端、Web、Urhox 引擎）默认跳过本步骤，无需写入结果。
 
 **3A 附加：Urhox 二进制影响分析（命中时执行）**
 
@@ -204,13 +212,20 @@ Task(subagent_type="generalPurpose", description="Codex 独立分析代码变更
 
 追加写入 `code_change_analysis.md` 的影响面和风险评估章节。
 
-#### Android 三方交互外部影响评估（命中时必须执行）
+#### 三方交互外部影响评估（Android / iOS / PC，命中时必须执行）
 
 **前提**：回读 `change_checklist.md`，确认「三方交互命中检测」节已写入（验证阶段 3A 已执行）。
 
 **触发条件**：`change_checklist.md` 中存在「外部影响评估待办」节（即阶段 3A 命中检测有结果）。
 
-**操作**：读取 [EXTERNAL-IMPACT.md](EXTERNAL-IMPACT.md)，按其「步骤 1」模板，将外部影响评估章节追加到 `code_change_analysis.md`。内容包括：命中模块汇总表、逐模块兼容性风险分析（向前兼容性 / 接口契约变化 / 受影响 SDK 模块 / 潜在断链场景）、综合外部影响等级。
+**操作**：读取 [EXTERNAL-IMPACT.md](EXTERNAL-IMPACT.md)，按其「步骤 1」模板，将外部影响评估章节追加到 `code_change_analysis.md`。章节标题需写明平台（如「外部影响评估（iOS 三方交互）」）。内容包括：命中模块汇总表、逐模块兼容性风险分析（向前兼容性 / 接口契约变化 / 受影响 SDK 模块 / 潜在断链场景）、综合外部影响等级。
+
+接口契约变化分析按平台关注：
+- Android：AIDL 方法签名 / Bundle key / Action 字符串 / resultCode / Extra key
+- iOS：URL Scheme / Universal Link host / NSKeyedArchiver 类名 + Coding key / query 参数名 / App Group / messageHandler action
+- PC：proto 字段 tag / EventId / enum 取值 / C ABI 符号名+参数+返回类型 / Named Pipe 名称 / HTTP 路径 / contextBridge 暴露名
+
+跨平台 MR 命中时第八章按平台分小节（8A / 8B / 8C）追加。
 
 若综合外部影响等级为 🔴 高，需在阶段 7 的 `change_analysis.json` 的 `key_findings` 和 `action_items` 中体现外部影响条目。
 
@@ -252,11 +267,13 @@ Task(subagent_type="generalPurpose", description="Codex 独立分析代码变更
 
 无覆盖缺口时跳过本阶段。
 
-#### Android 三方交互测试访问评估与建议用例（按需）
+#### 三方交互测试访问评估与建议用例（Android / iOS / PC，按需）
 
 **触发条件**：同阶段 4，`change_checklist.md` 中存在「外部影响评估待办」节。
 
-**操作**：读取 [EXTERNAL-IMPACT.md](EXTERNAL-IMPACT.md)，按其「步骤 2」模板，将外部影响测试访问评估章节追加到 `test_coverage_report.md`。内容包括：测试访问路径说明（仅列命中模块行）、每个命中模块的建议测试用例（关键路径 + 兼容性边界）、回归范围建议。新增用例通过 `mcp__cases__save_test_cases` 合并写入 `change_supplementary_cases.json`（如已存在，先 Read 现有内容、合并后再调用 tool 一次性覆盖写入）。
+**操作**：读取 [EXTERNAL-IMPACT.md](EXTERNAL-IMPACT.md)，按其「步骤 2」模板，将外部影响测试访问评估章节追加到 `test_coverage_report.md`。章节标题需写明平台（如「外部影响测试访问评估（PC 三方交互）」）。内容包括：测试访问路径说明（选择对应平台的访问路径表，仅列命中模块行）、每个命中模块的建议测试用例（关键路径 + 兼容性边界，前置条件按平台填写）、回归范围建议。新增用例通过 `mcp__cases__save_test_cases` 合并写入 `change_supplementary_cases.json`（如已存在，先 Read 现有内容、合并后再调用 tool 一次性覆盖写入）。
+
+跨平台 MR 命中时按平台分小节追加，前置条件分别写明各平台的测试机/SDK/Loader 版本要求。
 
 ### 阶段 7: output — 结构化输出
 
