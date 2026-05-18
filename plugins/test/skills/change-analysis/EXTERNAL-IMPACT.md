@@ -16,7 +16,7 @@
 
 ## 命中判断规则
 
-在阶段 3A（diff 分析）完成后，对照下表检查本次 MR 是否涉及列出的**高风险文件或模块**。
+在阶段 3A.1（命中检测）执行时，对照下表检查本次 MR 是否涉及列出的**高风险文件或模块**。
 任意一条匹配即视为**命中**，激活本模块后续全流程。
 
 | 匹配维度 | 命中标志 | 参考章节 |
@@ -162,7 +162,7 @@
 
 | 工作流阶段 | 本模块介入点 | 操作 |
 | ---------- | ------------ | ---- |
-| 阶段 3A：diff 分析 | MR 属于 Android 项目时，完成文件分类后执行命中检测 | 对照「命中判断规则」标记命中项，记录到 `change_checklist.md` |
+| 阶段 3A.1：命中检测 | MR 属于 Android 项目时，完成文件分类后执行命中检测 | 对照「命中判断规则」标记命中项，记录到 `change_checklist.md` |
 | 阶段 4：impact | 追加 `code_change_analysis.md` 第八章 | 按「步骤 1」模板填写逐模块分析 |
 | 阶段 6：generate | 追加 `test_coverage_report.md` 第八章 | 按「步骤 2」模板填写，并将新增用例同步写入 `change_supplementary_cases.json` |
 | 阶段 7：output | `change_analysis.json` 的 `key_findings` 和 `action_items` 中体现外部影响条目 | 命中 ⚠️ 级别时补充外部影响高风险发现 |
