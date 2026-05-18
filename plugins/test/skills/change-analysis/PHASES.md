@@ -255,9 +255,9 @@ Task(subagent_type="generalPurpose", description="Codex 独立分析代码变更
 
 #### Android 三方交互外部影响评估（命中时必须执行）
 
-**前提**：回读 `change_checklist.md`，确认「三方交互命中检测」节已写入（验证阶段 3A 已执行）。
+**前提**：回读 `change_checklist.md`，确认「三方交互命中检测」节已写入（验证阶段 3A.1 已执行）。
 
-**触发条件**：`change_checklist.md` 中存在「外部影响评估待办」节（即阶段 3A 命中检测有结果）。
+**触发条件**：`change_checklist.md` 中存在「外部影响评估待办」节（即阶段 3A.1 命中检测有结果）。
 
 **操作**：读取 [EXTERNAL-IMPACT.md](EXTERNAL-IMPACT.md)，按其「步骤 1」模板，将外部影响评估章节追加到 `code_change_analysis.md`。内容包括：命中模块汇总表、逐模块兼容性风险分析（向前兼容性 / 接口契约变化 / 受影响 SDK 模块 / 潜在断链场景）、综合外部影响等级。
 
