@@ -125,6 +125,16 @@ python3 $SKILLS_ROOT/test-shared-tools/scripts/github_helper.py file-content <ow
 - Web：`.vue`、`.tsx`、`.jsx`、`.ts`/`.js`（在 `src/components/` `src/views/` `src/pages/` 下）、`.css`、`.scss`、`.html`
 - 跨端：`.dart`、`.swiftui` 等
 
+**判定优先级**：先按下面"显式排除"过滤命中的文件，再按上面的扩展名/路径规则判定。
+
+**显式排除**（命中即视为非前端，跳过 Figma）：
+- 测试文件：`*.test.*`、`*.spec.*`、`*.stories.*`、`*_test.go`、`*_spec.rb`
+- 测试目录：路径含 `__tests__/`、`/test/`、`/tests/`、`/spec/`、`/__snapshots__/`、`/.storybook/`
+- 文档：`*.md`、`docs/`
+- 配置：根目录 dotfiles（`.eslintrc.*`、`.prettierrc.*`）、`*.lock`、`package.json` 等
+
+> 排除清单的目的：避免把 storybook、test fixtures、纯后端逻辑文件（`.kt` 但在 `data/` `domain/` `network/` 等目录）误判为前端 UI 变更，触发不必要的 Figma 调用。**判定有歧义时（如 `.kt` 文件不在 `ui/` 也不在排除目录），按"非前端"处理**（保守 — 设计稿调用是辅助，不调不会出错；误调会引入噪音 finding）。
+
 纯后端 / 配置 / 文档 diff 时跳过 Figma 调用，节省 token 和时延。判定结果写入 `change_checklist.md` 的「前端变更命中检测」节作为执行痕迹。
 
 ## 按需扩展模块
